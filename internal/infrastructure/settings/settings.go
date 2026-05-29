@@ -205,6 +205,75 @@ func (s *Settings) PreviewMergedHooks(block map[string]any) ([]byte, error) {
 	return append(out, '\n'), nil
 }
 
+// RemoveHooksMatching removes from s.Raw every hook handler whose "command"
+// string satisfies match. It is the uninstall counterpart to MergeHooks:
+// because the uninstall path has only the manifest (not the original
+// hooks.json), removal is driven by a predicate over the command string
+// (e.g. "references this package's script") rather than by an exact block.
+//
+// Matchers left with no handlers, and events left with no matchers, are
+// pruned; if the "hooks" object becomes empty it is removed entirely so the
+// document doesn't accumulate dangling structure. Returns the number of
+// handlers removed per event. Idempotent — a predicate that matches nothing
+// is a no-op (zero removals, no error).
+func (s *Settings) RemoveHooksMatching(match func(command string) bool) (removed map[string]int) {
+	removed = map[string]int{}
+
+	target, _ := s.Raw["hooks"].(map[string]any)
+	if target == nil {
+		return removed
+	}
+
+	for event, matchersRaw := range target {
+		existingMatchers, ok := matchersRaw.([]any)
+		if !ok {
+			continue
+		}
+		keptMatchers := make([]any, 0, len(existingMatchers))
+		for _, m := range existingMatchers {
+			matcher, ok := m.(map[string]any)
+			if !ok {
+				keptMatchers = append(keptMatchers, m)
+				continue
+			}
+			handlers, ok := matcher["hooks"].([]any)
+			if !ok {
+				keptMatchers = append(keptMatchers, m)
+				continue
+			}
+			keptHandlers := make([]any, 0, len(handlers))
+			for _, h := range handlers {
+				handler, ok := h.(map[string]any)
+				if !ok {
+					keptHandlers = append(keptHandlers, h)
+					continue
+				}
+				if cmd, _ := handler["command"].(string); cmd != "" && match(cmd) {
+					removed[event]++
+					continue
+				}
+				keptHandlers = append(keptHandlers, handler)
+			}
+			if len(keptHandlers) == 0 {
+				continue
+			}
+			matcher["hooks"] = keptHandlers
+			keptMatchers = append(keptMatchers, matcher)
+		}
+
+		if len(keptMatchers) == 0 {
+			delete(target, event)
+		} else {
+			target[event] = keptMatchers
+		}
+	}
+
+	if len(target) == 0 {
+		delete(s.Raw, "hooks")
+	}
+	return removed
+}
+
 // commandExists returns true if any handler under existingMatchers has a
 // "command" field that exactly matches cmd. Used to deduplicate handlers
 // across MergeHooks calls.
