@@ -13,6 +13,7 @@ import (
 	root "github.com/jorelcb/codify"
 	"github.com/jorelcb/codify/internal/application/command"
 	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify/internal/infrastructure/llm"
 	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
 	"github.com/jorelcb/codify/internal/infrastructure/targetinstaller"
 )
@@ -23,6 +24,9 @@ type catalogParams struct {
 	pkgType   string
 	packages  string
 	scope     string
+	mode      string
+	model     string
+	context   string
 	list      bool
 }
 
@@ -70,6 +74,9 @@ incrementally.`,
 	cmd.Flags().StringVar(&p.pkgType, "type", "", "Package type: skill or hook")
 	cmd.Flags().StringVar(&p.packages, "package", "", "Comma-separated package IDs to install")
 	cmd.Flags().StringVar(&p.scope, "scope", "", "Install scope: project or workstation (alias: global)")
+	cmd.Flags().StringVar(&p.mode, "mode", "static", "Skill mode: static (embedded template) or personalized (LLM-adapted)")
+	cmd.Flags().StringVar(&p.model, "model", "", "LLM model for personalized mode (e.g. claude-sonnet-4-6)")
+	cmd.Flags().StringVar(&p.context, "context", "", "Project context for personalized mode")
 	cmd.Flags().BoolVar(&p.list, "list", false, "List available packages instead of installing")
 
 	return cmd
@@ -80,29 +87,51 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 		return fmt.Errorf("ecosystem %q not supported yet (MVP: claude)", p.ecosystem)
 	}
 
-	svc := newCatalogService()
 	ctx := context.Background()
 
 	if p.list {
-		return catalogList(ctx, svc, p)
+		return catalogList(ctx, embeddedService(), p)
 	}
 
 	// Non-interactive install when the actionable flags are present.
 	if explicit["type"] || explicit["package"] {
-		return catalogInstallFromFlags(ctx, svc, p)
+		return catalogInstallFromFlags(ctx, p)
 	}
 
 	if !isInteractive() {
 		return fmt.Errorf("codify catalog needs a TTY for interactive mode; pass --type and --package for non-interactive install, or --list to browse")
 	}
-	return catalogInteractive(ctx, svc)
+	return catalogInteractive(ctx, p)
 }
 
-// newCatalogService wires the embedded source + Claude installer registry.
-func newCatalogService() *command.CatalogService {
+// catalogRegistry wires the per-ecosystem installers.
+func catalogRegistry() *targetinstaller.Registry {
+	return targetinstaller.NewRegistry(mustClaudeInstaller())
+}
+
+// embeddedService is the static path: packages ship as their embedded
+// template. Used for browsing (List/Installed) and static installs — no API
+// key required.
+func embeddedService() *command.CatalogService {
 	source := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
-	registry := targetinstaller.NewRegistry(mustClaudeInstaller())
-	return command.NewCatalogService(source, registry)
+	return command.NewCatalogService(source, catalogRegistry())
+}
+
+// personalizedService is the LLM path: skills are adapted to projectContext
+// before install, via the PersonalizingSource decorator. Requires a usable
+// model + API key.
+func personalizedService(ctx context.Context, model, projectContext string) (*command.CatalogService, error) {
+	apiKey, err := llm.ResolveAPIKey(model)
+	if err != nil {
+		return nil, err
+	}
+	provider, err := llm.NewProvider(ctx, model, apiKey, os.Stdout)
+	if err != nil {
+		return nil, fmt.Errorf("create LLM provider: %w", err)
+	}
+	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
+	source := packagesource.NewPersonalizingSource(embedded, provider, projectContext, "en", "claude")
+	return command.NewCatalogService(source, catalogRegistry()), nil
 }
 
 // mustClaudeInstaller builds a ClaudeInstaller against the real cwd/home. On
@@ -182,7 +211,28 @@ func catalogList(ctx context.Context, svc *command.CatalogService, p catalogPara
 	return nil
 }
 
-func catalogInstallFromFlags(ctx context.Context, svc *command.CatalogService, p catalogParams) error {
+// installService returns the CatalogService for an install, routing skills in
+// personalized mode through the LLM source and everything else through the
+// static embedded source. Personalized mode applies to skills only; for other
+// targets it falls back to static with a notice.
+func installService(ctx context.Context, mode string, target catalog.Target, model, projectContext string) (*command.CatalogService, error) {
+	if mode == "personalized" {
+		if target != catalog.TargetClaudeSkill {
+			fmt.Fprintf(os.Stderr, "→ personalized mode applies to skills only; installing %q statically\n", target)
+			return embeddedService(), nil
+		}
+		if projectContext == "" {
+			return nil, fmt.Errorf("personalized mode requires --context (a project description)")
+		}
+		if model == "" {
+			return nil, fmt.Errorf("personalized mode requires --model (or run interactively to pick one)")
+		}
+		return personalizedService(ctx, model, projectContext)
+	}
+	return embeddedService(), nil
+}
+
+func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 	if p.pkgType == "" {
 		return fmt.Errorf("--type is required for install (skill or hook)")
 	}
@@ -203,12 +253,16 @@ func catalogInstallFromFlags(ctx context.Context, svc *command.CatalogService, p
 		return err
 	}
 
+	svc, err := installService(ctx, p.mode, target, p.model, p.context)
+	if err != nil {
+		return err
+	}
 	out, err := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
 	printInstallOutcome(out, scope)
 	return err
 }
 
-func catalogInteractive(ctx context.Context, svc *command.CatalogService) error {
+func catalogInteractive(ctx context.Context, p catalogParams) error {
 	// Step 1 — ecosystem. MVP ships Claude only; auto-select with a notice
 	// rather than a single-option menu.
 	fmt.Fprintln(os.Stderr, "→ Ecosystem: claude (the only one supported in this version)")
@@ -223,7 +277,38 @@ func catalogInteractive(ctx context.Context, svc *command.CatalogService) error 
 	}
 	target := typeToTarget[tp]
 
-	// Step 3 — scope (needed to mark installed state).
+	// Step 3 — mode (skills only; hooks are catalog-driven, no LLM).
+	mode := "static"
+	model := p.model
+	projectContext := p.context
+	if tp == "skill" {
+		mode, err = promptSelect("Skill mode", []selectOption{
+			{"Static (instant, embedded template)", "static"},
+			{"Personalized (LLM-adapted to your project)", "personalized"},
+		}, "static")
+		if err != nil {
+			return err
+		}
+		if mode == "personalized" {
+			if projectContext == "" {
+				projectContext, err = promptInput("Describe your project (stack, architecture, domain)", "")
+				if err != nil {
+					return err
+				}
+			}
+			if projectContext == "" {
+				return fmt.Errorf("personalized mode requires a project description")
+			}
+			if model == "" {
+				model, err = promptModel()
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Step 4 — scope (needed to mark installed state).
 	scopeStr, err := promptSelect("Install scope", []selectOption{
 		{"Project (.claude/ in this repo)", "project"},
 		{"Workstation (~/.claude/, all projects)", "workstation"},
@@ -236,8 +321,10 @@ func catalogInteractive(ctx context.Context, svc *command.CatalogService) error 
 		return err
 	}
 
-	// Step 4 — package multi-select, marking already-installed entries.
-	available, err := svc.Available(ctx, target)
+	// Step 5 — package multi-select, marking already-installed entries.
+	// Browsing always uses the static source (no API key needed to list).
+	browse := embeddedService()
+	available, err := browse.Available(ctx, target)
 	if err != nil {
 		return err
 	}
@@ -245,7 +332,7 @@ func catalogInteractive(ctx context.Context, svc *command.CatalogService) error 
 		fmt.Printf("No %s packages available.\n", tp)
 		return nil
 	}
-	installed, err := svc.Installed(ctx, target, scope)
+	installed, err := browse.Installed(ctx, target, scope)
 	if err != nil {
 		return err
 	}
@@ -276,6 +363,10 @@ func catalogInteractive(ctx context.Context, svc *command.CatalogService) error 
 		return nil
 	}
 
+	svc, err := installService(ctx, mode, target, model, projectContext)
+	if err != nil {
+		return err
+	}
 	out, err := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
 	printInstallOutcome(out, scope)
 	return err

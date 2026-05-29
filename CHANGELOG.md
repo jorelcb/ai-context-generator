@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`codify catalog` command** — the unified surface for browsing and installing ecosystem packages (ADR-0010). Interactive wizard (ecosystem → type → packages → scope), `--list` browsing with source badges and installed markers, and non-interactive install (`--type skill --package a,b --scope project|workstation`). MVP covers the Claude ecosystem (skills + hooks); `codify skills`/`codify hooks` remain for now and are folded in incrementally.
+- **`codify catalog` command** — the unified surface for browsing and installing ecosystem packages (ADR-0010). Interactive wizard (ecosystem → type → mode → packages → scope), `--list` browsing with source badges and installed markers, and non-interactive install (`--type skill --package a,b --scope project|workstation`). Skills support `--mode personalized` (LLM-adapts the template to your project via `--context`/`--model`), modeled as a `PersonalizingSource` decorator so the install path is unchanged. MVP covers the Claude ecosystem (skills + hooks); `codify skills`/`codify hooks` remain for now and are folded in incrementally.
+- **`packagesource.PersonalizingSource`** — a `PackageSource` decorator that LLM-adapts skill packages before install; delegates List/Kind and non-skill Fetch to the inner embedded source. Keeps `CatalogService` and the installer untouched.
 - **`CatalogService`** (application) — orchestrates the package ports: `Available`, `Installed`, and `Install`, driven once and reused by the CLI (and later `config`/`init`).
 - **`catalog.PackageManifest`** — a single Target-tagged descriptor for any installable artifact (skill, hook, and later workflow), independent of origin, with Claude metadata (triggers, allowed-tools, user-invocable), source ref and checksum fields.
 - **`ManifestsFromSkillsCategory` / `ManifestsFromHooksCategory`** — pure converters from the built-in catalog into manifests.

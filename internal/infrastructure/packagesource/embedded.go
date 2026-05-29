@@ -205,27 +205,13 @@ func (s *EmbeddedSource) Fetch(ctx context.Context, m catalog.PackageManifest) (
 // Reusa catalog.GenerateFrontmatter como única fuente de verdad del
 // frontmatter de skills, compartida con el resto del catálogo.
 func (s *EmbeddedSource) fetchSkill(m catalog.PackageManifest) (catalog.PackageContent, error) {
-	// Buscar el template — la única forma confiable de localizar el
-	// archivo del skill desde su ID es re-iterar las categories y
-	// matchear por el guide name correspondiente. Es O(N) sobre el
-	// catálogo total, aceptable para v0 (catálogo de ~30 items).
-	guideName, templateDir, err := s.locateSkillTemplate(m.ID)
+	guideName, body, err := s.skillTemplate(m)
 	if err != nil {
 		return catalog.PackageContent{}, err
 	}
 
-	// Convención del repo: skills viven bajo templates/skills/<TemplateDir>/
-	// (locale-free — inglés-only por diseño). Espejo del filepath.Join en
-	// cli/commands/skills.go.
-	templatePath := path.Join("templates", "skills", templateDir, guideName+".template")
-	body, err := fs.ReadFile(s.fsys, templatePath)
-	if err != nil {
-		return catalog.PackageContent{}, fmt.Errorf("read skill template %s: %w", templatePath, err)
-	}
-
-	// Frontmatter via la función legacy — preserva exact comportamiento
-	// del comando skills. Cuando D.1.e migre los consumers, esta llamada
-	// se mueve al ClaudeInstaller (que conocerá Target específico).
+	// Frontmatter via catalog.GenerateFrontmatter — única fuente de verdad
+	// del frontmatter de skills, compartida con el resto del catálogo.
 	frontmatter := catalog.GenerateFrontmatter(guideName, "claude")
 	content := frontmatter + "\n" + string(body)
 
@@ -234,6 +220,27 @@ func (s *EmbeddedSource) fetchSkill(m catalog.PackageManifest) (catalog.PackageC
 			"SKILL.md": []byte(content),
 		},
 	}, nil
+}
+
+// skillTemplate resuelve el (guideName, rawBody) del template de un skill
+// desde su manifest. Reusado por fetchSkill (static, le agrega frontmatter)
+// y por PersonalizingSource (lo pasa al LLM como guide). El body es el
+// template crudo, sin frontmatter.
+func (s *EmbeddedSource) skillTemplate(m catalog.PackageManifest) (guideName string, body []byte, err error) {
+	// Localizar el archivo: re-iterar las categories y matchear por guide
+	// name. O(N) sobre el catálogo total, aceptable (~30 items).
+	guideName, templateDir, err := s.locateSkillTemplate(m.ID)
+	if err != nil {
+		return "", nil, err
+	}
+	// Convención del repo: skills bajo templates/skills/<TemplateDir>/
+	// (locale-free — inglés-only por diseño).
+	templatePath := path.Join("templates", "skills", templateDir, guideName+".template")
+	body, err = fs.ReadFile(s.fsys, templatePath)
+	if err != nil {
+		return "", nil, fmt.Errorf("read skill template %s: %w", templatePath, err)
+	}
+	return guideName, body, nil
 }
 
 // locateSkillTemplate encuentra el (guide_name, template_dir) de un
