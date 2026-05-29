@@ -36,6 +36,13 @@ import (
 // dos manifests por workflow (uno por target) o un mecanismo separado.
 // Skills + hooks (los dos casos del catalog UX por ADR-0010 §4) están
 // cubiertos.
+// Compile-time guard: EmbeddedSource must satisfy the frozen
+// catalog.PackageSource contract. If the interface or this adapter drift
+// apart, the build fails here instead of at a distant call site. Every
+// future source adapter (local-fs, git, http-registry) must add the same
+// assertion.
+var _ catalog.PackageSource = (*EmbeddedSource)(nil)
+
 type EmbeddedSource struct {
 	// fsys es el filesystem embebido (típicamente codify.TemplatesFS).
 	// Inyectado para permitir tests con FS mock sin dependencia del

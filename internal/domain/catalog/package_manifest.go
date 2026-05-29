@@ -272,6 +272,25 @@ type PackageContent struct {
 // Implementations live in internal/infrastructure/packagesource/. The
 // catalog command composes multiple sources at runtime via a registry,
 // applying ordering and deduplication.
+//
+// FROZEN CONTRACT (ratified post-D.1, before D.2/D.3). This signature is
+// the stable contract every adapter implements; reconciles two deliberate
+// deviations from the ADR-0010 §8 sketch — do not "restore" the sketch:
+//
+//   - Fetch takes the full PackageManifest, NOT (id, version). The caller
+//     always holds the manifest from a prior List, so the source needs no
+//     re-lookup, and per-source versioning falls out naturally (the
+//     manifest already carries Version + Source.URI). Richer input than
+//     coordinates, and strictly more capable for remote/versioned sources.
+//   - Kind() string instead of Capabilities() SourceCapabilities. The only
+//     near-term consumer (the catalog command, D.4) badges provenance and
+//     distinguishes offline vs network sources — both derivable from Kind
+//     via a pure helper. A SourceCapabilities struct is deferred until a
+//     real consumer needs it (marketplace/auth, D.10) rather than shipped
+//     speculatively.
+//
+// Each adapter must add a compile-time `var _ catalog.PackageSource`
+// assertion so signature drift fails the build instead of surfacing later.
 type PackageSource interface {
 	// Kind returns a stable identifier for the source type ("embedded",
 	// "local-fs", "git", "http-registry"). Used by the catalog UI to badge
