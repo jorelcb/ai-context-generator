@@ -90,7 +90,7 @@ func installSkill(target, locale, categoryName, preset, scope string) error {
 		return err
 	}
 
-	templatePath := filepath.Join("templates", locale, "skills", selection.TemplateDir)
+	templatePath := filepath.Join("templates", "skills", selection.TemplateDir)
 	loader := infratemplate.NewFileSystemTemplateLoaderWithMapping(root.TemplatesFS, templatePath, selection.TemplateMapping)
 	guides, err := loader.LoadAll()
 	if err != nil {
@@ -133,7 +133,7 @@ func skillsPathForScope(target, scope string) string {
 //
 // Hooks are Claude-only (Codex/Antigravity have no equivalent), so callers
 // should gate this on target == "claude" before invoking.
-func promptInstallHooks(locale, scope string) error {
+func promptInstallHooks(scope string) error {
 	if !isInteractive() {
 		return nil
 	}
@@ -168,7 +168,6 @@ func promptInstallHooks(locale, scope string) error {
 	config := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   preset,
-		Locale:   locale,
 		Install:  scope,
 	}
 

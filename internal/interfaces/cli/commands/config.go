@@ -140,7 +140,7 @@ func runConfigWizard(repo *infraconfig.Repository, path string) error {
 	}
 
 	if target == "claude" {
-		if err := promptInstallHooks(locale, "global"); err != nil {
+		if err := promptInstallHooks("global"); err != nil {
 			fmt.Fprintf(os.Stderr, "\nWarning: global hooks install step failed: %v\n", err)
 			fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify hooks --install global'.")
 		}

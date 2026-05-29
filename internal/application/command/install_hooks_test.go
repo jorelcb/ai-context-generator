@@ -38,7 +38,6 @@ func TestInstallHooks_FreshInstallProject(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   "linting",
-		Locale:   "en",
 		Install:  dto.InstallScopeProject,
 	}
 
@@ -96,7 +95,6 @@ func TestInstallHooks_Idempotent(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   "all",
-		Locale:   "en",
 		Install:  dto.InstallScopeProject,
 	}
 
@@ -143,7 +141,6 @@ func TestInstallHooks_BackupOnPreExisting(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   "linting",
-		Locale:   "en",
 		Install:  dto.InstallScopeProject,
 	}
 
@@ -186,7 +183,6 @@ func TestInstallHooks_DryRun(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   "linting",
-		Locale:   "en",
 		Install:  dto.InstallScopeProject,
 		DryRun:   true,
 	}
@@ -216,7 +212,6 @@ func TestInstallHooks_GlobalRewritesCommandsToHome(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   "all",
-		Locale:   "en",
 		Install:  dto.InstallScopeGlobal,
 	}
 
@@ -246,7 +241,6 @@ func TestInstallHooks_ProjectKeepsClaudeProjectDir(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category: "hooks",
 		Preset:   "security-guardrails",
-		Locale:   "en",
 		Install:  dto.InstallScopeProject,
 	}
 
@@ -275,7 +269,6 @@ func TestInstallHooks_RejectsCustomScope(t *testing.T) {
 	cfg := &dto.HookConfig{
 		Category:   "hooks",
 		Preset:     "linting",
-		Locale:     "en",
 		OutputPath: filepath.Join(tmp, "preview"),
 		// Install left empty intentionally
 	}

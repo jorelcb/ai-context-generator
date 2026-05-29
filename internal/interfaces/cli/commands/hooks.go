@@ -17,7 +17,6 @@ import (
 // hooksParams groups all parameters for the hooks command.
 type hooksParams struct {
 	preset  string
-	locale  string
 	output  string
 	install string
 	dryRun  bool
@@ -88,7 +87,6 @@ Examples:
 	}
 
 	cmd.Flags().StringVarP(&p.preset, "preset", "p", "", "Hook preset: linting, security-guardrails, convention-enforcement, or all")
-	cmd.Flags().StringVar(&p.locale, "locale", defaultLocale, "Output language for stderr messages: en (English) or es (Spanish)")
 	cmd.Flags().StringVarP(&p.output, "output", "o", "", "Preview mode: write standalone bundle to this directory (no settings change)")
 	cmd.Flags().StringVar(&p.install, "install", "", "Install scope: global or project (auto-activates immediately)")
 	cmd.Flags().BoolVar(&p.dryRun, "dry-run", false, "Print the proposed settings.json merge but write nothing")
@@ -125,19 +123,7 @@ func runHooks(p hooksParams, explicit map[string]bool) error {
 		return fmt.Errorf("invalid preset: %s (valid: linting, security-guardrails, convention-enforcement, all)", preset)
 	}
 
-	// 2. Resolve locale.
-	locale := p.locale
-	if !explicit["locale"] && interactive {
-		locale, err = promptLocale()
-		if err != nil {
-			return err
-		}
-	}
-	if locale == "" {
-		locale = defaultLocale
-	}
-
-	// 3. Resolve activation mode.
+	// 2. Resolve activation mode.
 	//
 	// Priority:
 	//   --output → preview mode (no settings change)
@@ -176,7 +162,6 @@ func runHooks(p hooksParams, explicit map[string]bool) error {
 	config := &dto.HookConfig{
 		Category:   "hooks",
 		Preset:     preset,
-		Locale:     locale,
 		OutputPath: output,
 		Install:    install,
 		DryRun:     dryRun,
@@ -203,7 +188,6 @@ func executeInstall(config *dto.HookConfig) error {
 	fmt.Println()
 	fmt.Printf("Activating Claude Code hooks (%s)\n", mode)
 	fmt.Printf("  Preset: %s\n", config.Preset)
-	fmt.Printf("  Locale: %s\n", config.Locale)
 	fmt.Printf("  Scope: %s\n", config.Install)
 	fmt.Println()
 
@@ -262,7 +246,6 @@ func executePreview(config *dto.HookConfig) error {
 	fmt.Println()
 	fmt.Printf("Generating Claude Code hook bundle (preview mode)\n")
 	fmt.Printf("  Preset: %s\n", config.Preset)
-	fmt.Printf("  Locale: %s\n", config.Locale)
 	fmt.Printf("  Output: %s\n", config.OutputPath)
 	fmt.Println()
 
@@ -292,7 +275,7 @@ func printDryRunPreview(config *dto.HookConfig, result *command.InstallResult) {
 	dirManager := filesystem.NewDirectoryManager()
 	deliverer := command.NewDeliverHooksCommand(fileWriter, dirManager, root.TemplatesFS)
 
-	bundle, err := deliverer.Build(config.Locale, config.Preset)
+	bundle, err := deliverer.Build(config.Preset)
 	if err != nil {
 		fmt.Printf("dry-run preview failed: %v\n", err)
 		return
