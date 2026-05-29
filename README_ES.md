@@ -12,7 +12,7 @@
 
 **Genera, audita y evoluciona el contexto de tu agente de IA a lo largo del lifecycle del proyecto.** 🏗️
 
-*Porque un agente sin contexto es un pasante con acceso root — y un contexto desactualizado es un pasante leyendo docs de hace tres semanas.*
+_Porque un agente sin contexto es un pasante con acceso root — y un contexto desactualizado es un pasante leyendo docs de hace tres semanas._
 
 [English](README.md) | **[Español]**
 
@@ -26,9 +26,10 @@
 
 ## 🎯 El Problema
 
-Le dices a tu agente: *"Construye una API de pagos en Go con microservicios"*
+Le dices a tu agente: _"Construye una API de pagos en Go con microservicios"_
 
 Y el agente, con toda su capacidad, improvisa:
+
 - Estructura de carpetas que nadie pidio
 - Patrones que contradicen tu arquitectura
 - Decisiones que vas a revertir en la siguiente sesion
@@ -179,14 +180,14 @@ Dos comandos complementarios definen como Codify se comporta: **`codify config`*
 
 `codify config` gestiona tus preferencias globales en `~/.codify/config.yml`. La primera vez que corres cualquier comando interactivo de Codify en TTY sin que ese archivo exista, se te ofrece lanzar el wizard. Tres respuestas: Yes (correr wizard), No (usar defaults esta vez), Skip permanently (crea `~/.codify/.no-auto-config` para que el prompt no aparezca mas).
 
-| Subcomando | Accion |
-|---|---|
-| `codify config` | Wizard si no existe config; imprime config actual si existe |
-| `codify config get <key>` | Lee un valor |
-| `codify config set <key> <value>` | Actualiza un valor |
-| `codify config unset <key>` | Limpia un valor |
-| `codify config edit` | Abre `~/.codify/config.yml` en `$EDITOR` |
-| `codify config list` | Imprime el config efectivo (con merge aplicado) |
+| Subcomando                        | Accion                                                      |
+| --------------------------------- | ----------------------------------------------------------- |
+| `codify config`                   | Wizard si no existe config; imprime config actual si existe |
+| `codify config get <key>`         | Lee un valor                                                |
+| `codify config set <key> <value>` | Actualiza un valor                                          |
+| `codify config unset <key>`       | Limpia un valor                                             |
+| `codify config edit`              | Abre `~/.codify/config.yml` en `$EDITOR`                    |
+| `codify config list`              | Imprime el config efectivo (con merge aplicado)             |
 
 Keys validos: `preset`, `locale`, `language`, `model`, `target`, `provider`, `project_name`.
 
@@ -194,10 +195,10 @@ Keys validos: `preset`, `locale`, `language`, `model`, `target`, `provider`, `pr
 
 `codify init` pregunta primero: ¿proyecto nuevo o existente? Segun la respuesta enruta al flujo correcto:
 
-| Respuesta | Flujo interno | Que provees |
-|---|---|---|
-| **new** | invoca `generate` | nombre + descripcion (inline o ruta a archivo) |
-| **existing** | invoca `analyze` | nombre (auto-detectado del cwd, override si querés) |
+| Respuesta    | Flujo interno     | Que provees                                         |
+| ------------ | ----------------- | --------------------------------------------------- |
+| **new**      | invoca `generate` | nombre + descripcion (inline o ruta a archivo)      |
+| **existing** | invoca `analyze`  | nombre (auto-detectado del cwd, override si querés) |
 
 Despues, ambas ramas recolectan: preset arquitectonico (override del default global), lenguaje, locale, output dir, modelo. Resultado:
 
@@ -229,13 +230,13 @@ La base. Genera archivos siguiendo el [estandar AGENTS.md](https://github.com/an
 
 #### Cuando usar `generate` vs `analyze`
 
-| Situacion | Usar | Por que |
-|---|---|---|
-| Proyecto greenfield (sin codigo aun) | `codify generate` | Tu provees la descripcion; el LLM genera contexto contra ella |
-| Repo existente con codigo dentro | `codify analyze` | El scanner extrae senales factuales (deps, build targets, CI, frameworks) y los alimenta como ground truth — mucho mas preciso que una descripcion manual |
-| Repo existente + quieres sobreescribir lo que el scanner detecta | `codify analyze` primero, luego editar, luego `codify reset-state` | Scan-first, hand-tune segundo |
-| Tienes un design doc detallado | `codify generate --from-file ./docs/design.md` | Trata el contenido del archivo como la descripcion |
-| En duda | `codify init` | Pregunta "¿nuevo o existente?" y te enruta al flow correcto internamente |
+| Situacion                                                        | Usar                                                               | Por que                                                                                                                                                   |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Proyecto greenfield (sin codigo aun)                             | `codify generate`                                                  | Tu provees la descripcion; el LLM genera contexto contra ella                                                                                             |
+| Repo existente con codigo dentro                                 | `codify analyze`                                                   | El scanner extrae senales factuales (deps, build targets, CI, frameworks) y los alimenta como ground truth — mucho mas preciso que una descripcion manual |
+| Repo existente + quieres sobreescribir lo que el scanner detecta | `codify analyze` primero, luego editar, luego `codify reset-state` | Scan-first, hand-tune segundo                                                                                                                             |
+| Tienes un design doc detallado                                   | `codify generate --from-file ./docs/design.md`                     | Trata el contenido del archivo como la descripcion                                                                                                        |
+| En duda                                                          | `codify init`                                                      | Pregunta "¿nuevo o existente?" y te enruta al flow correcto internamente                                                                                  |
 
 #### Comando `generate` — Contexto desde una descripcion
 
@@ -250,6 +251,7 @@ codify generate payment-service \
 Escanea un codebase existente y genera archivos de contexto a partir de lo que encuentra. Usa un **prompt diferenciado** que trata los datos del scan como ground truth factual, produciendo output mas preciso que una descripcion manual.
 
 **Lo que detecta el scanner:**
+
 - Lenguaje, framework y dependencias (Go, JS/TS, Python, Rust, Java, Ruby)
 - Estructura de directorios (3 niveles de profundidad)
 - Contenido del README (filtrado: badges, comentarios HTML, ToC eliminados)
@@ -265,13 +267,13 @@ codify analyze /path/to/my-project
 
 #### Archivos generados
 
-| Archivo | Que hace |
-|---------|----------|
-| `AGENTS.md` | Root file: tech stack, comandos, convenciones, estructura |
-| `CONTEXT.md` | Arquitectura, componentes, flujo de datos, decisiones |
-| `INTERACTIONS_LOG.md` | Bitacora de sesiones y ADRs |
-| `DEVELOPMENT_GUIDE.md` | Metodologia de trabajo, testing, seguridad, expectativas de entrega |
-| `IDIOMS.md` | Concurrencia, error handling, convenciones del lenguaje *(requiere `--language`)* |
+| Archivo                | Que hace                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `AGENTS.md`            | Root file: tech stack, comandos, convenciones, estructura                         |
+| `CONTEXT.md`           | Arquitectura, componentes, flujo de datos, decisiones                             |
+| `INTERACTIONS_LOG.md`  | Bitacora de sesiones y ADRs                                                       |
+| `DEVELOPMENT_GUIDE.md` | Metodologia de trabajo, testing, seguridad, expectativas de entrega               |
+| `IDIOMS.md`            | Concurrencia, error handling, convenciones del lenguaje _(requiere `--language`)_ |
 
 Coloca estos archivos en la raiz de tu proyecto. Agentes compatibles (Claude Code, Cursor, Codex, etc.) los leen automaticamente.
 
@@ -283,17 +285,17 @@ codify generate [nombre-proyecto] [flags]
 
 Todos los flags son opcionales en una terminal — los menus interactivos preguntan por los valores faltantes.
 
-| Flag | Corto | Descripcion | Default |
-|------|-------|-------------|---------|
-| `--description` | `-d` | Descripcion del proyecto *(requerido sin `--from-file`)* | *(interactivo)* |
-| `--from-file` | `-f` | Leer descripcion desde archivo *(alternativa a `-d`)* | — |
-| `--preset` | `-p` | Preset de templates (`neutral`, `clean-ddd`, `hexagonal`, `event-driven`) | *(interactivo)* |
-| `--model` | `-m` | Modelo LLM (`claude-*` o `gemini-*`) | auto-detectado |
-| `--language` | `-l` | Lenguaje (activa guias idiomaticas) | — |
-| `--locale` | | Idioma de salida (`en`, `es`) | `en` |
-| `--with-specs` | | Tambien genera specs SDD despues del contexto | `false` |
-| `--type` | `-t` | Hint de tipo (api, cli, lib...) | — |
-| `--architecture` | `-a` | Hint de arquitectura | — |
+| Flag             | Corto | Descripcion                                                               | Default         |
+| ---------------- | ----- | ------------------------------------------------------------------------- | --------------- |
+| `--description`  | `-d`  | Descripcion del proyecto _(requerido sin `--from-file`)_                  | _(interactivo)_ |
+| `--from-file`    | `-f`  | Leer descripcion desde archivo _(alternativa a `-d`)_                     | —               |
+| `--preset`       | `-p`  | Preset de templates (`neutral`, `clean-ddd`, `hexagonal`, `event-driven`) | _(interactivo)_ |
+| `--model`        | `-m`  | Modelo LLM (`claude-*` o `gemini-*`)                                      | auto-detectado  |
+| `--language`     | `-l`  | Lenguaje (activa guias idiomaticas)                                       | —               |
+| `--locale`       |       | Idioma de salida (`en`, `es`)                                             | `en`            |
+| `--with-specs`   |       | Tambien genera specs SDD despues del contexto                             | `false`         |
+| `--type`         | `-t`  | Hint de tipo (api, cli, lib...)                                           | —               |
+| `--architecture` | `-a`  | Hint de arquitectura                                                      | —               |
 
 ---
 
@@ -325,25 +327,25 @@ codify generate my-api \
 
 #### Archivos de spec generados
 
-| Archivo | Que hace |
-|---------|----------|
+| Archivo           | Que hace                                           |
+| ----------------- | -------------------------------------------------- |
 | `CONSTITUTION.md` | DNA del proyecto: stack, principios, restricciones |
-| `SPEC.md` | Features con criterios de aceptacion |
-| `PLAN.md` | Diseno tecnico y decisiones de arquitectura |
-| `TASKS.md` | Desglose de tareas con dependencias y prioridad |
+| `SPEC.md`         | Features con criterios de aceptacion               |
+| `PLAN.md`         | Diseno tecnico y decisiones de arquitectura        |
+| `TASKS.md`        | Desglose de tareas con dependencias y prioridad    |
 
 ---
 
 ### 🧩 Agent Skills
 
-Las skills son [Agent Skills](https://agentskills.io) reutilizables (archivos SKILL.md) que le ensenan a tu agente *como* ejecutar tareas especificas — seguir Conventional Commits, aplicar patrones DDD, hacer code reviews, versionar releases. Complementan los archivos de contexto: el contexto le dice al agente *que* es tu proyecto, las skills le dicen *como* hacer las cosas bien.
+Las skills son [Agent Skills](https://agentskills.io) reutilizables (archivos SKILL.md) que le ensenan a tu agente _como_ ejecutar tareas especificas — seguir Conventional Commits, aplicar patrones DDD, hacer code reviews, versionar releases. Complementan los archivos de contexto: el contexto le dice al agente _que_ es tu proyecto, las skills le dicen _como_ hacer las cosas bien.
 
 #### Dos modos
 
-| Modo | Que hace | API key | Costo | Velocidad |
-|------|----------|---------|-------|-----------|
-| **Static** | Entrega skills pre-construidas desde el catalogo embebido. Listas para produccion, con frontmatter por ecosistema. | No necesaria | Gratis | Instantaneo |
-| **Personalized** | El LLM adapta las skills a tu proyecto — los ejemplos usan tu dominio, lenguaje y stack. | Requerida | ~centavos | ~10s |
+| Modo             | Que hace                                                                                                           | API key      | Costo     | Velocidad   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ------------ | --------- | ----------- |
+| **Static**       | Entrega skills pre-construidas desde el catalogo embebido. Listas para produccion, con frontmatter por ecosistema. | No necesaria | Gratis    | Instantaneo |
+| **Personalized** | El LLM adapta las skills a tu proyecto — los ejemplos usan tu dominio, lenguaje y stack.                           | Requerida    | ~centavos | ~10s        |
 
 #### Modo interactivo
 
@@ -382,25 +384,25 @@ codify skills --category architecture --preset neutral --target codex
 
 #### Scopes de instalacion
 
-| Scope | Path (Claude) | Path (Codex) | Uso |
-|-------|---------------|--------------|-----|
-| `global` | `~/.claude/skills/` | `~/.codex/skills/` | Accesible desde cualquier proyecto |
+| Scope     | Path (Claude)       | Path (Codex)        | Uso                                       |
+| --------- | ------------------- | ------------------- | ----------------------------------------- |
+| `global`  | `~/.claude/skills/` | `~/.codex/skills/`  | Accesible desde cualquier proyecto        |
 | `project` | `./.claude/skills/` | `./.agents/skills/` | Committed a git, compartido con el equipo |
 
 #### Catalogo de skills
 
-| Categoria | Preset | Skills |
-|-----------|--------|--------|
-| `architecture` | `neutral` | Code review, test strategy, safe refactoring, API design |
-| `architecture` | `clean-ddd` | DDD entity, Clean Architecture layer, BDD scenario, CQRS command, Hexagonal port |
-| `architecture` | `hexagonal` | Port definition, Adapter pattern, Dependency inversion, Hexagonal integration test |
-| `architecture` | `event-driven` | Command handler, Domain event, Event projection, Saga orchestrator, Event idempotency |
-| `testing` | `foundational` | Test Desiderata — Las 12 propiedades de Kent Beck para buenos tests |
-| `testing` | `tdd` | Test-Driven Development — Red-Green-Refactor *(incluye foundational)* |
-| `testing` | `bdd` | Behavior-Driven Development — Given/When/Then *(incluye foundational)* |
-| `conventions` | `conventional-commit` | Conventional Commits |
-| `conventions` | `semantic-versioning` | Semantic Versioning |
-| `conventions` | `all` | Todas las skills de convenciones combinadas |
+| Categoria      | Preset                | Skills                                                                                |
+| -------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `architecture` | `neutral`             | Code review, test strategy, safe refactoring, API design                              |
+| `architecture` | `clean-ddd`           | DDD entity, Clean Architecture layer, BDD scenario, CQRS command, Hexagonal port      |
+| `architecture` | `hexagonal`           | Port definition, Adapter pattern, Dependency inversion, Hexagonal integration test    |
+| `architecture` | `event-driven`        | Command handler, Domain event, Event projection, Saga orchestrator, Event idempotency |
+| `testing`      | `foundational`        | Test Desiderata — Las 12 propiedades de Kent Beck para buenos tests                   |
+| `testing`      | `tdd`                 | Test-Driven Development — Red-Green-Refactor _(incluye foundational)_                 |
+| `testing`      | `bdd`                 | Behavior-Driven Development — Given/When/Then _(incluye foundational)_                |
+| `conventions`  | `conventional-commit` | Conventional Commits                                                                  |
+| `conventions`  | `semantic-versioning` | Semantic Versioning                                                                   |
+| `conventions`  | `all`                 | Todas las skills de convenciones combinadas                                           |
 
 Los cuatro presets de `architecture` son espejo de los cuatro `--preset` de generacion de contexto, asi que las skills instaladas con `hexagonal` se alinean con AGENTS.md/CONTEXT.md generados con `--preset hexagonal`.
 
@@ -408,11 +410,11 @@ Los cuatro presets de `architecture` son espejo de los cuatro `--preset` de gene
 
 Cada ecosistema recibe frontmatter YAML especifico y rutas de salida:
 
-| Target | Frontmatter | Ruta de salida |
-|--------|-------------|----------------|
-| `claude` *(default)* | `name`, `description`, `user-invocable: true` | `.claude/skills/` |
-| `codex` | `name`, `description` | `.agents/skills/` |
-| `antigravity` | `name`, `description`, `triggers` | `.agents/skills/` |
+| Target               | Frontmatter                                   | Ruta de salida    |
+| -------------------- | --------------------------------------------- | ----------------- |
+| `claude` _(default)_ | `name`, `description`, `user-invocable: true` | `.claude/skills/` |
+| `codex`              | `name`, `description`                         | `.agents/skills/` |
+| `antigravity`        | `name`, `description`, `triggers`             | `.agents/skills/` |
 
 #### Opciones
 
@@ -420,32 +422,33 @@ Cada ecosistema recibe frontmatter YAML especifico y rutas de salida:
 codify skills [flags]
 ```
 
-| Flag | Descripcion | Default |
-|------|-------------|---------|
-| `--category` | Categoria de skill (`architecture`, `testing`, `conventions`) | *(interactivo)* |
-| `--preset` | Preset dentro de la categoria | *(interactivo)* |
-| `--mode` | Modo de generacion: `static` o `personalized` | *(interactivo)* |
-| `--install` | Scope de instalacion: `global` (path del agente) o `project` (dir actual) | *(interactivo)* |
-| `--context` | Descripcion del proyecto para modo personalized | — |
-| `--target` | Ecosistema target (`claude`, `codex`, `antigravity`) | `claude` |
-| `--model` `-m` | Modelo LLM (solo modo personalized) | auto-detectado |
-| `--locale` | Idioma de salida (`en`, `es`) | `en` |
-| `--output` `-o` | Directorio de salida (sobreescribe `--install`) | especifico del ecosistema |
+| Flag            | Descripcion                                                               | Default                   |
+| --------------- | ------------------------------------------------------------------------- | ------------------------- |
+| `--category`    | Categoria de skill (`architecture`, `testing`, `conventions`)             | _(interactivo)_           |
+| `--preset`      | Preset dentro de la categoria                                             | _(interactivo)_           |
+| `--mode`        | Modo de generacion: `static` o `personalized`                             | _(interactivo)_           |
+| `--install`     | Scope de instalacion: `global` (path del agente) o `project` (dir actual) | _(interactivo)_           |
+| `--context`     | Descripcion del proyecto para modo personalized                           | —                         |
+| `--target`      | Ecosistema target (`claude`, `codex`, `antigravity`)                      | `claude`                  |
+| `--model` `-m`  | Modelo LLM (solo modo personalized)                                       | auto-detectado            |
+| `--locale`      | Idioma de salida (`en`, `es`)                                             | `en`                      |
+| `--output` `-o` | Directorio de salida (sobreescribe `--install`)                           | especifico del ecosistema |
 
 ---
 
 ### 🔄 Workflows
 
-Los workflows son recetas de orquestacion multi-paso que los agentes de IA ejecutan bajo demanda. A diferencia de las skills (que ensenan *como* hacer una tarea especifica), los workflows orquestan *secuencias de tareas* — desde la creacion del branch hasta el merge del PR, desde el reporte del bug hasta el deploy del fix.
+Los workflows son recetas de orquestacion multi-paso que los agentes de IA ejecutan bajo demanda. A diferencia de las skills (que ensenan _como_ hacer una tarea especifica), los workflows orquestan _secuencias de tareas_ — desde la creacion del branch hasta el merge del PR, desde el reporte del bug hasta el deploy del fix.
 
 Codify genera workflows para dos ecosistemas:
 
-| Target | Formato de salida | Ruta de salida | Invocacion |
-|--------|-------------------|----------------|------------|
-| **Claude Code** | Native skill (SKILL.md con frontmatter) | `.claude/skills/{workflow}/SKILL.md` | `/{skill-name}` |
-| **Antigravity** | `.md` nativo con anotaciones de ejecucion (`// turbo`, `// capture`, etc.) | `.agent/workflows/{workflow}.md` | `/workflow-name` |
+| Target          | Formato de salida                                                          | Ruta de salida                       | Invocacion       |
+| --------------- | -------------------------------------------------------------------------- | ------------------------------------ | ---------------- |
+| **Claude Code** | Native skill (SKILL.md con frontmatter)                                    | `.claude/skills/{workflow}/SKILL.md` | `/{skill-name}`  |
+| **Antigravity** | `.md` nativo con anotaciones de ejecucion (`// turbo`, `// capture`, etc.) | `.agent/workflows/{workflow}.md`     | `/workflow-name` |
 
 Cada skill de Claude incluye frontmatter YAML:
+
 - `name` — Nombre del workflow
 - `description` — Descripcion breve
 - `disable-model-invocation: true` — Solo invocacion explicita del usuario
@@ -453,10 +456,10 @@ Cada skill de Claude incluye frontmatter YAML:
 
 #### Dos modos
 
-| Modo | Que hace | API key | Costo | Velocidad |
-|------|----------|---------|-------|-----------|
-| **Static** | Entrega workflows pre-construidos del catalogo embebido. Frontmatter por ecosistema. | No necesaria | Gratis | Instantaneo |
-| **Personalized** | LLM adapta workflows a tu proyecto — los pasos referencian tus herramientas, CI/CD y targets de despliegue. | Requerida | ~centavos | ~10s |
+| Modo             | Que hace                                                                                                    | API key      | Costo     | Velocidad   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- | ------------ | --------- | ----------- |
+| **Static**       | Entrega workflows pre-construidos del catalogo embebido. Frontmatter por ecosistema.                        | No necesaria | Gratis    | Instantaneo |
+| **Personalized** | LLM adapta workflows a tu proyecto — los pasos referencian tus herramientas, CI/CD y targets de despliegue. | Requerida    | ~centavos | ~10s        |
 
 #### Modo interactivo
 
@@ -495,38 +498,40 @@ codify workflows --preset all --target claude --mode personalized \
 
 #### Ecosistemas target
 
-| Target | Salida | Estructura | Diferencia clave |
-|--------|--------|------------|------------------|
-| `claude` | Native skill | `{workflow}/SKILL.md` con frontmatter YAML | Anotaciones eliminadas, instrucciones en prosa |
-| `antigravity` *(default)* | Archivo `.md` plano | `{workflow}.md` con frontmatter YAML | Anotaciones nativas: `// turbo`, `// capture`, `// if`, `// parallel` |
+| Target                    | Salida              | Estructura                                 | Diferencia clave                                                      |
+| ------------------------- | ------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| `claude`                  | Native skill        | `{workflow}/SKILL.md` con frontmatter YAML | Anotaciones eliminadas, instrucciones en prosa                        |
+| `antigravity` _(default)_ | Archivo `.md` plano | `{workflow}.md` con frontmatter YAML       | Anotaciones nativas: `// turbo`, `// capture`, `// if`, `// parallel` |
 
 #### Scopes de instalacion
 
-| Scope | Path Claude | Path Antigravity |
-|-------|-------------|------------------|
-| `global` | `~/.claude/skills/` | `~/.gemini/antigravity/global_workflows/` |
-| `project` | `.claude/skills/` | `.agent/workflows/` |
+| Scope     | Path Claude         | Path Antigravity                          |
+| --------- | ------------------- | ----------------------------------------- |
+| `global`  | `~/.claude/skills/` | `~/.gemini/antigravity/global_workflows/` |
+| `project` | `.claude/skills/`   | `.agent/workflows/`                       |
 
 #### Catalogo de workflows
 
-| Preset | Workflow | Descripcion |
-|--------|----------|-------------|
-| `spec-driven-change` | Cambio Spec-driven | Proponer → aplicar → archivar — ciclo SDD completo con deltas formales, branch creation y cleanup de merge |
-| `bug-fix` | Bug Fix | Reproducir → diagnosticar → corregir → testear → PR |
-| `release-cycle` | Release Cycle | Bump de version → changelog → tag → deploy |
-| `all` | Todos los workflows | Todos los presets de workflow combinados |
+| Preset               | Workflow            | Descripcion                                                                                                |
+| -------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `spec-driven-change` | Cambio Spec-driven  | Proponer → aplicar → archivar — ciclo SDD completo con deltas formales, branch creation y cleanup de merge |
+| `bug-fix`            | Bug Fix             | Reproducir → diagnosticar → corregir → testear → PR                                                        |
+| `release-cycle`      | Release Cycle       | Bump de version → changelog → tag → deploy                                                                 |
+| `all`                | Todos los workflows | Todos los presets de workflow combinados                                                                   |
 
 #### Spec-driven Change: la filosofia
 
 `spec-driven-change` es el workflow recomendado para agregar features y hacer cambios no triviales. Implementa **Spec-Driven Development (SDD)**: una metodologia donde los artefactos formales de planeacion preceden al codigo, y donde cada cambio al sistema es una evolucion trackeable y revisable de las specifications — no solo un diff de codigo.
 
 **El problema con desarrollo IA basado en chat:**
+
 - Los planes desaparecen cuando termina la sesion de chat
-- Los code reviews ven *que* cambio pero no *por que* cambio
+- Los code reviews ven _que_ cambio pero no _por que_ cambio
 - Los agentes IA pierden contexto entre sesiones y re-litigan decisiones
 - Los specs (cuando existen) se desincronizan del codigo
 
 **La respuesta SDD:**
+
 - **Los specs viven en el repositorio**, organizados por capability bajo `openspec/specs/<capability>/spec.md`
 - **Cada cambio es un workspace auto-contenido** bajo `openspec/changes/<change-id>/`
 - **Los deltas (ADDED / MODIFIED / REMOVED requirements)** describen como evolucionan los specs, no solo el estado final
@@ -548,11 +553,11 @@ Cada fase es un modo cognitivo separado con un hand-off claro:
    Intencion          Implementacion         Verdad
 ```
 
-| Fase | Que produce | Modo cognitivo |
-|------|-------------|----------------|
-| **Propose** | `proposal.md` (motivacion), `design.md` (decisiones tecnicas), `tasks.md` (checklist atomico), `specs/<capability>/spec.md` (deltas con ADDED/MODIFIED/REMOVED) — ademas un branch de feature con la propuesta committeada | "Que debe cambiar y por que" — sin codigo todavia |
-| **Apply** | Ejecucion secuencial de tareas, commits atomicos por tarea, tests, self-review, pull request | "Como hacerlo realidad" — enfocado en implementacion, deltas ya aprobados |
-| **Archive** | Deltas mergeados a `openspec/specs/<capability>/spec.md`, cambio movido a `openspec/changes/archive/YYYY-MM-DD-<id>/`, branch mergeado y eliminado | "Hacer durable la verdad" — cerrar el ciclo |
+| Fase        | Que produce                                                                                                                                                                                                                | Modo cognitivo                                                            |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Propose** | `proposal.md` (motivacion), `design.md` (decisiones tecnicas), `tasks.md` (checklist atomico), `specs/<capability>/spec.md` (deltas con ADDED/MODIFIED/REMOVED) — ademas un branch de feature con la propuesta committeada | "Que debe cambiar y por que" — sin codigo todavia                         |
+| **Apply**   | Ejecucion secuencial de tareas, commits atomicos por tarea, tests, self-review, pull request                                                                                                                               | "Como hacerlo realidad" — enfocado en implementacion, deltas ya aprobados |
+| **Archive** | Deltas mergeados a `openspec/specs/<capability>/spec.md`, cambio movido a `openspec/changes/archive/YYYY-MM-DD-<id>/`, branch mergeado y eliminado                                                                         | "Hacer durable la verdad" — cerrar el ciclo                               |
 
 #### Ejemplo concreto
 
@@ -625,6 +630,7 @@ Este patron (el [retrofitting mode de OpenSpec](https://openspec.dev/)) produce 
 La estructura de salida (`openspec/specs/`, `openspec/changes/`, formato delta con ADDED/MODIFIED/REMOVED, scenarios GIVEN/WHEN/THEN) sigue la convencion de [OpenSpec](https://openspec.dev/). Los skills generados por Codify estan disenados para operar sin friccion sobre workspaces OpenSpec.
 
 **Valor que agrega Codify sobre instalar OpenSpec directo:**
+
 - **Personalizacion via LLM**: `--mode personalized --context "..."` adapta los skills a tu stack, herramientas y convenciones
 - **Multi-target**: misma metodologia SDD entregada para Claude Code o Antigravity
 - **Soporte de locale**: skills en ingles y espanol out of the box
@@ -632,12 +638,12 @@ La estructura de salida (`openspec/specs/`, `openspec/changes/`, formato delta c
 
 #### Skills vs Workflows
 
-| | Skills | Workflows |
-|-|--------|-----------|
-| **Proposito** | Ensenan *como* hacer una tarea especifica | Orquestan una *secuencia* de tareas |
-| **Alcance** | Responsabilidad unica (ej. "escribir un commit") | Proceso end-to-end (ej. "evolucionar un spec desde propuesta hasta cambio mergeado") |
-| **Invocacion** | El agente lee cuando es relevante | El usuario invoca via `/command` |
-| **Ejemplos** | Conventional Commits, DDD entity, code review | Ciclo de cambio spec-driven, bug fix, release cycle |
+|                | Skills                                           | Workflows                                                                            |
+| -------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| **Proposito**  | Ensenan _como_ hacer una tarea especifica        | Orquestan una _secuencia_ de tareas                                                  |
+| **Alcance**    | Responsabilidad unica (ej. "escribir un commit") | Proceso end-to-end (ej. "evolucionar un spec desde propuesta hasta cambio mergeado") |
+| **Invocacion** | El agente lee cuando es relevante                | El usuario invoca via `/command`                                                     |
+| **Ejemplos**   | Conventional Commits, DDD entity, code review    | Ciclo de cambio spec-driven, bug fix, release cycle                                  |
 
 #### Opciones
 
@@ -645,15 +651,15 @@ La estructura de salida (`openspec/specs/`, `openspec/changes/`, formato delta c
 codify workflows [flags]
 ```
 
-| Flag | Descripcion | Default |
-|------|-------------|---------|
-| `--preset` `-p` | Preset de workflow | *(interactivo)* |
-| `--target` | Ecosistema target: `claude` o `antigravity` | `antigravity` |
-| `--mode` | Modo de generacion: `static` o `personalized` | *(interactivo)* |
-| `--install` | Scope de instalacion: `global` o `project` | *(interactivo)* |
-| `--context` | Descripcion del proyecto para modo personalized | — |
-| `--model` `-m` | Modelo LLM (solo modo personalized) | auto-detectado |
-| `--locale` | Idioma de salida (`en`, `es`) | `en` |
+| Flag            | Descripcion                                     | Default               |
+| --------------- | ----------------------------------------------- | --------------------- |
+| `--preset` `-p` | Preset de workflow                              | _(interactivo)_       |
+| `--target`      | Ecosistema target: `claude` o `antigravity`     | `antigravity`         |
+| `--mode`        | Modo de generacion: `static` o `personalized`   | _(interactivo)_       |
+| `--install`     | Scope de instalacion: `global` o `project`      | _(interactivo)_       |
+| `--context`     | Descripcion del proyecto para modo personalized | —                     |
+| `--model` `-m`  | Modelo LLM (solo modo personalized)             | auto-detectado        |
+| `--locale`      | Idioma de salida (`en`, `es`)                   | `en`                  |
 | `--output` `-o` | Directorio de salida (sobreescribe `--install`) | especifico del target |
 
 ---
@@ -664,29 +670,29 @@ Los hooks son **guardrails deterministicos** para Claude Code. Donde los skills 
 
 Las tres capas de artefactos se complementan:
 
-| Capa | Mecanismo | Cuando corre? | Determinismo |
-|---|---|---|---|
-| **Skills** | Prompt cargado en contexto | Cuando agente o usuario lo invoca | Depende del LLM |
-| **Workflows** | Lifecycle multi-skill | Usuario lo invoca via slash command | Depende del LLM |
-| **Hooks** | Scripts shell en eventos | Cada llamada a tool que coincida | 100% (exit codes) |
+| Capa          | Mecanismo                  | Cuando corre?                       | Determinismo      |
+| ------------- | -------------------------- | ----------------------------------- | ----------------- |
+| **Skills**    | Prompt cargado en contexto | Cuando agente o usuario lo invoca   | Depende del LLM   |
+| **Workflows** | Lifecycle multi-skill      | Usuario lo invoca via slash command | Depende del LLM   |
+| **Hooks**     | Scripts shell en eventos   | Cada llamada a tool que coincida    | 100% (exit codes) |
 
 #### Catalogo de presets
 
-| Preset | Evento | Proposito |
-|---|---|---|
-| `linting` | `PostToolUse` (Edit\|Write) | Auto-formatea y lintea archivos usando la herramienta correcta por lenguaje (Prettier/ESLint, ruff/black, gofmt/gofumpt, rustfmt, rubocop, shfmt). Detecta tools instalados via `command -v` — silencioso si falta uno. |
-| `security-guardrails` | `PreToolUse` (Bash, Edit\|Write) | Bloquea comandos Bash peligrosos (`rm -rf /`, `git push --force` a main, `curl \| bash`, fork bombs, formateo de fs) y protege archivos sensibles (`.env*`, `secrets/`, `.git/`, lockfiles, claves privadas, configs CI). |
-| `convention-enforcement` | `PreToolUse` (Bash con `if`) | Valida mensajes de commit contra Conventional Commits 1.0.0 (titulo ≤72 chars, tipo valido, sin placeholders triviales) y bloquea push directo/force-push a branches protegidos (`main`, `master`, `develop`, `production`, `release/*`). Requiere Claude Code v2.1.85+. |
-| `all` | (combinado) | Los tres presets mergeados en un solo `hooks.json` |
+| Preset                   | Evento                           | Proposito                                                                                                                                                                                                                                                                |
+| ------------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `linting`                | `PostToolUse` (Edit\|Write)      | Auto-formatea y lintea archivos usando la herramienta correcta por lenguaje (Prettier/ESLint, ruff/black, gofmt/gofumpt, rustfmt, rubocop, shfmt). Detecta tools instalados via `command -v` — silencioso si falta uno.                                                  |
+| `security-guardrails`    | `PreToolUse` (Bash, Edit\|Write) | Bloquea comandos Bash peligrosos (`rm -rf /`, `git push --force` a main, `curl \| bash`, fork bombs, formateo de fs) y protege archivos sensibles (`.env*`, `secrets/`, `.git/`, lockfiles, claves privadas, configs CI).                                                |
+| `convention-enforcement` | `PreToolUse` (Bash con `if`)     | Valida mensajes de commit contra Conventional Commits 1.0.0 (titulo ≤72 chars, tipo valido, sin placeholders triviales) y bloquea push directo/force-push a branches protegidos (`main`, `master`, `develop`, `production`, `release/*`). Requiere Claude Code v2.1.85+. |
+| `all`                    | (combinado)                      | Los tres presets mergeados en un solo `hooks.json`                                                                                                                                                                                                                       |
 
 #### Modos de activacion
 
-| Flag | Comportamiento |
-|---|---|
+| Flag                                      | Comportamiento                                                                                                                                                         |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--install project` (default interactivo) | Mergea en `.claude/settings.json` y copia scripts a `.claude/hooks/`. Crea backup antes de modificar. Idempotente: ejecutarlo dos veces no agrega handlers duplicados. |
-| `--install global` | Igual que project pero en `~/.claude/settings.json` y `~/.claude/hooks/` (todos los proyectos) |
-| `--output PATH` | **Modo preview** — escribe `{PATH}/hooks.json` + `{PATH}/hooks/*.sh` standalone para inspeccion o merge manual. NO toca `settings.json` |
-| `--dry-run` | Imprime el `settings.json` resultante del merge propuesto, sale 0, no escribe nada |
+| `--install global`                        | Igual que project pero en `~/.claude/settings.json` y `~/.claude/hooks/` (todos los proyectos)                                                                         |
+| `--output PATH`                           | **Modo preview** — escribe `{PATH}/hooks.json` + `{PATH}/hooks/*.sh` standalone para inspeccion o merge manual. NO toca `settings.json`                                |
+| `--dry-run`                               | Imprime el `settings.json` resultante del merge propuesto, sale 0, no escribe nada                                                                                     |
 
 #### Estructura de salida
 
@@ -707,7 +713,6 @@ Las tres capas de artefactos se complementan:
 ```bash
 codify hooks
 # → Selecciona preset (linting, security-guardrails, convention-enforcement, all)
-# → Selecciona locale (en, es)
 # → Selecciona modo de activacion (project / global / preview)
 ```
 
@@ -725,10 +730,9 @@ codify hooks --preset linting --output ./tmp/preview
 
 # Ver el merge propuesto sin escribir nada
 codify hooks --preset all --install project --dry-run
-
-# Mensajes stderr en espanol
-codify hooks --preset linting --install project --locale es
 ```
+
+> Los hooks son inglés-only por diseño (scripts shell deterministas, sin personalización por LLM), así que `codify hooks` no tiene flag `--locale`.
 
 #### Verificar activacion
 
@@ -760,13 +764,12 @@ Los scripts bash usan patrones regex, no AST parsing. Detienen comandos **descui
 codify hooks [flags]
 ```
 
-| Flag | Descripcion | Default |
-|---|---|---|
-| `--preset` `-p` | `linting`, `security-guardrails`, `convention-enforcement`, o `all` | *(interactivo)* |
-| `--locale` | Idioma de salida para stderr (`en` o `es`) | `en` |
-| `--install` | Scope de instalacion: `global` o `project` (auto-activa) | *(interactivo — default `project`)* |
-| `--output` `-o` | Directorio preview: escribe bundle standalone, no toca settings | — |
-| `--dry-run` | Imprime el merge propuesto sin escribir nada | `false` |
+| Flag            | Descripcion                                                         | Default                             |
+| --------------- | ------------------------------------------------------------------- | ----------------------------------- |
+| `--preset` `-p` | `linting`, `security-guardrails`, `convention-enforcement`, o `all` | _(interactivo)_                     |
+| `--install`     | Scope de instalacion: `global` o `project` (auto-activa)            | _(interactivo — default `project`)_ |
+| `--output` `-o` | Directorio preview: escribe bundle standalone, no toca settings     | —                                   |
+| `--dry-run`     | Imprime el merge propuesto sin escribir nada                        | `false`                             |
 
 ---
 
@@ -791,14 +794,14 @@ codify check -o ./output/my-project   # si los artefactos viven fuera del cwd
 
 **Qué detecta:**
 
-| Tipo de drift | Severidad | Que significa |
-|---|---|---|
-| `artifact_modified` | significant | Un archivo generado (e.g. AGENTS.md) fue editado despues de generacion |
-| `artifact_missing` | significant | Un archivo presente en el snapshot ya no esta en disco |
-| `signal_changed` | significant | Un input signal (`go.mod`, `Makefile`, `README.md`, etc.) cambio — tu contexto puede haber quedado desfasado |
-| `signal_removed` | significant | Un signal trackeado ya no esta en disco |
-| `artifact_new` | minor | Un nuevo artefacto aparecio desde el snapshot |
-| `signal_added` | minor | Un nuevo signal aparecio (informativo) |
+| Tipo de drift       | Severidad   | Que significa                                                                                                |
+| ------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
+| `artifact_modified` | significant | Un archivo generado (e.g. AGENTS.md) fue editado despues de generacion                                       |
+| `artifact_missing`  | significant | Un archivo presente en el snapshot ya no esta en disco                                                       |
+| `signal_changed`    | significant | Un input signal (`go.mod`, `Makefile`, `README.md`, etc.) cambio — tu contexto puede haber quedado desfasado |
+| `signal_removed`    | significant | Un signal trackeado ya no esta en disco                                                                      |
+| `artifact_new`      | minor       | Un nuevo artefacto aparecio desde el snapshot                                                                |
+| `signal_added`      | minor       | Un nuevo signal aparecio (informativo)                                                                       |
 
 **Exit codes:**
 
@@ -958,6 +961,7 @@ Para cada archivo con markers, Codify hace una llamada LLM de enrichment para tr
 ```
 
 Parser de input:
+
 - **entero 1-N** → elige la sugerencia
 - **texto libre** → usa como respuesta
 - **Enter** → usa default si existe, si no skip
@@ -969,12 +973,12 @@ Cuando el enrichment falla (sin API key, error del provider, respuesta malformad
 
 Por default, skipear un marker lo reemplaza con un comentario TODO con fecha en la sintaxis nativa del archivo — la gap queda visible en panels de TODO del IDE y en grep:
 
-| Extension | Reemplazo |
-|---|---|
-| `.md`, `.html`, `.htm`, `.xml` | `<!-- TODO 2026-05-06: ISO 4217 code -->` |
-| `.go`, `.js`, `.ts`, `.java`, `.rs`, `.c`, `.cpp`, `.swift`, `.cs`, ... | `// TODO 2026-05-06: ISO 4217 code` |
-| `.py`, `.rb`, `.sh`, `.yml`, `.yaml`, `.toml`, `.ini`, ... | `# TODO 2026-05-06: ISO 4217 code` |
-| Otra / desconocida | Marker preservado verbatim (default safe) |
+| Extension                                                               | Reemplazo                                 |
+| ----------------------------------------------------------------------- | ----------------------------------------- |
+| `.md`, `.html`, `.htm`, `.xml`                                          | `<!-- TODO 2026-05-06: ISO 4217 code -->` |
+| `.go`, `.js`, `.ts`, `.java`, `.rs`, `.c`, `.cpp`, `.swift`, `.cs`, ... | `// TODO 2026-05-06: ISO 4217 code`       |
+| `.py`, `.rb`, `.sh`, `.yml`, `.yaml`, `.toml`, `.ini`, ...              | `# TODO 2026-05-06: ISO 4217 code`        |
+| Otra / desconocida                                                      | Marker preservado verbatim (default safe) |
 
 Pasa `--skip-mode=verbatim` para mantener markers `[DEFINE: ...]` crudos en el archivo.
 
@@ -1007,7 +1011,7 @@ Dos capas protegen contra el LLM haciendo mas de lo que se le pidio:
    - `Lost` — el usuario skipeo este marker pero el LLM lo borro igual
    - `NotApplied` — el usuario respondio pero el marker sigue en el archivo
    - `Spurious` — markers que no existian en el input pero aparecen en el output
-   
+
    Cualquiera de esos dispara un fallback transparente a substitucion literal deterministica, preservando todas las respuestas del usuario. Va una WARNING a stderr explicando el downgrade.
 
 #### Flags
@@ -1016,16 +1020,16 @@ Dos capas protegen contra el LLM haciendo mas de lo que se le pidio:
 codify resolve [files...] [flags]
 ```
 
-| Flag | Descripcion | Default |
-|------|-------------|---------|
-| `--all`, `-a` | Walk del cwd recursivo por archivos con markers `[DEFINE]` | `false` |
-| `--since` | Solo resuelve archivos cambiados en git desde este ref (e.g. `HEAD~5`) | — |
-| `--no-enrich` | Salta el step LLM de question/suggestions (mas barato, menos amigable) | `false` |
-| `--no-preview` | Salta el diff preview antes de escribir archivos | `false` |
-| `--skip-mode` | `todo` (default, comentario TODO en sintaxis del archivo) o `verbatim` | `todo` |
-| `--dry-run` | Walk de markers y reporta que cambiaria sin escribir archivos | `false` |
-| `--locale` | Locale de output para los prompts de rewrite/enrichment del LLM | `en` |
-| `--model`, `-m` | Modelo LLM | auto-detect |
+| Flag            | Descripcion                                                            | Default     |
+| --------------- | ---------------------------------------------------------------------- | ----------- |
+| `--all`, `-a`   | Walk del cwd recursivo por archivos con markers `[DEFINE]`             | `false`     |
+| `--since`       | Solo resuelve archivos cambiados en git desde este ref (e.g. `HEAD~5`) | —           |
+| `--no-enrich`   | Salta el step LLM de question/suggestions (mas barato, menos amigable) | `false`     |
+| `--no-preview`  | Salta el diff preview antes de escribir archivos                       | `false`     |
+| `--skip-mode`   | `todo` (default, comentario TODO en sintaxis del archivo) o `verbatim` | `todo`      |
+| `--dry-run`     | Walk de markers y reporta que cambiaria sin escribir archivos          | `false`     |
+| `--locale`      | Locale de output para los prompts de rewrite/enrichment del LLM        | `en`        |
+| `--model`, `-m` | Modelo LLM                                                             | auto-detect |
 
 #### Notas de costo
 
@@ -1046,6 +1050,7 @@ codify watch --auto-update --strict  # mantiene artefactos sincronizados agresiv
 ```
 
 **Comportamiento:**
+
 - Carga `.codify/state.json` una vez al startup; exit 2 si falta
 - Se suscribe via `fsnotify` a los dirs padres de los paths registrados (sin walk recursivo)
 - Debouncea eventos (default 2s) — cinco saves rapidos disparan UN check, no cinco
@@ -1089,6 +1094,7 @@ nohup codify watch > codify-watch.log 2>&1 &
 Para usuarios cuyo modelo mental es "validar al hacer commit" en vez de "validar mientras edito", `codify check` es la herramienta correcta — es un one-shot deterministico disenado para CI y git hooks. Integrar via tu hook manager preferido:
 
 **lefthook (`lefthook.yml`):**
+
 ```yaml
 pre-commit:
   commands:
@@ -1097,6 +1103,7 @@ pre-commit:
 ```
 
 **pre-commit (`.pre-commit-config.yaml`):**
+
 ```yaml
 repos:
   - repo: local
@@ -1109,6 +1116,7 @@ repos:
 ```
 
 **watchexec (alternativa foreground sobre la misma base de FS-events):**
+
 ```bash
 watchexec -w go.mod -w Makefile -w README.md -- codify check
 ```
@@ -1177,24 +1185,24 @@ Agrega a `~/.gemini/settings.json`:
 
 #### Herramientas generativas (requieren API key de LLM)
 
-| Herramienta | Descripcion |
-|-------------|-------------|
-| `generate_context` | Genera archivos de contexto a partir de una descripcion |
-| `generate_specs` | Genera specs SDD a partir de contexto existente |
-| `analyze_project` | Escanea un proyecto existente y genera contexto desde su estructura |
-| `generate_skills` | Genera Agent Skills — soporta modos `static` (instantaneo) y `personalized` (adaptado via LLM) |
-| `generate_workflows` | Genera workflows para Claude Code (native skills) o Antigravity (.md nativo) — soporta modos `static` y `personalized` |
-| `generate_hooks` | Genera bundles de hooks para Claude Code (guardrails deterministicos). Static-only, Claude-only. Produce `hooks.json` + scripts `.sh` para merge manual al `settings.json` |
+| Herramienta          | Descripcion                                                                                                                                                                |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate_context`   | Genera archivos de contexto a partir de una descripcion                                                                                                                    |
+| `generate_specs`     | Genera specs SDD a partir de contexto existente                                                                                                                            |
+| `analyze_project`    | Escanea un proyecto existente y genera contexto desde su estructura                                                                                                        |
+| `generate_skills`    | Genera Agent Skills — soporta modos `static` (instantaneo) y `personalized` (adaptado via LLM)                                                                             |
+| `generate_workflows` | Genera workflows para Claude Code (native skills) o Antigravity (.md nativo) — soporta modos `static` y `personalized`                                                     |
+| `generate_hooks`     | Genera bundles de hooks para Claude Code (guardrails deterministicos). Static-only, Claude-only. Produce `hooks.json` + scripts `.sh` para merge manual al `settings.json` |
 
-Todas las herramientas generativas soportan `locale` (`en`/`es`) y `model`. `generate_context` y `analyze_project` tambien aceptan `with_specs`. `generate_skills` acepta `mode`, `category`, `preset`, `target` y `project_context`. `generate_workflows` acepta `mode`, `preset`, `target` (`claude`/`antigravity`) y `project_context`. `generate_hooks` acepta `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`), `locale` y `output` — sin model ni context (static-only).
+Todas las herramientas generativas soportan `locale` (`en`/`es`) y `model`. `generate_context` y `analyze_project` tambien aceptan `with_specs`. `generate_skills` acepta `mode`, `category`, `preset`, `target` y `project_context`. `generate_workflows` acepta `mode`, `preset`, `target` (`claude`/`antigravity`) y `project_context`. `generate_hooks` acepta `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) y `output` — sin model, context ni locale (los hooks son inglés-only, static-only).
 
 #### Herramientas read-only (sin API key)
 
-| Herramienta | Descripcion |
-|-------------|-------------|
-| `commit_guidance` | Spec de Conventional Commits y contexto comportamental para generar mensajes de commit |
-| `version_guidance` | Spec de Semantic Versioning y contexto comportamental para determinar bumps de version |
-| `get_usage` | Lee tracking de costos LLM desde `.codify/usage.json` (proyecto) o `~/.codify/usage.json` (global). Pure file read, sin LLM call. Parametros: `scope` (`project`/`global`), `since` (e.g. `7d`/`24h`), `by` (`command`/`model`/`provider`) |
+| Herramienta        | Descripcion                                                                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `commit_guidance`  | Spec de Conventional Commits y contexto comportamental para generar mensajes de commit                                                                                                                                                     |
+| `version_guidance` | Spec de Semantic Versioning y contexto comportamental para determinar bumps de version                                                                                                                                                     |
+| `get_usage`        | Lee tracking de costos LLM desde `.codify/usage.json` (proyecto) o `~/.codify/usage.json` (global). Pure file read, sin LLM call. Parametros: `scope` (`project`/`global`), `since` (e.g. `7d`/`24h`), `by` (`command`/`model`/`provider`) |
 
 Las herramientas de conocimiento inyectan contexto comportamental en el agente que las invoca — el agente recibe la spec e instrucciones, y las aplica a la tarea actual. Soportan `locale` (`en`/`es`).
 
@@ -1235,11 +1243,11 @@ Las herramientas de conocimiento inyectan contexto comportamental en el agente q
 
 Cuando pasas `--language`, la herramienta genera un archivo adicional `IDIOMS.md` con patrones y convenciones especificas de ese lenguaje. Este es uno de los features de mayor impacto — le da a tu agente conocimiento profundo de patrones idiomaticos en lugar de consejos genericos.
 
-| Lenguaje | Que cubre IDIOMS.md |
-|----------|---------------------|
-| `go` | Goroutines, channels, WaitGroups, `context.Context`, error wrapping con `%w`, table-driven tests |
-| `javascript` | async/await, `Promise.all`, `AbortController`, worker threads, TypeScript, ESM, patrones Jest |
-| `python` | asyncio, multiprocessing, type hints, pydantic, fixtures pytest, `ruff` |
+| Lenguaje     | Que cubre IDIOMS.md                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| `go`         | Goroutines, channels, WaitGroups, `context.Context`, error wrapping con `%w`, table-driven tests |
+| `javascript` | async/await, `Promise.all`, `AbortController`, worker threads, TypeScript, ESM, patrones Jest    |
+| `python`     | asyncio, multiprocessing, type hints, pydantic, fixtures pytest, `ruff`                          |
 
 ```bash
 # Proyecto Go con guias idiomaticas
@@ -1258,12 +1266,12 @@ Sin `--language`, la herramienta genera 4 archivos. Con el flag, obtienes 5 — 
 
 Elige la filosofia arquitectonica para tu contexto. Codify trae **4 presets**:
 
-| Preset | Foco | Cuando usar |
-|---|---|---|
-| `neutral` *(default)* | Sin opinion arquitectonica — la estructura se adapta al proyecto | Greenfield exploratorio, scripts, herramientas, donde querés minima opinion baked in |
-| `clean-ddd` | DDD + Clean Architecture + BDD + Domain layered | Sistemas de negocio long-lived, logica rica de dominio, equipos comodos con layered architecture |
-| `hexagonal` | Ports & Adapters — mas liviano que clean-ddd | Apps con preocupaciones fuertes de integracion externa, infra swappable, mas simple que DDD completo |
-| `event-driven` | CQRS + Event Sourcing + Sagas | Sistemas async, coordinacion multi-servicio, dominios event-first, audit trails |
+| Preset                | Foco                                                             | Cuando usar                                                                                          |
+| --------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `neutral` _(default)_ | Sin opinion arquitectonica — la estructura se adapta al proyecto | Greenfield exploratorio, scripts, herramientas, donde querés minima opinion baked in                 |
+| `clean-ddd`           | DDD + Clean Architecture + BDD + Domain layered                  | Sistemas de negocio long-lived, logica rica de dominio, equipos comodos con layered architecture     |
+| `hexagonal`           | Ports & Adapters — mas liviano que clean-ddd                     | Apps con preocupaciones fuertes de integracion externa, infra swappable, mas simple que DDD completo |
+| `event-driven`        | CQRS + Event Sourcing + Sagas                                    | Sistemas async, coordinacion multi-servicio, dominios event-first, audit trails                      |
 
 ```bash
 # Default — sin opinion arquitectonica
@@ -1297,11 +1305,11 @@ Codify v2.0 tiene **un solo cambio breaking**. Todo lo demas (multi-target Claud
 
 ### Que cambio
 
-| v1.x | v2.0 |
-|---|---|
+| v1.x                                                                        | v2.0                                                               |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `--preset default` (alias deprecado que resolvia a `clean-ddd` con warning) | **Removido** — devuelve error claro con instrucciones de migracion |
-| Valor default del flag `--preset`: `clean-ddd` | **`neutral`** (sin opinion arquitectonica baked in) |
-| `default` aceptado en `~/.codify/config.yml` | Mismo error al cargar el config |
+| Valor default del flag `--preset`: `clean-ddd`                              | **`neutral`** (sin opinion arquitectonica baked in)                |
+| `default` aceptado en `~/.codify/config.yml`                                | Mismo error al cargar el config                                    |
 
 El cambio de default refleja una decision documentada en [ADR-001](docs/adr/0001-default-preset-transition.md): el "default" de Codify era DDD/Clean — opinado. v2.0 hace que el default sea arquitectonicamente neutro, asi el agente parte de una base limpia salvo que elijas explicitamente una postura.
 
@@ -1442,6 +1450,7 @@ go test ./tests/...
 Snapshot completo de la superficie. Lo que aparece aqui esta shippeado, testeado y se comporta como esta documentado arriba.
 
 **Capa Context**
+
 - ✅ `generate` — contexto desde una descripcion (4 archivos, +1 con `--language`)
 - ✅ `analyze` — contexto desde un repo existente via project scanner (18+ patrones de archivos de contexto, parseo de build targets, deteccion CI/CD, frameworks + dependencias en 8 lenguajes)
 - ✅ `spec` + flag `--with-specs` — specs SDD (CONSTITUTION, SPEC, PLAN, TASKS)
@@ -1449,15 +1458,18 @@ Snapshot completo de la superficie. Lo que aparece aqui esta shippeado, testeado
 - ✅ Prompt caching de Anthropic en el loop de generacion por archivo
 
 **Capa Behavior**
+
 - ✅ `skills` — 4 presets de architecture (espejados con los presets de context) + testing + conventions; modos static + personalized; multi-ecosistema (claude, codex, antigravity)
 - ✅ `workflows` — spec-driven-change, bug-fix, release-cycle; static + personalized; claude (native skills) + antigravity (anotaciones nativas)
 - ✅ `hooks` — linting, security-guardrails, convention-enforcement; auto-install con backup + merge idempotente; `--output` preview y `--dry-run`
 
 **Capa Bootstrap**
+
 - ✅ `config` — wizard de config a nivel usuario con auto-launch SOFT (TTY-gated, triple opt-out); subcomandos `get` / `set` / `unset` / `edit` / `list`
 - ✅ `init` — smart router a nivel proyecto (nuevo vs existente) que delega a `generate` o `analyze`
 
 **Capa Lifecycle**
+
 - ✅ `check` — drift detection (artifact_modified, signal_changed, etc.) — deterministico, sin LLM
 - ✅ `update` — regeneracion selectiva via `analyze`; rechaza sobreescribir hand-edits sin `--force`
 - ✅ `audit` — Conventional Commits + branches protegidas (rules-only, gratis) + modo heuristico `--with-llm` (registra usage)
@@ -1467,19 +1479,23 @@ Snapshot completo de la superficie. Lo que aparece aqui esta shippeado, testeado
 - ✅ `resolve` — resolucion interactiva de markers `[DEFINE]` con prompts LLM-driven (sugerencias grounded + default), modo skip con TODO-anchor, validator post-rewrite (anti-alucinacion), diff preview, seleccion `--all` / `--since` / archivos explicitos, opt-outs `--no-enrich` / `--no-preview` / `--skip-mode=verbatim` / `--dry-run`
 
 **MCP server**
+
 - ✅ 10 tools: 7 generative (context/specs/analyze/skills/workflows/hooks/usage) + 3 read-only (commit_guidance/version_guidance/get_usage)
 - ✅ Transportes stdio + HTTP; parametros con enums para validacion mas estricta; sin API key para read-only
 
 **Distribucion**
+
 - ✅ Homebrew tap (`brew install jorelcb/tap/codify`)
 - ✅ `go install github.com/jorelcb/codify/cmd/codify@latest`
 - ✅ Binarios pre-construidos en GitHub Releases
 
 **Calidad**
+
 - ✅ 9 paquetes BDD con 30+ scenarios; tests unitarios puros en domain + infrastructure
 - ✅ Layout interno DDD/Clean Architecture (el proyecto come de su propia comida)
 
 **Limites conocidos (intencionales, no roadmap):**
+
 - Sin modo daemon para `watch` — envolver con tmux/nohup/systemd si se necesita (per [ADR-008](docs/adr/0008-watch-model-decision.md))
 - Sin libreria Go `pkg/codify` — embedding via process boundary (CLI/MCP) es el contrato (per [ADR-003](docs/adr/0003-no-public-go-library.md))
 - Hooks son Claude Code-only (la primitive subyacente no existe en codex/antigravity)
@@ -1508,7 +1524,7 @@ Puedes crear tus propios presets en `templates/<locale>/`. Cada preset necesita 
 Cualquier agente compatible con el estandar [AGENTS.md](https://github.com/anthropics/AGENTS.md): Claude Code, Cursor, GitHub Copilot Workspace, Codex, y mas.
 
 **¿Cual es la diferencia entre Skills y Workflows?**
-Las skills le ensenan a tu agente *como* hacer una tarea individual (ej. escribir un mensaje de commit, disenar una entidad DDD). Los workflows orquestan una *secuencia* de tareas en un proceso end-to-end (ej. el ciclo completo de desarrollo de una feature, desde el branch hasta el merge del PR). Las skills son pasivas (se leen cuando son relevantes), los workflows son activos (se invocan via `/command`).
+Las skills le ensenan a tu agente _como_ hacer una tarea individual (ej. escribir un mensaje de commit, disenar una entidad DDD). Los workflows orquestan una _secuencia_ de tareas en un proceso end-to-end (ej. el ciclo completo de desarrollo de una feature, desde el branch hasta el merge del PR). Las skills son pasivas (se leen cuando son relevantes), los workflows son activos (se invocan via `/command`).
 
 **¿Necesito API key para workflows?**
 Solo para el modo personalized. El modo static entrega workflows pre-construidos al instante — sin LLM, sin API key, sin costo.
@@ -1517,10 +1533,10 @@ Solo para el modo personalized. El modo static entrega workflows pre-construidos
 Claude Code (`--target claude`) y Antigravity (`--target antigravity`). Los workflows de Claude generan native skills (SKILL.md con frontmatter) que el agente ejecuta via `/skill-name`. Los workflows de Antigravity producen archivos `.md` nativos con anotaciones de ejecucion (`// turbo`, `// capture`, etc.).
 
 **¿Que es AI Spec-Driven Development?**
-Una metodologia donde generas contexto y especificaciones *antes* de escribir codigo. Tu agente implementa una spec, no improvisa. `generate` crea el plano, `spec` crea el plan de implementacion, y el workflow `spec-driven-change` gobierna cada cambio subsecuente como una evolucion trackeada del spec (propose → apply → archive) con deltas formales, workspaces de cambio aislados, y audit trails.
+Una metodologia donde generas contexto y especificaciones _antes_ de escribir codigo. Tu agente implementa una spec, no improvisa. `generate` crea el plano, `spec` crea el plan de implementacion, y el workflow `spec-driven-change` gobierna cada cambio subsecuente como una evolucion trackeada del spec (propose → apply → archive) con deltas formales, workspaces de cambio aislados, y audit trails.
 
 **¿Por que tres fases (propose / apply / archive) en lugar de un solo workflow?**
-Cada fase es un modo cognitivo distinto. *Propose* responde "¿que debe cambiar y por que?" sin escribir codigo — el LLM se mantiene enfocado en intencion. *Apply* responde "¿como hacerlo realidad?" con los deltas ya aprobados, eliminando ambiguedad de spec del contexto de implementacion. *Archive* cierra el ciclo deterministicamente: mergea deltas a specs fuente-de-verdad, archiva el cambio para auditoria, mergea el branch. Mezclar estas fases diluye atencion y produce planes vagos + codigo descuidado.
+Cada fase es un modo cognitivo distinto. _Propose_ responde "¿que debe cambiar y por que?" sin escribir codigo — el LLM se mantiene enfocado en intencion. _Apply_ responde "¿como hacerlo realidad?" con los deltas ya aprobados, eliminando ambiguedad de spec del contexto de implementacion. _Archive_ cierra el ciclo deterministicamente: mergea deltas a specs fuente-de-verdad, archiva el cambio para auditoria, mergea el branch. Mezclar estas fases diluye atencion y produce planes vagos + codigo descuidado.
 
 **¿Codify reemplaza a OpenSpec?**
 No — lo complementa. El preset `spec-driven-change` genera skills que operan sobre workspaces formato OpenSpec (`openspec/specs/`, `openspec/changes/`, deltas ADDED/MODIFIED/REMOVED con scenarios G/W/T). Si ya usas OpenSpec, Codify te da skills de ciclo personalizadas via LLM adaptadas a tu stack. Si no, Codify es tu punto de entrada zero-config a la metodologia — combinado con `codify generate` y `codify spec`, obtienes el pipeline completo desde repo en blanco hasta iteracion gobernada.
@@ -1538,13 +1554,15 @@ Si tu sintoma no aparece en [`docs/troubleshooting.md`](docs/troubleshooting.md)
 ## 📚 Documentacion
 
 **Empieza aca:**
-- [📘 Getting Started](docs/getting-started.md) — Tour end-to-end de 5 minutos con outputs esperados *(en ingles)*
-- [📋 Lifecycle Matrix](docs/lifecycle-matrix.md) — Que comando aplica a workstation vs proyecto, greenfield vs brownfield *(en ingles)*
-- [📖 Command Reference](docs/command-reference.md) — Cheatsheet de cada comando, agrupado por fase *(en ingles)*
-- [🆘 Troubleshooting](docs/troubleshooting.md) — Errores comunes y fixes *(en ingles)*
+
+- [📘 Getting Started](docs/getting-started.md) — Tour end-to-end de 5 minutos con outputs esperados _(en ingles)_
+- [📋 Lifecycle Matrix](docs/lifecycle-matrix.md) — Que comando aplica a workstation vs proyecto, greenfield vs brownfield _(en ingles)_
+- [📖 Command Reference](docs/command-reference.md) — Cheatsheet de cada comando, agrupado por fase _(en ingles)_
+- [🆘 Troubleshooting](docs/troubleshooting.md) — Errores comunes y fixes _(en ingles)_
 
 **Referencia:**
-- [📐 ADRs](docs/adr/) — Architectural Decision Records *(en ingles)*
+
+- [📐 ADRs](docs/adr/) — Architectural Decision Records _(en ingles)_
 - [📋 AGENTS.md](AGENTS.md) — Contexto del proyecto para agentes de IA
 - [🏛️ Arquitectura](context/CONTEXT.md) — Detalle DDD/Clean Architecture
 - [📝 Changelog](CHANGELOG.md) — Historial de cambios
@@ -1562,7 +1580,7 @@ Apache License 2.0 — ver [LICENSE](LICENSE).
 
 **Contexto. Specs. Skills. Workflows. Hooks. Lifecycle. Tu agente, completamente equipado — y mantenido honesto.** 🧠
 
-*"Un agente sin contexto es un pasante con acceso root — y contexto desactualizado es un pasante leyendo docs de hace tres semanas"*
+_"Un agente sin contexto es un pasante con acceso root — y contexto desactualizado es un pasante leyendo docs de hace tres semanas"_
 
 ⭐ Si te sirvio, dale una estrella — nos motiva a seguir construyendo
 

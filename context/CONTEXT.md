@@ -7,6 +7,7 @@ Main pattern: **Clean Architecture with Domain-Driven Design (DDD)**
 ### DDD Layers and Responsibilities
 
 #### Domain Layer (`internal/domain`)
+
 - **Responsibility:** Pure business logic, technology-agnostic.
 - **Contains:**
   - `catalog/` — Declarative skill catalog (`SkillCategory`, `SkillOption`, `SkillMetadata`) and workflow catalog (`WorkflowCategories`, `WorkflowMetadata`). Both catalogs share structural types (`SkillCategory`, `SkillOption`, `ResolvedSelection`) but are separate bounded contexts with independent metadata registries.
@@ -16,6 +17,7 @@ Main pattern: **Clean Architecture with Domain-Driven Design (DDD)**
 - **Rule:** No external dependencies. Defines WHAT it needs, not HOW it's implemented.
 
 #### Application Layer (`internal/application`)
+
 - **Responsibility:** Orchestrates use cases using the domain. Follows CQRS pattern.
 - **Commands:**
   - `GenerateContextCommand` — generates context files (AGENTS.md, CONTEXT.md, etc.)
@@ -29,6 +31,7 @@ Main pattern: **Clean Architecture with Domain-Driven Design (DDD)**
 - **Rule:** Depends only on domain. Coordinates, does not implement business logic.
 
 #### Infrastructure Layer (`internal/infrastructure`)
+
 - **Responsibility:** Concrete implementations and technology adapters.
 - **Contains:**
   - `llm/` — `AnthropicProvider` (Claude SDK v1.25.0), `GeminiProvider` (GenAI SDK v1.49.0), `ProviderFactory` (resolves by model prefix), `PromptBuilder` (XML-tagged system prompts for context/spec/skills/workflows).
@@ -39,6 +42,7 @@ Main pattern: **Clean Architecture with Domain-Driven Design (DDD)**
 - **Rule:** Implements interfaces defined in the domain layer.
 
 #### Interfaces Layer (`internal/interfaces`)
+
 - **Responsibility:** Application entry points.
 - **Contains:**
   - `cli/commands/` — Cobra commands: `generate`, `analyze`, `spec`, `skills`, `workflows`, `serve`, `list`. Interactive prompts via charmbracelet/huh for missing flags.
@@ -48,29 +52,31 @@ Main pattern: **Clean Architecture with Domain-Driven Design (DDD)**
 - **Rule:** Adapts user input (CLI flags, MCP requests) to application layer DTOs.
 
 ### Dependency Rule (Clean Architecture)
+
 Dependencies always point inward: `Interfaces → Application → Domain`. The `Infrastructure` layer implements interfaces defined in `Domain` (Dependency Inversion). Nothing in `Domain` imports from outer layers.
 
 ## Main Components
 
-| Component | Responsibility | Layer | Key Interfaces |
-|---|---|---|---|
-| **CLI Commands** | Expose functionality via Cobra with interactive menus | Interfaces | Application commands/queries |
-| **MCP Server** | Expose functionality via Model Context Protocol (8 tools) | Interfaces | Application commands/queries |
-| **Skill Catalog** | Declarative registry of skill categories, presets, metadata | Domain | `SkillCategory`, `SkillOption`, `SkillMetadata` |
-| **Workflow Catalog** | Declarative registry of workflow presets and metadata | Domain | `WorkflowCategories`, `WorkflowMeta` |
-| **Hook Catalog** | Declarative registry of Claude Code hook presets and metadata | Domain | `HookCategories`, `HookMetadata` |
-| **LLM Provider** | Abstract communication with LLM APIs (Claude, Gemini) | Infrastructure | `domain.service.LLMProvider` |
-| **Provider Factory** | Select provider by model prefix (`claude-*` → Anthropic, `gemini-*` → Gemini) | Infrastructure | `llm.NewProvider()` |
-| **Prompt Builder** | Build XML-structured system prompts for each generation mode | Infrastructure | Context/Spec/Skills/Workflows prompt builders |
-| **Template Loader** | Load structural templates with locale/preset/language awareness | Infrastructure | `domain.service.TemplateLoader` |
-| **Context Reader** | Read existing AGENTS.md/CONTEXT.md for spec generation | Infrastructure | Used by `GenerateSpecCommand` |
-| **Project Scanner** | Analyze existing codebase (language, framework, deps, structure) | Infrastructure | Used by `analyze` command |
-| **File Writer** | Persist generated files to output directory | Infrastructure | `domain.service.FileWriter` |
-| **Directory Manager** | Create/manage output directories | Infrastructure | `domain.service.DirectoryManager` |
+| Component             | Responsibility                                                                | Layer          | Key Interfaces                                  |
+| --------------------- | ----------------------------------------------------------------------------- | -------------- | ----------------------------------------------- |
+| **CLI Commands**      | Expose functionality via Cobra with interactive menus                         | Interfaces     | Application commands/queries                    |
+| **MCP Server**        | Expose functionality via Model Context Protocol (8 tools)                     | Interfaces     | Application commands/queries                    |
+| **Skill Catalog**     | Declarative registry of skill categories, presets, metadata                   | Domain         | `SkillCategory`, `SkillOption`, `SkillMetadata` |
+| **Workflow Catalog**  | Declarative registry of workflow presets and metadata                         | Domain         | `WorkflowCategories`, `WorkflowMeta`            |
+| **Hook Catalog**      | Declarative registry of Claude Code hook presets and metadata                 | Domain         | `HookCategories`, `HookMetadata`                |
+| **LLM Provider**      | Abstract communication with LLM APIs (Claude, Gemini)                         | Infrastructure | `domain.service.LLMProvider`                    |
+| **Provider Factory**  | Select provider by model prefix (`claude-*` → Anthropic, `gemini-*` → Gemini) | Infrastructure | `llm.NewProvider()`                             |
+| **Prompt Builder**    | Build XML-structured system prompts for each generation mode                  | Infrastructure | Context/Spec/Skills/Workflows prompt builders   |
+| **Template Loader**   | Load structural templates with locale/preset/language awareness               | Infrastructure | `domain.service.TemplateLoader`                 |
+| **Context Reader**    | Read existing AGENTS.md/CONTEXT.md for spec generation                        | Infrastructure | Used by `GenerateSpecCommand`                   |
+| **Project Scanner**   | Analyze existing codebase (language, framework, deps, structure)              | Infrastructure | Used by `analyze` command                       |
+| **File Writer**       | Persist generated files to output directory                                   | Infrastructure | `domain.service.FileWriter`                     |
+| **Directory Manager** | Create/manage output directories                                              | Infrastructure | `domain.service.DirectoryManager`               |
 
 ## Data Flows
 
 ### `generate` command
+
 1. **CLI** — Cobra command receives `--description`, `--name`, `--preset`, `--language`, `--locale`, `--model`. Missing flags prompt interactively.
 2. **Application** — `GenerateContextCommand` receives `ProjectConfig` DTO.
 3. **Infrastructure** — `TemplateLoader` fetches structural guides from `templates/{locale}/{preset}/`.
@@ -79,13 +85,15 @@ Dependencies always point inward: `Interfaces → Application → Domain`. The `
 6. **Application/CLI** — Returns `GenerationResult` (paths, tokens, model).
 
 ### `skills` command
+
 1. **CLI** — Interactive or flag-based selection of category, preset, mode, target, install scope, locale.
 2. **Domain** — `FindCategory()` + `Resolve()` from declarative catalog. Returns `ResolvedSelection` with template mappings.
-3. **Infrastructure** — `TemplateLoader` loads skill templates from `templates/{locale}/skills/{dir}/`.
+3. **Infrastructure** — `TemplateLoader` loads skill templates from `templates/skills/{dir}/` (locale-free — skills are English-only by design; `--locale` only governs LLM output language in personalized mode).
 4. **Application** — Static mode: `DeliverStaticSkillsCommand` writes templates with ecosystem frontmatter. Personalized mode: `GenerateSkillsCommand` sends templates as guides to LLM, writes adapted output.
 5. **Output** — SKILL.md files in target-specific paths (`.claude/skills/`, `.agents/skills/`, `~/.claude/skills/`).
 
 ### `workflows` command
+
 1. **CLI** — Interactive or flag-based selection of preset, mode, install scope, locale. Target is always Antigravity.
 2. **Domain** — `FindWorkflowCategory()` + `Resolve()`. Returns `ResolvedSelection` with workflow template mappings.
 3. **Infrastructure** — `TemplateLoader` loads workflow templates from `templates/{locale}/workflows/`.
@@ -94,18 +102,18 @@ Dependencies always point inward: `Interfaces → Application → Domain`. The `
 
 ## Design Decisions
 
-| Decision | Justification | Discarded Alternatives |
-|---|---|---|
-| **Per-file LLM generation** | Avoids token limits and JSON parsing failures. Granular progress feedback. | Single LLM call returning large JSON. |
-| **AGENTS.md as root file** | Linux Foundation standard for AI agent context. Maximum tool compatibility. | Custom root files (CLAUDE.md, .projectrc). |
-| **XML tags in system prompts** | Improves LLM semantic understanding, especially for Claude. | Markdown-only prompts. |
-| **Multi-provider LLM factory** | User flexibility (Claude/Gemini) without changing core logic. | Single hardcoded provider. |
-| **Spec is context-dependent** | Ensures specifications are consistent with architectural context. | Standalone spec command. |
-| **Declarative catalogs** | Skills/workflows defined as in-code data structures with metadata. No config files. | YAML/JSON config files, database. |
-| **Separate skill and workflow catalogs** | Different bounded contexts — skills = expertise, workflows = orchestration. | Single unified catalog. |
-| **Antigravity-first for workflows** | Only ecosystem with native workflow primitive. Validates concept before expanding. | Simultaneous multi-ecosystem support. |
-| **Embedded templates (embed.FS)** | Binary works from any directory. No external file dependencies. | Filesystem templates alongside binary. |
-| **Interactive prompts via huh** | Better UX — guides users through all configuration options. | Flag-only CLI requiring full command memorization. |
+| Decision                                 | Justification                                                                       | Discarded Alternatives                             |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Per-file LLM generation**              | Avoids token limits and JSON parsing failures. Granular progress feedback.          | Single LLM call returning large JSON.              |
+| **AGENTS.md as root file**               | Linux Foundation standard for AI agent context. Maximum tool compatibility.         | Custom root files (CLAUDE.md, .projectrc).         |
+| **XML tags in system prompts**           | Improves LLM semantic understanding, especially for Claude.                         | Markdown-only prompts.                             |
+| **Multi-provider LLM factory**           | User flexibility (Claude/Gemini) without changing core logic.                       | Single hardcoded provider.                         |
+| **Spec is context-dependent**            | Ensures specifications are consistent with architectural context.                   | Standalone spec command.                           |
+| **Declarative catalogs**                 | Skills/workflows defined as in-code data structures with metadata. No config files. | YAML/JSON config files, database.                  |
+| **Separate skill and workflow catalogs** | Different bounded contexts — skills = expertise, workflows = orchestration.         | Single unified catalog.                            |
+| **Antigravity-first for workflows**      | Only ecosystem with native workflow primitive. Validates concept before expanding.  | Simultaneous multi-ecosystem support.              |
+| **Embedded templates (embed.FS)**        | Binary works from any directory. No external file dependencies.                     | Filesystem templates alongside binary.             |
+| **Interactive prompts via huh**          | Better UX — guides users through all configuration options.                         | Flag-only CLI requiring full command memorization. |
 
 ## Catalog Architecture
 
@@ -113,11 +121,11 @@ Dependencies always point inward: `Interfaces → Application → Domain`. The `
 
 Three categories, each with exclusive or non-exclusive preset resolution:
 
-| Category | Exclusive | Presets | Template Dir |
-|---|---|---|---|
-| `architecture` | Yes (pick one) | `clean`, `neutral` | `default`, `neutral` |
-| `testing` | Yes (pick one) | `foundational`, `tdd`, `bdd` | `testing` |
-| `conventions` | No (supports `all`) | `conventional-commit`, `semantic-versioning`, `all` | `conventions` |
+| Category       | Exclusive           | Presets                                             | Template Dir         |
+| -------------- | ------------------- | --------------------------------------------------- | -------------------- |
+| `architecture` | Yes (pick one)      | `clean`, `neutral`                                  | `default`, `neutral` |
+| `testing`      | Yes (pick one)      | `foundational`, `tdd`, `bdd`                        | `testing`            |
+| `conventions`  | No (supports `all`) | `conventional-commit`, `semantic-versioning`, `all` | `conventions`        |
 
 Each preset maps to template files via `TemplateMapping` (template filename → output name). `SkillMetadata` provides ecosystem frontmatter (name, description, triggers).
 
@@ -127,11 +135,11 @@ Legacy mapping: `"workflow"` → `{"conventions", "all"}` for backward compatibi
 
 Single non-exclusive category with 3 presets:
 
-| Preset | Description (max 250 chars, Antigravity constraint) |
-|---|---|
+| Preset               | Description (max 250 chars, Antigravity constraint)                                                                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `spec-driven-change` | Spec-driven feature lifecycle (propose → apply → archive) — generates three skills (`/spec-propose`, `/spec-apply`, `/spec-archive`) implementing the OpenSpec-compatible SDD methodology |
-| `bug-fix` | Structured bug fix: reproduce, diagnose, fix, test, and PR |
-| `release-cycle` | Release process: version bump, changelog, tag, and deploy |
+| `bug-fix`            | Structured bug fix: reproduce, diagnose, fix, test, and PR                                                                                                                                |
+| `release-cycle`      | Release process: version bump, changelog, tag, and deploy                                                                                                                                 |
 
 For Antigravity, workflows generate flat `.md` files. For Claude Code, workflows generate native skill directories (`{preset}/SKILL.md`). `GenerateWorkflowFrontmatter()` produces target-specific YAML frontmatter (Antigravity uses `description` only; Claude uses `name`, `description`, `disable-model-invocation`, `allowed-tools`).
 
@@ -153,13 +161,13 @@ The output structure follows the [OpenSpec](https://openspec.dev/) convention. C
 
 Single non-exclusive category with 3 presets, each delivering a deterministic guardrail bundle for Claude Code (`hooks.json` + `.sh` scripts):
 
-| Preset | Event | Description (max 250 chars) |
-|---|---|---|
-| `linting` | `PostToolUse` (Edit\|Write) | Auto-format and lint files on every edit using the right tool per language (Prettier/ESLint, ruff/black, gofmt/gofumpt, rustfmt, rubocop, shfmt) — non-blocking |
-| `security-guardrails` | `PreToolUse` (Bash, Edit\|Write) | Block dangerous Bash commands and protect sensitive files (env files, secrets, lockfiles, private keys, CI configs) |
-| `convention-enforcement` | `PreToolUse` (Bash with `if`) | Validate Conventional Commits headers and protect main/master/develop/production branches from direct or force pushes |
+| Preset                   | Event                            | Description (max 250 chars)                                                                                                                                     |
+| ------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `linting`                | `PostToolUse` (Edit\|Write)      | Auto-format and lint files on every edit using the right tool per language (Prettier/ESLint, ruff/black, gofmt/gofumpt, rustfmt, rubocop, shfmt) — non-blocking |
+| `security-guardrails`    | `PreToolUse` (Bash, Edit\|Write) | Block dangerous Bash commands and protect sensitive files (env files, secrets, lockfiles, private keys, CI configs)                                             |
+| `convention-enforcement` | `PreToolUse` (Bash with `if`)    | Validate Conventional Commits headers and protect main/master/develop/production branches from direct or force pushes                                           |
 
-The catalog uses the same `SkillCategory` / `SkillOption` / `ResolvedSelection` types as skills and workflows (shared across bounded contexts via `internal/domain/catalog/skills_catalog.go`), but every option has `TemplateMapping: nil` — hooks are not rendered, they are copied. The delivery command (`internal/application/command/deliver_hooks.go`) reads the entire `templates/{locale}/hooks/{preset}/` directory and copies its files verbatim, including `chmod 0755` on `.sh` scripts.
+The catalog uses the same `SkillCategory` / `SkillOption` / `ResolvedSelection` types as skills and workflows (shared across bounded contexts via `internal/domain/catalog/skills_catalog.go`), but every option has `TemplateMapping: nil` — hooks are not rendered, they are copied. The delivery command (`internal/application/command/deliver_hooks.go`) reads the entire `templates/hooks/{preset}/` directory (locale-free — hooks are English-only by design) and copies its files verbatim, including `chmod 0755` on `.sh` scripts.
 
 The `all` preset is special: it's not a directory but a runtime merge. The deliver command reads `hooks.json` from each of the three preset directories and unions per-event arrays (`PreToolUse`, `PostToolUse`) into a single output. Claude Code automatically dedupes identical command strings, so concatenation without deduplication is safe.
 
@@ -176,9 +184,9 @@ Default output path is `./codify-hooks/` rather than `.claude/hooks/`. This deli
 
 ## External Integrations
 
-| Service | Purpose | Protocol | SDK |
-|---|---|---|---|
-| **Anthropic API** | Claude LLM for generation | HTTPS/REST | `anthropic-sdk-go` v1.25.0 |
+| Service               | Purpose                   | Protocol   | SDK                               |
+| --------------------- | ------------------------- | ---------- | --------------------------------- |
+| **Anthropic API**     | Claude LLM for generation | HTTPS/REST | `anthropic-sdk-go` v1.25.0        |
 | **Google Gemini API** | Gemini LLM for generation | HTTPS/REST | `google.golang.org/genai` v1.49.0 |
 
 API keys resolved via environment: `ANTHROPIC_API_KEY` for Claude, `GEMINI_API_KEY`/`GOOGLE_API_KEY` for Gemini. Provider auto-detected from `--model` prefix, or from available API key when no model specified.
