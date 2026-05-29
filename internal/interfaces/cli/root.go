@@ -105,6 +105,7 @@ func init() {
 	rootCmd.AddCommand(withGroup(commands.NewGenerateCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewAnalyzeCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewSpecCmd(), groupEquip))
+	rootCmd.AddCommand(withGroup(commands.NewCatalogCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewSkillsCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewWorkflowsCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewHooksCmd(), groupEquip))
