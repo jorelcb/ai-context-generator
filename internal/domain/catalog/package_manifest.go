@@ -309,17 +309,25 @@ type PackageSource interface {
 	Fetch(ctx context.Context, m PackageManifest) (PackageContent, error)
 }
 
-// TargetInstaller knows how to install/uninstall packages of a specific
-// Target onto a Scope. See ADR-0010 §9.
+// TargetInstaller knows how to install/uninstall packages onto a Scope for
+// one ecosystem. See ADR-0010 §9.
 //
 // The install recipe lives here, not in the manifest — hook bundles copy
 // multiple files and merge settings.json; skills write a single SKILL.md;
 // SDD standards register a runtime adapter. Each TargetInstaller
-// implementation encodes the per-target conventions for its ecosystem.
+// implementation encodes the conventions for its ecosystem.
+//
+// Ratified for D.3 as PER-ECOSYSTEM, not per-Target: one installer
+// (ClaudeInstaller, GeminiInstaller, AntigravityInstaller) owns all the
+// Targets of its ecosystem, since they share path roots (~/.claude/, etc.)
+// and settings mechanics. Hence Handles(Target) bool rather than the
+// per-Target Target() of the ADR sketch — the installer registry routes a
+// manifest to the first installer that Handles its Target.
 type TargetInstaller interface {
-	// Target returns the Target value this installer handles. The catalog
-	// command's installer registry routes packages to installers by Target.
-	Target() Target
+	// Handles reports whether this installer can install the given Target.
+	// The catalog command's installer registry routes packages by asking
+	// each registered installer.
+	Handles(t Target) bool
 
 	// Install writes the package to the appropriate filesystem location
 	// under the given Scope. For behavior packages (SDD standards), this

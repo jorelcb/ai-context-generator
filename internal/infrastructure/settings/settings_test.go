@@ -268,6 +268,76 @@ func TestPreviewMergedHooks_DoesNotWrite(t *testing.T) {
 	}
 }
 
+func TestRemoveHooksMatching_RemovesAndPrunes(t *testing.T) {
+	s := &Settings{Path: "/tmp/x", Raw: map[string]any{}}
+	block := mustParse(t, `{
+  "hooks": {
+    "PostToolUse": [
+      {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "/.claude/hooks/lint.sh"}]}
+    ]
+  }
+}`)
+	if _, _, err := s.MergeHooks(block); err != nil {
+		t.Fatalf("MergeHooks: %v", err)
+	}
+
+	removed := s.RemoveHooksMatching(func(cmd string) bool {
+		return strings.Contains(cmd, "lint.sh")
+	})
+	if removed["PostToolUse"] != 1 {
+		t.Fatalf("removed PostToolUse: got %d, want 1", removed["PostToolUse"])
+	}
+	// The hooks object should be pruned entirely once empty.
+	if _, ok := s.Raw["hooks"]; ok {
+		t.Errorf("empty hooks object should be pruned, got: %v", s.Raw["hooks"])
+	}
+}
+
+func TestRemoveHooksMatching_PreservesNonMatching(t *testing.T) {
+	s := &Settings{Path: "/tmp/x", Raw: map[string]any{}}
+	block := mustParse(t, `{
+  "hooks": {
+    "PostToolUse": [
+      {"matcher": "Edit|Write", "hooks": [
+        {"type": "command", "command": "/.claude/hooks/lint.sh"},
+        {"type": "command", "command": "/.claude/hooks/keep.sh"}
+      ]}
+    ]
+  }
+}`)
+	if _, _, err := s.MergeHooks(block); err != nil {
+		t.Fatalf("MergeHooks: %v", err)
+	}
+
+	removed := s.RemoveHooksMatching(func(cmd string) bool {
+		return strings.Contains(cmd, "lint.sh")
+	})
+	if removed["PostToolUse"] != 1 {
+		t.Fatalf("removed: got %d, want 1", removed["PostToolUse"])
+	}
+	hooks, ok := s.Raw["hooks"].(map[string]any)
+	if !ok {
+		t.Fatal("hooks object should remain (keep.sh still present)")
+	}
+	post := hooks["PostToolUse"].([]any)
+	matcher := post[0].(map[string]any)
+	handlers := matcher["hooks"].([]any)
+	if len(handlers) != 1 {
+		t.Fatalf("expected 1 handler left, got %d", len(handlers))
+	}
+	if cmd, _ := handlers[0].(map[string]any)["command"].(string); !strings.Contains(cmd, "keep.sh") {
+		t.Errorf("surviving handler should be keep.sh, got %q", cmd)
+	}
+}
+
+func TestRemoveHooksMatching_NoMatchIsNoOp(t *testing.T) {
+	s := &Settings{Path: "/tmp/x", Raw: map[string]any{}}
+	removed := s.RemoveHooksMatching(func(string) bool { return true })
+	if len(removed) != 0 {
+		t.Errorf("removing from empty settings should be a no-op, got %v", removed)
+	}
+}
+
 func mustParse(t *testing.T, doc string) map[string]any {
 	t.Helper()
 	var m map[string]any
