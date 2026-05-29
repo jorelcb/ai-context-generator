@@ -5,15 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - Track D: package catalog foundation + locale-free distributable artifacts
+## [Unreleased] - Track D: package catalog (model, sources, installers, `catalog` command)
 
-> First slice of Track D (ADR-0010): a unified package model and an embedded package source, plus the greenfield decision to make distributable artifacts (skills + hooks) locale-free. Distributable artifacts are English-only by design, so the ES locale subtree for skills/hooks is dropped rather than maintained.
+> Track D (ADR-0010): a unified package model, a read-side package source and a write-side ecosystem installer, surfaced through a new `codify catalog` command. Plus the greenfield decision to make distributable artifacts (skills + hooks) locale-free — English-only by design, so the ES locale subtree for skills/hooks is dropped rather than maintained.
 
 ### Added
 
+- **`codify catalog` command** — the unified surface for browsing and installing ecosystem packages (ADR-0010). Interactive wizard (ecosystem → type → packages → scope), `--list` browsing with source badges and installed markers, and non-interactive install (`--type skill --package a,b --scope project|workstation`). MVP covers the Claude ecosystem (skills + hooks); `codify skills`/`codify hooks` remain for now and are folded in incrementally.
+- **`CatalogService`** (application) — orchestrates the package ports: `Available`, `Installed`, and `Install`, driven once and reused by the CLI (and later `config`/`init`).
 - **`catalog.PackageManifest`** — a single Target-tagged descriptor for any installable artifact (skill, hook, and later workflow), independent of origin, with Claude metadata (triggers, allowed-tools, user-invocable), source ref and checksum fields.
 - **`ManifestsFromSkillsCategory` / `ManifestsFromHooksCategory`** — pure converters from the built-in catalog into manifests.
-- **`packagesource.EmbeddedSource`** — `catalog.PackageSource` adapter over the embedded filesystem: enumerates skills + hooks as decorated manifests and resolves their installable content (SKILL.md; scripts + settings fragment) directly from `embed.FS`.
+- **`packagesource.EmbeddedSource`** — `catalog.PackageSource` adapter over the embedded filesystem: enumerates skills + hooks as decorated manifests and resolves their installable content (SKILL.md; scripts + settings fragment) directly from `embed.FS`. The `PackageSource` port is frozen (`Fetch(manifest)` + `Kind()`).
+- **`targetinstaller.ClaudeInstaller` + `Registry`** — the write-side `catalog.TargetInstaller` (per-ecosystem): installs/uninstalls/lists Claude skills and hooks, reusing the `settings` merge mechanics. `settings.RemoveHooksMatching` added for hook uninstall.
 
 ### Changed
 

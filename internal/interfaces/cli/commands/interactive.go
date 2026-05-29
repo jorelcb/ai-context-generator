@@ -38,6 +38,26 @@ func promptSelect(title string, options []selectOption, defaultVal string) (stri
 	return selected, nil
 }
 
+// promptMultiSelect displays an interactive multi-selection menu and returns
+// the values the user checked (empty slice if none).
+func promptMultiSelect(title string, options []selectOption) ([]string, error) {
+	huhOpts := make([]huh.Option[string], len(options))
+	for i, o := range options {
+		huhOpts[i] = huh.NewOption(o.Label, o.Value)
+	}
+
+	var selected []string
+	err := huh.NewMultiSelect[string]().
+		Title(title).
+		Options(huhOpts...).
+		Value(&selected).
+		Run()
+	if err != nil {
+		return nil, fmt.Errorf("selection cancelled")
+	}
+	return selected, nil
+}
+
 // promptInput muestra un campo de entrada de texto interactivo.
 func promptInput(title, defaultVal string) (string, error) {
 	value := defaultVal
