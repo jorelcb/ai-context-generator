@@ -63,13 +63,13 @@ func NewDeliverHooksCommand(
 // Build assembles the in-memory hook bundle for the requested preset(s).
 // It does not write to disk and is the entry point used by
 // InstallHooksCommand to obtain the merge block + scripts.
-func (c *DeliverHooksCommand) Build(locale, preset string) (*HookBundle, error) {
+func (c *DeliverHooksCommand) Build(preset string) (*HookBundle, error) {
 	presets := []string{preset}
 	if preset == "all" {
 		presets = []string{"linting", "security-guardrails", "convention-enforcement"}
 	}
 
-	mergedBytes, err := c.mergeHooksJSON(locale, presets)
+	mergedBytes, err := c.mergeHooksJSON(presets)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (c *DeliverHooksCommand) Build(locale, preset string) (*HookBundle, error) 
 
 	var scripts []HookScript
 	for _, p := range presets {
-		dir := filepath.Join("templates", locale, "hooks", p)
+		dir := filepath.Join("templates", "hooks", p)
 		entries, err := c.templatesFS.ReadDir(dir)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read template dir %s: %w", dir, err)
@@ -132,7 +132,7 @@ func (c *DeliverHooksCommand) Execute(config *dto.HookConfig) (*dto.GenerationRe
 		return nil, fmt.Errorf("failed to create scripts directory %s: %w", scriptsDir, err)
 	}
 
-	bundle, err := c.Build(config.Locale, config.Preset)
+	bundle, err := c.Build(config.Preset)
 	if err != nil {
 		return nil, err
 	}
@@ -166,14 +166,14 @@ func (c *DeliverHooksCommand) Execute(config *dto.HookConfig) (*dto.GenerationRe
 }
 
 // mergeHooksJSON reads hooks.json from each preset directory under
-// templates/{locale}/hooks/{preset}/ and combines them into a single
+// templates/hooks/{preset}/ and combines them into a single
 // {"hooks": {<event>: [handlers...]}} document.
 //
 // Merge strategy: per-event arrays are concatenated in preset order
 // (linting → security-guardrails → convention-enforcement). No
 // deduplication; if two presets define handlers for the same event,
 // both run (Claude Code dedupes identical command strings automatically).
-func (c *DeliverHooksCommand) mergeHooksJSON(locale string, presets []string) ([]byte, error) {
+func (c *DeliverHooksCommand) mergeHooksJSON(presets []string) ([]byte, error) {
 	type hooksDoc struct {
 		Hooks map[string][]any `json:"hooks"`
 	}
@@ -181,7 +181,7 @@ func (c *DeliverHooksCommand) mergeHooksJSON(locale string, presets []string) ([
 	merged := hooksDoc{Hooks: map[string][]any{}}
 
 	for _, p := range presets {
-		path := filepath.Join("templates", locale, "hooks", p, "hooks.json")
+		path := filepath.Join("templates", "hooks", p, "hooks.json")
 		data, err := c.templatesFS.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read %s: %w", path, err)

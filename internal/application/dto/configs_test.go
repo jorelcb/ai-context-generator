@@ -125,47 +125,37 @@ func TestHookConfig_Validate(t *testing.T) {
 	}{
 		{
 			"happy install",
-			&HookConfig{Category: "hooks", Preset: "linting", Locale: "en", Install: InstallScopeProject},
+			&HookConfig{Category: "hooks", Preset: "linting", Install: InstallScopeProject},
 			false,
 		},
 		{
 			"happy preview",
-			&HookConfig{Category: "hooks", Preset: "all", Locale: "en", OutputPath: "/o"},
+			&HookConfig{Category: "hooks", Preset: "all", OutputPath: "/o"},
 			false,
 		},
 		{
 			"missing category",
-			&HookConfig{Preset: "linting", Locale: "en", Install: InstallScopeProject},
+			&HookConfig{Preset: "linting", Install: InstallScopeProject},
 			true,
 		},
 		{
 			"missing preset",
-			&HookConfig{Category: "hooks", Locale: "en", Install: InstallScopeProject},
+			&HookConfig{Category: "hooks", Install: InstallScopeProject},
 			true,
 		},
 		{
 			"invalid preset",
-			&HookConfig{Category: "hooks", Preset: "telemetry", Locale: "en", Install: InstallScopeProject},
+			&HookConfig{Category: "hooks", Preset: "telemetry", Install: InstallScopeProject},
 			true,
 		},
 		{
 			"invalid install scope",
-			&HookConfig{Category: "hooks", Preset: "linting", Locale: "en", Install: "system"},
-			true,
-		},
-		{
-			"missing locale",
-			&HookConfig{Category: "hooks", Preset: "linting", Install: InstallScopeProject},
-			true,
-		},
-		{
-			"unsupported locale",
-			&HookConfig{Category: "hooks", Preset: "linting", Locale: "fr", Install: InstallScopeProject},
+			&HookConfig{Category: "hooks", Preset: "linting", Install: "system"},
 			true,
 		},
 		{
 			"neither install nor output",
-			&HookConfig{Category: "hooks", Preset: "linting", Locale: "en"},
+			&HookConfig{Category: "hooks", Preset: "linting"},
 			true,
 		},
 	}

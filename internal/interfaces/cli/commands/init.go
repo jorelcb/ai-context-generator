@@ -19,11 +19,11 @@ var codifyVersion = "dev"
 // NewInitCmd construye `codify init`, el smart entry point a nivel proyecto.
 //
 // Flujo:
-//   1. Pregunta si el proyecto es nuevo o existente
-//   2. Recolecta preset/language/locale (con override de defaults globales)
-//   3. Si "nuevo": invoca generate (con descripción inline o desde archivo)
-//      Si "existente": invoca analyze
-//   4. Persiste .codify/config.yml + .codify/state.json
+//  1. Pregunta si el proyecto es nuevo o existente
+//  2. Recolecta preset/language/locale (con override de defaults globales)
+//  3. Si "nuevo": invoca generate (con descripción inline o desde archivo)
+//     Si "existente": invoca analyze
+//  4. Persiste .codify/config.yml + .codify/state.json
 //
 // Skills/workflows/hooks de proyecto se delegan a sus comandos respectivos —
 // init imprime sugerencias de comandos para correrlos después, en lugar de
@@ -234,7 +234,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if target == "claude" {
-		if err := promptInstallHooks(locale, "project"); err != nil {
+		if err := promptInstallHooks("project"); err != nil {
 			fmt.Fprintf(os.Stderr, "\nWarning: project hooks install step failed: %v\n", err)
 			fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify hooks --install project'.")
 		}

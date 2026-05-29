@@ -15,10 +15,12 @@ import "github.com/jorelcb/codify/internal/domain/shared"
 // (or .claude/hooks/). OutputPath is used only as an escape hatch:
 // preview/dry mode that writes a bundle to a custom directory without
 // touching settings.
+// Hooks are English-only by design (catalog-driven shell scripts, no LLM
+// localization), so HookConfig carries no Locale field — the bundles live
+// under locale-free templates/hooks/.
 type HookConfig struct {
 	Category   string // "hooks"
 	Preset     string // "linting" | "security-guardrails" | "convention-enforcement" | "all"
-	Locale     string // "en" or "es"
 	OutputPath string // optional: when set with empty Install, runs in preview mode
 	Install    string // install scope: "global", "project", or "" (preview/custom)
 	DryRun     bool   // when true, prints the proposed merge but writes nothing
@@ -52,12 +54,6 @@ func (hc *HookConfig) Validate() error {
 	}
 	if hc.Install != "" && hc.Install != InstallScopeGlobal && hc.Install != InstallScopeProject {
 		return shared.ErrInvalidInput("invalid install scope: must be 'global' or 'project'")
-	}
-	if hc.Locale == "" {
-		return shared.ErrInvalidInput("locale is required")
-	}
-	if hc.Locale != "en" && hc.Locale != "es" {
-		return shared.ErrInvalidInput("locale must be 'en' or 'es'")
 	}
 	return nil
 }

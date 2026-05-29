@@ -40,7 +40,7 @@ type InstallHooksCommand struct {
 // build a structured response.
 type InstallResult struct {
 	SettingsPath    string
-	BackupPath      string         // empty when no backup was needed (file did not pre-exist)
+	BackupPath      string // empty when no backup was needed (file did not pre-exist)
 	HooksDir        string
 	HandlersAdded   map[string]int // by event (PreToolUse, PostToolUse, ...)
 	HandlersSkipped map[string]int // by event
@@ -96,7 +96,7 @@ func (c *InstallHooksCommand) Execute(config *dto.HookConfig) (*InstallResult, e
 		return nil, fmt.Errorf("failed to resolve scope %q: %w", config.Install, err)
 	}
 
-	bundle, err := c.deliverer.Build(config.Locale, config.Preset)
+	bundle, err := c.deliverer.Build(config.Preset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build hook bundle: %w", err)
 	}

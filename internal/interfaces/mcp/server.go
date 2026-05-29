@@ -155,7 +155,6 @@ func generateHooksTool() server.ServerTool {
 		mcp.WithDescription("Activate Claude Code hook bundles. Default install_scope is 'preview' (writes a standalone bundle to 'output' for the user to merge). Set install_scope to 'global' or 'project' to auto-merge into settings.json + copy scripts into the agent's hooks directory. Static-only, Claude Code-only."),
 		mcp.WithString("preset", mcp.Required(), mcp.Description("Hook preset"), mcp.Enum(catalog.HookPresetNames()...)),
 		mcp.WithString("install_scope", mcp.Description("Activation mode: global (auto-merge into ~/.claude), project (auto-merge into .claude), or preview (write bundle to output, no settings change)"), mcp.Enum("global", "project", "preview"), mcp.DefaultString("preview")),
-		mcp.WithString("locale", mcp.Description("Output language for stderr messages"), mcp.Enum("en", "es"), mcp.DefaultString("en")),
 		mcp.WithString("output", mcp.Description("Output directory (required for install_scope=preview; default: ./codify-hooks)")),
 	)
 
@@ -166,7 +165,6 @@ func generateHooksTool() server.ServerTool {
 func commitGuidanceTool() server.ServerTool {
 	tool := mcp.NewTool("commit_guidance",
 		mcp.WithDescription("Conventional Commits behavioral context. Returns the spec and instructions for generating proper commit messages. No API key needed."),
-		mcp.WithString("locale", mcp.Description("Language for the guidance: en or es"), mcp.DefaultString("en")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleCommitGuidance}
@@ -176,7 +174,6 @@ func commitGuidanceTool() server.ServerTool {
 func versionGuidanceTool() server.ServerTool {
 	tool := mcp.NewTool("version_guidance",
 		mcp.WithDescription("Semantic Versioning behavioral context. Returns the spec and instructions for determining version bumps from conventional commits. No API key needed."),
-		mcp.WithString("locale", mcp.Description("Language for the guidance: en or es"), mcp.DefaultString("en")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleVersionGuidance}
@@ -343,7 +340,7 @@ func handleGenerateSkills(ctx context.Context, request mcp.CallToolRequest) (*mc
 
 	// Cargar templates
 	templateLoader := infratemplate.NewFileSystemTemplateLoaderWithMapping(
-		root.TemplatesFS, filepath.Join("templates", locale, "skills", selection.TemplateDir), selection.TemplateMapping,
+		root.TemplatesFS, filepath.Join("templates", "skills", selection.TemplateDir), selection.TemplateMapping,
 	)
 	guides, err := templateLoader.LoadAll()
 	if err != nil {
@@ -476,15 +473,11 @@ func handleGenerateWorkflows(ctx context.Context, request mcp.CallToolRequest) (
 
 func handleGenerateHooks(_ context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	preset := stringArg(request, "preset")
-	locale := stringArgDefault(request, "locale", "en")
 	output := stringArg(request, "output")
 	scope := stringArgDefault(request, "install_scope", "preview")
 
 	if !dto.ValidHookPresets[preset] {
 		return mcp.NewToolResultError(fmt.Sprintf("Invalid hook preset: %s (valid: linting, security-guardrails, convention-enforcement, all)", preset)), nil
-	}
-	if locale != "en" && locale != "es" {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid locale: %s (must be 'en' or 'es')", locale)), nil
 	}
 
 	switch scope {
@@ -495,7 +488,6 @@ func handleGenerateHooks(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 		config := &dto.HookConfig{
 			Category:   "hooks",
 			Preset:     preset,
-			Locale:     locale,
 			OutputPath: output,
 		}
 		result, err := executePreviewHooksMCP(config)
@@ -517,7 +509,6 @@ func handleGenerateHooks(_ context.Context, request mcp.CallToolRequest) (*mcp.C
 		config := &dto.HookConfig{
 			Category: "hooks",
 			Preset:   preset,
-			Locale:   locale,
 			Install:  scope,
 		}
 		result, err := executeInstallHooksMCP(config)
@@ -559,8 +550,7 @@ func sumIntMap(m map[string]int) int {
 }
 
 func handleCommitGuidance(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	locale := stringArgDefault(request, "locale", "en")
-	content, err := loadKnowledgeTemplate(locale, "conventions", "conventional_commit.template")
+	content, err := loadKnowledgeTemplate("conventions", "conventional_commit.template")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to load commit guidance: %v", err)), nil
 	}
@@ -568,17 +558,18 @@ func handleCommitGuidance(ctx context.Context, request mcp.CallToolRequest) (*mc
 }
 
 func handleVersionGuidance(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	locale := stringArgDefault(request, "locale", "en")
-	content, err := loadKnowledgeTemplate(locale, "conventions", "semantic_versioning.template")
+	content, err := loadKnowledgeTemplate("conventions", "semantic_versioning.template")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to load version guidance: %v", err)), nil
 	}
 	return mcp.NewToolResultText(content), nil
 }
 
-// loadKnowledgeTemplate reads an embedded template and returns its content as behavioral context.
-func loadKnowledgeTemplate(locale, preset, filename string) (string, error) {
-	path := filepath.Join("templates", locale, "skills", preset, filename)
+// loadKnowledgeTemplate reads an embedded skill template and returns its
+// content as behavioral context. Skill templates are English-only by
+// design, so the path is locale-free (templates/skills/...).
+func loadKnowledgeTemplate(preset, filename string) (string, error) {
+	path := filepath.Join("templates", "skills", preset, filename)
 	data, err := root.TemplatesFS.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("template not found: %s", path)
@@ -708,7 +699,7 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model stri
 				"- Technical design and plan: `specs/PLAN.md`\n" +
 				"- Task breakdown: `specs/TASKS.md`\n"
 		}
-		_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0644)
+		_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0o644)
 	}
 
 	return result, nil

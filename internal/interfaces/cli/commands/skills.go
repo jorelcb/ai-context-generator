@@ -213,7 +213,10 @@ func runSkills(p skillsParams, explicit map[string]bool) error {
 		return err
 	}
 
-	templatePath := filepath.Join("templates", locale, "skills", selection.TemplateDir)
+	// Skill templates are English-only by design — they live under the
+	// locale-free templates/skills/. The locale still governs LLM output
+	// language in personalized mode (see SkillsConfig.Locale below).
+	templatePath := filepath.Join("templates", "skills", selection.TemplateDir)
 	templateLoader := infratemplate.NewFileSystemTemplateLoaderWithMapping(root.TemplatesFS, templatePath, selection.TemplateMapping)
 	guides, err := templateLoader.LoadAll()
 	if err != nil {

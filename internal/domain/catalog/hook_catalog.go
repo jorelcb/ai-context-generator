@@ -18,7 +18,7 @@ var HookMetadata = map[string]HookMeta{
 //
 // A diferencia de skills/workflows, los hooks NO usan TemplateMapping para resolver
 // archivos individualmente: cada preset apunta a un directorio completo
-// (templates/{locale}/hooks/{preset}/) cuyo contenido se copia tal cual al output.
+// (templates/hooks/{preset}/) cuyo contenido se copia tal cual al output.
 // El mapping es nil intencionalmente; la logica de delivery lee el directorio entero.
 var HookCategories = []SkillCategory{
 	{
