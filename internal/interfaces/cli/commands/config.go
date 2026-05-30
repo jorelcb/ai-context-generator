@@ -129,7 +129,7 @@ func runConfigWizard(repo *infraconfig.Repository, path string) error {
 	}
 	fmt.Printf("\n✓ Saved %s\n", path)
 
-	if err := promptInstallSkills(target, locale, "global"); err != nil {
+	if err := promptInstallSkills(target, "global"); err != nil {
 		fmt.Fprintf(os.Stderr, "\nWarning: global skills install step failed: %v\n", err)
 		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify skills --install global'.")
 	}

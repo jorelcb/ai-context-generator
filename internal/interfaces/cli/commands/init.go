@@ -223,7 +223,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		target = "claude"
 	}
 
-	if err := promptInstallSkills(target, locale, "project"); err != nil {
+	if err := promptInstallSkills(target, "project"); err != nil {
 		fmt.Fprintf(os.Stderr, "\nWarning: project skills install step failed: %v\n", err)
 		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify skills --install project'.")
 	}

@@ -1,8 +1,11 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	root "github.com/jorelcb/codify"
 	"github.com/jorelcb/codify/internal/application/command"
@@ -24,20 +27,25 @@ func scopeLabel(scope string) string {
 // scope (global or project), one catalog category at a time. Each prompt has
 // "skip" as the default — running through with all skips installs nothing.
 //
-// Skills are installed in static mode (no LLM, no API key needed). Power users
-// who want personalized skills can run `codify skills` later.
-func promptInstallSkills(target, locale, scope string) error {
+// Skills install through the catalog (static mode, no LLM, no API key). The
+// catalog surface is Claude-only for now, so non-Claude targets are skipped
+// with a notice — they return when the catalog gains those ecosystems. Power
+// users who want personalized skills can run `codify catalog --mode
+// personalized`.
+func promptInstallSkills(target, scope string) error {
 	if !isInteractive() {
 		return nil
 	}
-
-	skillsPath := skillsPathForScope(target, scope)
+	if target != "claude" {
+		fmt.Printf("\nSkills: skipped — the catalog supports Claude only for now (target is %q).\n", target)
+		return nil
+	}
 
 	fmt.Println()
 	fmt.Printf("Skills (%s, optional)\n", scopeLabel(scope))
 	fmt.Println("─────────────────────────────")
-	fmt.Printf("Skills are installed to %s. Each preset is a curated bundle of related SKILL.md files.\n", skillsPath)
-	fmt.Println("Pick one preset per category, or skip. You can revisit later with 'codify skills'.")
+	fmt.Println("Each preset is a curated bundle of related SKILL.md files installed under .claude/skills/.")
+	fmt.Println("Pick one preset per category, or skip. You can revisit later with 'codify catalog'.")
 
 	for _, cat := range catalog.Categories {
 		preset, err := promptSelect(
@@ -51,7 +59,7 @@ func promptInstallSkills(target, locale, scope string) error {
 		if preset == "skip" {
 			continue
 		}
-		if err := installSkill(target, locale, cat.Name, preset, scope); err != nil {
+		if err := installSkillsViaCatalog(cat.Name, preset, scope); err != nil {
 			fmt.Printf("  ✗ %s/%s install failed: %v\n", cat.Name, preset, err)
 			continue
 		}
@@ -78,9 +86,11 @@ func buildCategoryPresetOptions(cat catalog.SkillCategory) []selectOption {
 	return options
 }
 
-// installSkill executes a static-mode skills install at the given scope,
-// reusing the same pipeline as `codify skills --install <scope>`.
-func installSkill(target, locale, categoryName, preset, scope string) error {
+// installSkillsViaCatalog resolves a category preset to its skill package IDs
+// and installs them through the catalog (static, Claude). Replaces the bespoke
+// template-load + DeliverStaticSkillsCommand path — the catalog's
+// EmbeddedSource + ClaudeInstaller now own skill delivery.
+func installSkillsViaCatalog(categoryName, preset, scope string) error {
 	cat, err := catalog.FindCategory(categoryName)
 	if err != nil {
 		return err
@@ -89,50 +99,41 @@ func installSkill(target, locale, categoryName, preset, scope string) error {
 	if err != nil {
 		return err
 	}
+	ids := skillIDsFromSelection(selection)
 
-	templatePath := filepath.Join("templates", "skills", selection.TemplateDir)
-	loader := infratemplate.NewFileSystemTemplateLoaderWithMapping(root.TemplatesFS, templatePath, selection.TemplateMapping)
-	guides, err := loader.LoadAll()
-	if err != nil {
-		return fmt.Errorf("load skill templates: %w", err)
-	}
-
-	output := skillsPathForScope(target, scope)
-	config := &dto.SkillsConfig{
-		Category:   cat.Name,
-		Preset:     preset,
-		Mode:       dto.SkillModeStatic,
-		Locale:     locale,
-		Target:     target,
-		OutputPath: output,
-		Install:    scope,
-	}
-
-	fileWriter := filesystem.NewFileWriter()
-	dirManager := filesystem.NewDirectoryManager()
-	deliver := command.NewDeliverStaticSkillsCommand(fileWriter, dirManager)
-
-	result, err := deliver.Execute(config, guides)
+	sc, err := resolveScope(scope)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("  ✓ %s/%s installed (%d file(s)) → %s\n", cat.Name, preset, len(result.GeneratedFiles), result.OutputPath)
+	out, err := embeddedService().Install(context.Background(),
+		command.InstallRequest{Target: catalog.TargetClaudeSkill, IDs: ids, Scope: sc})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  ✓ %s/%s installed (%d skill(s))\n", categoryName, preset, len(out.Installed))
 	return nil
 }
 
-func skillsPathForScope(target, scope string) string {
-	if scope == dto.InstallScopeGlobal {
-		return globalSkillsPath(target)
+// skillIDsFromSelection derives the catalog package IDs from a resolved
+// selection. Package IDs are the guide names with underscores turned to
+// hyphens (the D.1.b normalization), so the converse of the catalog's guide
+// naming. All skill presets carry an explicit TemplateMapping, so the values
+// are the guide names.
+func skillIDsFromSelection(sel *catalog.ResolvedSelection) []string {
+	ids := make([]string, 0, len(sel.TemplateMapping))
+	for _, guide := range sel.TemplateMapping {
+		ids = append(ids, strings.ReplaceAll(guide, "_", "-"))
 	}
-	return defaultSkillsPath(target)
+	sort.Strings(ids)
+	return ids
 }
 
 // promptInstallHooks offers the user a chance to install Claude Code hook
 // bundles at the given scope (global or project). Skipping installs nothing.
 //
 // Hooks are Claude-only (Codex/Antigravity have no equivalent), so callers
-// should gate this on target == "claude" before invoking.
+// should gate this on target == "claude" before invoking. Install goes
+// through the catalog (EmbeddedSource + ClaudeInstaller).
 func promptInstallHooks(scope string) error {
 	if !isInteractive() {
 		return nil
@@ -165,30 +166,26 @@ func promptInstallHooks(scope string) error {
 		return nil
 	}
 
-	config := &dto.HookConfig{
-		Category: "hooks",
-		Preset:   preset,
-		Install:  scope,
-	}
-
-	fileWriter := filesystem.NewFileWriter()
-	dirManager := filesystem.NewDirectoryManager()
-	deliverer := command.NewDeliverHooksCommand(fileWriter, dirManager, root.TemplatesFS)
-	installer := command.NewInstallHooksCommand(deliverer, fileWriter, dirManager)
-
-	result, err := installer.Execute(config)
+	sc, err := resolveScope(scope)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("  ✓ hooks/%s installed → %s\n", preset, result.SettingsPath)
-	if total := sumMap(result.HandlersAdded); total > 0 {
-		fmt.Printf("  ✓ %d handler(s) added across %d event(s)\n", total, len(result.HandlersAdded))
+	out, err := embeddedService().Install(context.Background(),
+		command.InstallRequest{Target: catalog.TargetClaudeHook, IDs: hookIDsForPreset(preset), Scope: sc})
+	if err != nil {
+		return err
 	}
-	if len(result.ScriptsCopied) > 0 {
-		fmt.Printf("  ✓ %d script(s) copied to %s\n", len(result.ScriptsCopied), result.HooksDir)
-	}
+	fmt.Printf("  ✓ hooks/%s installed (%d bundle(s)) → %s\n", preset, len(out.Installed), settingsPath)
 	return nil
+}
+
+// hookIDsForPreset maps a hook preset name to its package IDs. "all" expands
+// to the three bundles; any other value is a single bundle ID.
+func hookIDsForPreset(preset string) []string {
+	if preset == "all" {
+		return []string{"linting", "security-guardrails", "convention-enforcement"}
+	}
+	return []string{preset}
 }
 
 // promptInstallWorkflows offers the user a chance to install workflow bundles
