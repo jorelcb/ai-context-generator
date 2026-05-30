@@ -55,9 +55,20 @@ func NewPersonalizingSource(inner *EmbeddedSource, provider service.LLMProvider,
 func (p *PersonalizingSource) Kind() string { return p.inner.Kind() + "+llm" }
 
 // List delegates to the inner source — the set of available packages is the
-// same; only how a skill's content is produced on Fetch changes.
+// same; only how a skill's content is produced on Fetch changes. Each
+// manifest's Source.Kind is re-stamped to this source's Kind so that a
+// CompositeSource routes Fetch back here (not to the bare inner source) and
+// the UI badges these packages as personalized.
 func (p *PersonalizingSource) List(ctx context.Context) ([]catalog.PackageManifest, error) {
-	return p.inner.List(ctx)
+	manifests, err := p.inner.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	kind := p.Kind()
+	for i := range manifests {
+		manifests[i].Source.Kind = kind
+	}
+	return manifests, nil
 }
 
 // Fetch returns LLM-adapted content for skills and delegates everything else
