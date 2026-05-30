@@ -149,9 +149,8 @@ cd my-project && codify init
 
 # 4. Equip — instala solo lo que necesites (cada uno es opcional)
 codify spec <name> --from-context ./output/<name>/    # SDD specs
-codify skills                                         # Skills reutilizables
+codify catalog                                        # Skills + hooks (paquetes)
 codify workflows                                      # Recetas multi-paso
-codify hooks                                          # Guardrails de Claude Code
 
 # 5. Maintain — mantiene los artefactos honestos a medida que el codigo evoluciona
 codify check    # Drift detection — sin LLM, cero costo
@@ -206,7 +205,7 @@ Despues, ambas ramas recolectan: preset arquitectonico (override del default glo
 - `.codify/state.json` — snapshot del estado de generacion (consumido por lifecycle commands)
 - `AGENTS.md` y `context/*.md` generados a `output/`
 
-Skills, workflows y hooks NO se incluyen — `init` imprime los comandos recomendados para mantener responsabilidades enfocadas. Corre `codify skills`, `codify workflows`, `codify hooks` por separado cuando los necesites.
+Skills, workflows y hooks NO se incluyen — `init` imprime los comandos recomendados para mantener responsabilidades enfocadas. Corre `codify catalog` (skills + hooks) y `codify workflows` por separado cuando los necesites.
 
 #### Precedencia de merge
 
@@ -338,103 +337,86 @@ codify generate my-api \
 
 ### 🧩 Agent Skills
 
-> **Nota (Track D):** el comando standalone `codify skills` fue eliminado — las skills ahora se instalan vía **`codify catalog`** (el surface unificado de paquetes). Estático: `codify catalog --type skill --package <id,...> --scope project|workstation`. Personalizado (adaptado por LLM): agrega `--mode personalized --context "<proyecto>" --model <id>`. O corre `codify catalog` para el wizard interactivo. El contenido conceptual de abajo sigue vigente; los ejemplos de comandos están en migración a la sintaxis de catalog.
-
 Las skills son [Agent Skills](https://agentskills.io) reutilizables (archivos SKILL.md) que le ensenan a tu agente _como_ ejecutar tareas especificas — seguir Conventional Commits, aplicar patrones DDD, hacer code reviews, versionar releases. Complementan los archivos de contexto: el contexto le dice al agente _que_ es tu proyecto, las skills le dicen _como_ hacer las cosas bien.
+
+Las skills se instalan vía **`codify catalog`** — el surface unificado de paquetes del ecosistema (skills + hooks).
 
 #### Dos modos
 
-| Modo             | Que hace                                                                                                           | API key      | Costo     | Velocidad   |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ------------ | --------- | ----------- |
-| **Static**       | Entrega skills pre-construidas desde el catalogo embebido. Listas para produccion, con frontmatter por ecosistema. | No necesaria | Gratis    | Instantaneo |
-| **Personalized** | El LLM adapta las skills a tu proyecto — los ejemplos usan tu dominio, lenguaje y stack.                           | Requerida    | ~centavos | ~10s        |
+| Modo             | Que hace                                                                                                  | API key      | Costo     | Velocidad   |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ------------ | --------- | ----------- |
+| **Static**       | Entrega skills pre-construidas desde el catalogo embebido. Listas para produccion, frontmatter de Claude. | No necesaria | Gratis    | Instantaneo |
+| **Personalized** | El LLM adapta la skill a tu proyecto — los ejemplos usan tu dominio, lenguaje y stack.                    | Requerida    | ~centavos | ~10s        |
 
 #### Modo interactivo
 
-Solo ejecuta `codify skills` — el menu interactivo te guia por cada decision:
+Ejecuta `codify catalog` y el wizard te guia por cada decision:
 
 ```bash
-codify skills
-# → Selecciona categoria (architecture, testing, conventions)
-# → Selecciona preset (clean, neutral, conventional-commit, ...)
-# → Selecciona modo (static o personalized)
-# → Selecciona ecosistema target (claude, codex, antigravity)
-# → Selecciona ubicacion de instalacion (global, project, o custom)
-# → Selecciona locale
+codify catalog
+# → Ecosistema: claude
+# → Tipo de paquete: Skills
+# → Modo: static o personalized
 # → Si personalized: describe tu proyecto, elige modelo
+# → Scope de instalacion: project o workstation
+# → Multi-selecciona las skills a instalar
 ```
 
 #### Modo CLI
 
 ```bash
-# Static: entrega instantanea, sin API key
-codify skills --category conventions --preset all --mode static
+# Static: entrega instantanea, sin API key. Instala en el proyecto actual (.claude/skills/).
+codify catalog --type skill --package ddd-entity,hexagonal-port --scope project
 
-# Instalar globalmente — skills accesibles desde cualquier proyecto
-codify skills --category conventions --preset all --mode static --install global
+# Scope workstation — accesible desde cualquier proyecto (~/.claude/skills/).
+codify catalog --type skill --package conventional-commit,semantic-versioning --scope workstation
 
-# Instalar en el proyecto actual — compartible via git
-codify skills --category architecture --preset clean-ddd --mode static --install project
+# Personalized: el LLM adapta cada skill a tu proyecto.
+codify catalog --type skill --package ddd-entity,cqrs-command --scope project \
+  --mode personalized --context "Microservicio Go con DDD, Godog BDD, PostgreSQL"
 
-# Personalized: adaptado a tu proyecto via LLM
-codify skills --category architecture --preset clean-ddd --mode personalized \
-  --context "Microservicio Go con DDD, Godog BDD, PostgreSQL"
-
-# Skills de arquitectura para ecosistema Codex
-codify skills --category architecture --preset neutral --target codex
+# Navega todo lo disponible, con badges de fuente y marcadores de instalado.
+codify catalog --list --type skill
 ```
 
 #### Scopes de instalacion
 
-| Scope     | Path (Claude)       | Path (Codex)        | Uso                                       |
-| --------- | ------------------- | ------------------- | ----------------------------------------- |
-| `global`  | `~/.claude/skills/` | `~/.codex/skills/`  | Accesible desde cualquier proyecto        |
-| `project` | `./.claude/skills/` | `./.agents/skills/` | Committed a git, compartido con el equipo |
+| Scope         | Path                | Uso                                       |
+| ------------- | ------------------- | ----------------------------------------- |
+| `project`     | `./.claude/skills/` | Committed a git, compartido con el equipo |
+| `workstation` | `~/.claude/skills/` | Accesible desde cualquier proyecto        |
+
+El catalog apunta al ecosistema **Claude** por ahora; el install de skills para Codex/Antigravity vuelve cuando el catalog gane esos ecosistemas.
 
 #### Catalogo de skills
 
-| Categoria      | Preset                | Skills                                                                                |
-| -------------- | --------------------- | ------------------------------------------------------------------------------------- |
-| `architecture` | `neutral`             | Code review, test strategy, safe refactoring, API design                              |
-| `architecture` | `clean-ddd`           | DDD entity, Clean Architecture layer, BDD scenario, CQRS command, Hexagonal port      |
-| `architecture` | `hexagonal`           | Port definition, Adapter pattern, Dependency inversion, Hexagonal integration test    |
-| `architecture` | `event-driven`        | Command handler, Domain event, Event projection, Saga orchestrator, Event idempotency |
-| `testing`      | `foundational`        | Test Desiderata — Las 12 propiedades de Kent Beck para buenos tests                   |
-| `testing`      | `tdd`                 | Test-Driven Development — Red-Green-Refactor _(incluye foundational)_                 |
-| `testing`      | `bdd`                 | Behavior-Driven Development — Given/When/Then _(incluye foundational)_                |
-| `conventions`  | `conventional-commit` | Conventional Commits                                                                  |
-| `conventions`  | `semantic-versioning` | Semantic Versioning                                                                   |
-| `conventions`  | `all`                 | Todas las skills de convenciones combinadas                                           |
+Los paquetes se instalan individualmente por ID (`--package <id,...>`). Navega la lista en vivo con `codify catalog --list --type skill`. Las 23 skills, agrupadas por tema:
 
-Los cuatro presets de `architecture` son espejo de los cuatro `--preset` de generacion de contexto, asi que las skills instaladas con `hexagonal` se alinean con AGENTS.md/CONTEXT.md generados con `--preset hexagonal`.
+| Tema         | Package IDs                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| Neutral      | `code-review`, `test-strategy`, `refactor-safely`, `api-design`                                 |
+| Clean + DDD  | `ddd-entity`, `clean-arch-layer`, `bdd-scenario`, `cqrs-command`, `hexagonal-port`              |
+| Hexagonal    | `port-definition`, `adapter-pattern`, `dependency-inversion`, `hex-integration-test`            |
+| Event-Driven | `command-handler`, `domain-event`, `event-projection`, `saga-orchestrator`, `event-idempotency` |
+| Testing      | `test-foundational`, `test-tdd`, `test-bdd`                                                     |
+| Conventions  | `conventional-commit`, `semantic-versioning`                                                    |
 
-#### Ecosistemas target
+Los temas de arquitectura son espejo de los cuatro `--preset` de generacion de contexto, asi que las skills `hexagonal-port`/`adapter-pattern` se alinean con AGENTS.md/CONTEXT.md generados con `--preset hexagonal`.
 
-Cada ecosistema recibe frontmatter YAML especifico y rutas de salida:
-
-| Target               | Frontmatter                                   | Ruta de salida    |
-| -------------------- | --------------------------------------------- | ----------------- |
-| `claude` _(default)_ | `name`, `description`, `user-invocable: true` | `.claude/skills/` |
-| `codex`              | `name`, `description`                         | `.agents/skills/` |
-| `antigravity`        | `name`, `description`, `triggers`             | `.agents/skills/` |
-
-#### Opciones
+#### Opciones (`codify catalog`, tipo skill)
 
 ```bash
-codify skills [flags]
+codify catalog --type skill [flags]
 ```
 
-| Flag            | Descripcion                                                               | Default                   |
-| --------------- | ------------------------------------------------------------------------- | ------------------------- |
-| `--category`    | Categoria de skill (`architecture`, `testing`, `conventions`)             | _(interactivo)_           |
-| `--preset`      | Preset dentro de la categoria                                             | _(interactivo)_           |
-| `--mode`        | Modo de generacion: `static` o `personalized`                             | _(interactivo)_           |
-| `--install`     | Scope de instalacion: `global` (path del agente) o `project` (dir actual) | _(interactivo)_           |
-| `--context`     | Descripcion del proyecto para modo personalized                           | —                         |
-| `--target`      | Ecosistema target (`claude`, `codex`, `antigravity`)                      | `claude`                  |
-| `--model` `-m`  | Modelo LLM (solo modo personalized)                                       | auto-detectado            |
-| `--locale`      | Idioma de salida (`en`, `es`)                                             | `en`                      |
-| `--output` `-o` | Directorio de salida (sobreescribe `--install`)                           | especifico del ecosistema |
+| Flag        | Descripcion                                                      | Default         |
+| ----------- | ---------------------------------------------------------------- | --------------- |
+| `--package` | Package IDs a instalar (separados por coma)                      | _(interactivo)_ |
+| `--scope`   | Scope: `project` o `workstation` (alias: `global`)               | `project`       |
+| `--mode`    | `static` (template embebido) o `personalized` (adaptado por LLM) | `static`        |
+| `--context` | Descripcion del proyecto para modo personalized                  | —               |
+| `--model`   | Modelo LLM para modo personalized                                | auto-detectado  |
+| `--list`    | Navega los paquetes disponibles en vez de instalar               | `false`         |
 
 ---
 
@@ -668,9 +650,9 @@ codify workflows [flags]
 
 ### 🪝 Hooks
 
-> **Nota (Track D):** el comando standalone `codify hooks` fue eliminado — los hooks ahora se instalan vía **`codify catalog`**: `codify catalog --type hook --package linting,security-guardrails,convention-enforcement --scope project|workstation`, o corre `codify catalog` para el wizard interactivo. El contenido conceptual de abajo sigue vigente; los ejemplos de comandos están en migración a la sintaxis de catalog.
-
 Los hooks son **guardrails deterministicos** para Claude Code. Donde los skills (prompts) y los workflows (orquestacion) dependen de que el LLM haga lo correcto, los hooks son scripts shell que **siempre** se ejecutan en eventos del lifecycle (`PreToolUse`, `PostToolUse`, etc.) — hacen cumplir reglas en cada llamada, por exit code.
+
+Los hooks se instalan vía **`codify catalog`** (el surface unificado de paquetes). Son catalog-driven (sin personalizacion por LLM) e inglés-only por diseño.
 
 Las tres capas de artefactos se complementan:
 
@@ -687,16 +669,16 @@ Las tres capas de artefactos se complementan:
 | `linting`                | `PostToolUse` (Edit\|Write)      | Auto-formatea y lintea archivos usando la herramienta correcta por lenguaje (Prettier/ESLint, ruff/black, gofmt/gofumpt, rustfmt, rubocop, shfmt). Detecta tools instalados via `command -v` — silencioso si falta uno.                                                  |
 | `security-guardrails`    | `PreToolUse` (Bash, Edit\|Write) | Bloquea comandos Bash peligrosos (`rm -rf /`, `git push --force` a main, `curl \| bash`, fork bombs, formateo de fs) y protege archivos sensibles (`.env*`, `secrets/`, `.git/`, lockfiles, claves privadas, configs CI).                                                |
 | `convention-enforcement` | `PreToolUse` (Bash con `if`)     | Valida mensajes de commit contra Conventional Commits 1.0.0 (titulo ≤72 chars, tipo valido, sin placeholders triviales) y bloquea push directo/force-push a branches protegidos (`main`, `master`, `develop`, `production`, `release/*`). Requiere Claude Code v2.1.85+. |
-| `all`                    | (combinado)                      | Los tres presets mergeados en un solo `hooks.json`                                                                                                                                                                                                                       |
+| `all`                    | (combinado)                      | Pasa los tres package IDs para instalar el bundle completo                                                                                                                                                                                                               |
 
-#### Modos de activacion
+> Cada preset de arriba es un **paquete** del catalog: `linting`, `security-guardrails`, `convention-enforcement`. Instalalos por ID con `--package`.
 
-| Flag                                      | Comportamiento                                                                                                                                                         |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--install project` (default interactivo) | Mergea en `.claude/settings.json` y copia scripts a `.claude/hooks/`. Crea backup antes de modificar. Idempotente: ejecutarlo dos veces no agrega handlers duplicados. |
-| `--install global`                        | Igual que project pero en `~/.claude/settings.json` y `~/.claude/hooks/` (todos los proyectos)                                                                         |
-| `--output PATH`                           | **Modo preview** — escribe `{PATH}/hooks.json` + `{PATH}/hooks/*.sh` standalone para inspeccion o merge manual. NO toca `settings.json`                                |
-| `--dry-run`                               | Imprime el `settings.json` resultante del merge propuesto, sale 0, no escribe nada                                                                                     |
+#### Scopes de instalacion
+
+| Scope         | Target                                         | Comportamiento                                                                                                      |
+| ------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `project`     | `.claude/settings.json` + `.claude/hooks/`     | Mergea handlers + copia scripts para este repo. Crea backup primero; idempotente: re-ejecutar no agrega nada nuevo. |
+| `workstation` | `~/.claude/settings.json` + `~/.claude/hooks/` | Igual, para todos tus proyectos. Las rutas de comando de los scripts se reescriben a `$HOME`.                       |
 
 #### Estructura de salida
 
@@ -715,28 +697,25 @@ Las tres capas de artefactos se complementan:
 #### Modo interactivo
 
 ```bash
-codify hooks
-# → Selecciona preset (linting, security-guardrails, convention-enforcement, all)
-# → Selecciona modo de activacion (project / global / preview)
+codify catalog
+# → Ecosistema: claude
+# → Tipo de paquete: Hooks
+# → Scope de instalacion: project o workstation
+# → Multi-selecciona los bundles de hooks a instalar
 ```
 
 #### Modo CLI
 
 ```bash
-# Activar todo para el proyecto actual (flujo default)
-codify hooks --preset all --install project
+# Activar todo para el proyecto actual
+codify catalog --type hook --package linting,security-guardrails,convention-enforcement --scope project
 
-# Globalmente para todos tus proyectos
-codify hooks --preset all --install global
+# Solo linting, en scope workstation (todos tus proyectos)
+codify catalog --type hook --package linting --scope workstation
 
-# Solo preview (escribe bundle, no toca settings.json)
-codify hooks --preset linting --output ./tmp/preview
-
-# Ver el merge propuesto sin escribir nada
-codify hooks --preset all --install project --dry-run
+# Navega los bundles de hooks disponibles con marcadores de instalado
+codify catalog --list --type hook
 ```
-
-> Los hooks son inglés-only por diseño (scripts shell deterministas, sin personalización por LLM), así que `codify hooks` no tiene flag `--locale`.
 
 #### Verificar activacion
 
@@ -765,15 +744,14 @@ Los scripts bash usan patrones regex, no AST parsing. Detienen comandos **descui
 #### Opciones
 
 ```bash
-codify hooks [flags]
+codify catalog --type hook [flags]
 ```
 
-| Flag            | Descripcion                                                         | Default                             |
-| --------------- | ------------------------------------------------------------------- | ----------------------------------- |
-| `--preset` `-p` | `linting`, `security-guardrails`, `convention-enforcement`, o `all` | _(interactivo)_                     |
-| `--install`     | Scope de instalacion: `global` o `project` (auto-activa)            | _(interactivo — default `project`)_ |
-| `--output` `-o` | Directorio preview: escribe bundle standalone, no toca settings     | —                                   |
-| `--dry-run`     | Imprime el merge propuesto sin escribir nada                        | `false`                             |
+| Flag        | Descripcion                                                                                     | Default         |
+| ----------- | ----------------------------------------------------------------------------------------------- | --------------- |
+| `--package` | IDs de bundles: `linting`, `security-guardrails`, `convention-enforcement` (separados por coma) | _(interactivo)_ |
+| `--scope`   | Scope: `project` o `workstation` (alias: `global`)                                              | `project`       |
+| `--list`    | Navega los bundles disponibles en vez de instalar                                               | `false`         |
 
 ---
 
@@ -1463,9 +1441,10 @@ Snapshot completo de la superficie. Lo que aparece aqui esta shippeado, testeado
 
 **Capa Behavior**
 
-- ✅ `skills` — 4 presets de architecture (espejados con los presets de context) + testing + conventions; modos static + personalized; multi-ecosistema (claude, codex, antigravity)
+- ✅ `catalog` — surface unificado de install para **skills + hooks** (ADR-0010). Wizard interactivo, navegacion `--list` con badges de fuente + marcadores de instalado, install no-interactivo `--type/--package/--scope`; skills soportan `--mode personalized` (adaptado por LLM). Ecosistema Claude (otros vuelven luego)
+- ✅ `skills` (via catalog) — architecture (neutral/clean-ddd/hexagonal/event-driven) + testing + conventions; modos static + personalized
+- ✅ `hooks` (via catalog) — linting, security-guardrails, convention-enforcement; auto-install con backup de settings.json + merge idempotente
 - ✅ `workflows` — spec-driven-change, bug-fix, release-cycle; static + personalized; claude (native skills) + antigravity (anotaciones nativas)
-- ✅ `hooks` — linting, security-guardrails, convention-enforcement; auto-install con backup + merge idempotente; `--output` preview y `--dry-run`
 
 **Capa Bootstrap**
 

@@ -167,9 +167,8 @@ cd my-project && codify init
 
 # 4. Equip — install only what you need (each is skippable)
 codify spec <name> --from-context ./output/<name>/    # SDD specs
-codify skills                                         # Reusable agent skills
+codify catalog                                        # Skills + hooks (packages)
 codify workflows                                      # Multi-step recipes
-codify hooks                                          # Claude Code guardrails
 
 # 5. Maintain — keep artifacts honest as the code evolves
 codify check    # Drift detection — no LLM, zero cost
@@ -224,7 +223,7 @@ After that, both branches collect: architectural preset (override of global defa
 - `.codify/state.json` — snapshot of generation state (consumed by lifecycle commands)
 - Generated `AGENTS.md` and `context/*.md` written to `output/`
 
-Skills, workflows, and hooks are NOT bundled — `init` prints recommended next-step commands to keep responsibilities focused. Run `codify skills`, `codify workflows`, `codify hooks` separately when you want them.
+Skills, workflows, and hooks are NOT bundled — `init` prints recommended next-step commands to keep responsibilities focused. Run `codify catalog` (skills + hooks) and `codify workflows` separately when you want them.
 
 #### Merge precedence
 
@@ -356,103 +355,86 @@ codify generate my-api \
 
 ### 🧩 Agent Skills
 
-> **Note (Track D):** the standalone `codify skills` command was removed — skills now install through **`codify catalog`** (the unified packages surface). Static: `codify catalog --type skill --package <id,...> --scope project|workstation`. Personalized (LLM-adapted): add `--mode personalized --context "<project>" --model <id>`. Or run `codify catalog` for the interactive wizard. The conceptual content below still applies; command examples are being migrated to the catalog syntax.
-
 Skills are reusable [Agent Skills](https://agentskills.io) (SKILL.md files) that teach your agent _how_ to perform specific tasks — following Conventional Commits, applying DDD patterns, doing code reviews, versioning releases. They complement context files: context tells the agent _what_ your project is, skills tell it _how_ to do things right.
+
+Skills install through **`codify catalog`** — the unified surface for ecosystem packages (skills + hooks).
 
 #### Two modes
 
-| Mode             | What it does                                                                                        | API key    | Cost     | Speed   |
-| ---------------- | --------------------------------------------------------------------------------------------------- | ---------- | -------- | ------- |
-| **Static**       | Delivers pre-built skills from the embedded catalog. Production-ready, ecosystem-aware frontmatter. | Not needed | Free     | Instant |
-| **Personalized** | LLM adapts skills to your project — examples use your domain, language, and stack.                  | Required   | ~pennies | ~10s    |
+| Mode             | What it does                                                                               | API key    | Cost     | Speed   |
+| ---------------- | ------------------------------------------------------------------------------------------ | ---------- | -------- | ------- |
+| **Static**       | Delivers pre-built skills from the embedded catalog. Production-ready, Claude frontmatter. | Not needed | Free     | Instant |
+| **Personalized** | LLM adapts the skill to your project — examples use your domain, language, and stack.      | Required   | ~pennies | ~10s    |
 
 #### Interactive mode
 
-Just run `codify skills` — the interactive menu guides you through every choice:
+Run `codify catalog` and the wizard guides you through every choice:
 
 ```bash
-codify skills
-# → Select category (architecture, testing, conventions)
-# → Select preset (clean, neutral, conventional-commit, ...)
-# → Select mode (static or personalized)
-# → Select target ecosystem (claude, codex, antigravity)
-# → Select install location (global, project, or custom)
-# → Select locale
+codify catalog
+# → Ecosystem: claude
+# → Package type: Skills
+# → Mode: static or personalized
 # → If personalized: describe your project, choose model
+# → Install scope: project or workstation
+# → Multi-select the skills to install
 ```
 
 #### CLI mode
 
 ```bash
-# Static: instant delivery, no API key
-codify skills --category conventions --preset all --mode static
+# Static: instant delivery, no API key. Install to the current project (.claude/skills/).
+codify catalog --type skill --package ddd-entity,hexagonal-port --scope project
 
-# Install globally — skills available from any project
-codify skills --category conventions --preset all --mode static --install global
+# Install at workstation scope — available from any project (~/.claude/skills/).
+codify catalog --type skill --package conventional-commit,semantic-versioning --scope workstation
 
-# Install to current project — shareable via git
-codify skills --category architecture --preset clean --mode static --install project
+# Personalized: LLM-adapts each skill to your project.
+codify catalog --type skill --package ddd-entity,cqrs-command --scope project \
+  --mode personalized --context "Go microservice with DDD, Godog BDD, PostgreSQL"
 
-# Personalized: LLM-adapted to your project
-codify skills --category architecture --preset clean --mode personalized \
-  --context "Go microservice with DDD, Godog BDD, PostgreSQL"
-
-# Architecture skills for Codex ecosystem
-codify skills --category architecture --preset neutral --target codex
+# Browse everything available, with source badges and installed markers.
+codify catalog --list --type skill
 ```
 
 #### Install scopes
 
-| Scope     | Path (Claude)       | Path (Codex)        | Use case                           |
-| --------- | ------------------- | ------------------- | ---------------------------------- |
-| `global`  | `~/.claude/skills/` | `~/.codex/skills/`  | Available from any project         |
-| `project` | `./.claude/skills/` | `./.agents/skills/` | Committed to git, shared with team |
+| Scope         | Path                | Use case                           |
+| ------------- | ------------------- | ---------------------------------- |
+| `project`     | `./.claude/skills/` | Committed to git, shared with team |
+| `workstation` | `~/.claude/skills/` | Available from any project         |
+
+The catalog targets the **Claude** ecosystem for now; Codex/Antigravity skill install returns when the catalog gains those ecosystems.
 
 #### Skill catalog
 
-| Category       | Preset                | Skills                                                                                |
-| -------------- | --------------------- | ------------------------------------------------------------------------------------- |
-| `architecture` | `neutral`             | Code review, test strategy, safe refactoring, API design                              |
-| `architecture` | `clean-ddd`           | DDD entity, Clean Architecture layer, BDD scenario, CQRS command, Hexagonal port      |
-| `architecture` | `hexagonal`           | Port definition, Adapter pattern, Dependency inversion, Hexagonal integration test    |
-| `architecture` | `event-driven`        | Command handler, Domain event, Event projection, Saga orchestrator, Event idempotency |
-| `testing`      | `foundational`        | Test Desiderata — Kent Beck's 12 properties of good tests                             |
-| `testing`      | `tdd`                 | Test-Driven Development — Red-Green-Refactor _(includes foundational)_                |
-| `testing`      | `bdd`                 | Behavior-Driven Development — Given/When/Then _(includes foundational)_               |
-| `conventions`  | `conventional-commit` | Conventional Commits                                                                  |
-| `conventions`  | `semantic-versioning` | Semantic Versioning                                                                   |
-| `conventions`  | `all`                 | All convention skills combined                                                        |
+Packages are installed individually by ID (`--package <id,...>`). Browse the live list with `codify catalog --list --type skill`. The 23 skills, grouped by theme:
 
-The four `architecture` presets mirror the four `--preset` options for context generation, so skills installed for `hexagonal` line up with AGENTS.md/CONTEXT.md generated under `--preset hexagonal`.
+| Theme        | Package IDs                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| Neutral      | `code-review`, `test-strategy`, `refactor-safely`, `api-design`                                 |
+| Clean + DDD  | `ddd-entity`, `clean-arch-layer`, `bdd-scenario`, `cqrs-command`, `hexagonal-port`              |
+| Hexagonal    | `port-definition`, `adapter-pattern`, `dependency-inversion`, `hex-integration-test`            |
+| Event-Driven | `command-handler`, `domain-event`, `event-projection`, `saga-orchestrator`, `event-idempotency` |
+| Testing      | `test-foundational`, `test-tdd`, `test-bdd`                                                     |
+| Conventions  | `conventional-commit`, `semantic-versioning`                                                    |
 
-#### Target ecosystems
+The architecture themes mirror the four `--preset` options for context generation, so skills installed for `hexagonal-port`/`adapter-pattern` line up with AGENTS.md/CONTEXT.md generated under `--preset hexagonal`.
 
-Each ecosystem gets specific YAML frontmatter and output paths:
-
-| Target               | Frontmatter                                   | Output path       |
-| -------------------- | --------------------------------------------- | ----------------- |
-| `claude` _(default)_ | `name`, `description`, `user-invocable: true` | `.claude/skills/` |
-| `codex`              | `name`, `description`                         | `.agents/skills/` |
-| `antigravity`        | `name`, `description`, `triggers`             | `.agents/skills/` |
-
-#### Options
+#### Options (`codify catalog`, skill type)
 
 ```bash
-codify skills [flags]
+codify catalog --type skill [flags]
 ```
 
-| Flag            | Description                                                     | Default            |
-| --------------- | --------------------------------------------------------------- | ------------------ |
-| `--category`    | Skill category (`architecture`, `testing`, `conventions`)       | _(interactive)_    |
-| `--preset`      | Preset within category                                          | _(interactive)_    |
-| `--mode`        | Generation mode: `static` or `personalized`                     | _(interactive)_    |
-| `--install`     | Install scope: `global` (agent path) or `project` (current dir) | _(interactive)_    |
-| `--context`     | Project description for personalized mode                       | —                  |
-| `--target`      | Target ecosystem (`claude`, `codex`, `antigravity`)             | `claude`           |
-| `--model` `-m`  | LLM model (personalized mode only)                              | auto-detected      |
-| `--locale`      | Output language (`en`, `es`)                                    | `en`               |
-| `--output` `-o` | Output directory (overrides `--install`)                        | ecosystem-specific |
+| Flag        | Description                                                  | Default         |
+| ----------- | ------------------------------------------------------------ | --------------- |
+| `--package` | Comma-separated package IDs to install                       | _(interactive)_ |
+| `--scope`   | Install scope: `project` or `workstation` (alias: `global`)  | `project`       |
+| `--mode`    | `static` (embedded template) or `personalized` (LLM-adapted) | `static`        |
+| `--context` | Project description for personalized mode                    | —               |
+| `--model`   | LLM model for personalized mode                              | auto-detected   |
+| `--list`    | Browse available packages instead of installing              | `false`         |
 
 ---
 
@@ -686,9 +668,9 @@ codify workflows [flags]
 
 ### 🪝 Hooks
 
-> **Note (Track D):** the standalone `codify hooks` command was removed — hooks now install through **`codify catalog`**: `codify catalog --type hook --package linting,security-guardrails,convention-enforcement --scope project|workstation`, or run `codify catalog` for the interactive wizard. The conceptual content below still applies; command examples are being migrated to the catalog syntax.
-
 Hooks are **deterministic guardrails** for Claude Code. Where skills (prompts) and workflows (orchestration) rely on the LLM doing the right thing, hooks are shell scripts that **always** run on lifecycle events (`PreToolUse`, `PostToolUse`, etc.) — they enforce rules every single time, by exit code.
+
+Hooks install through **`codify catalog`** (the unified packages surface). They are catalog-driven (no LLM personalization) and English-only by design.
 
 The three artifact layers complement each other:
 
@@ -705,16 +687,16 @@ The three artifact layers complement each other:
 | `linting`                | `PostToolUse` (Edit\|Write)      | Auto-format and lint files using the right tool per language (Prettier/ESLint, ruff/black, gofmt/gofumpt, rustfmt, rubocop, shfmt). Tools detected via `command -v` — skipped silently if not installed.                                                         |
 | `security-guardrails`    | `PreToolUse` (Bash, Edit\|Write) | Block dangerous Bash commands (`rm -rf /`, `git push --force` to main, `curl \| bash`, fork bombs, fs-formatting) and protect sensitive files (`.env*`, `secrets/`, `.git/`, lockfiles, private keys, CI configs).                                               |
 | `convention-enforcement` | `PreToolUse` (Bash with `if`)    | Validate commit messages against Conventional Commits 1.0.0 (header ≤72 chars, valid type, no trivial placeholders) and block direct/force pushes to protected branches (`main`, `master`, `develop`, `production`, `release/*`). Requires Claude Code v2.1.85+. |
-| `all`                    | (combined)                       | All three preset bundles merged into a single `hooks.json`                                                                                                                                                                                                       |
+| `all`                    | (combined)                       | Pass all three package IDs to install the full bundle                                                                                                                                                                                                            |
 
-#### Activation modes
+> Each preset above is a catalog **package**: `linting`, `security-guardrails`, `convention-enforcement`. Install them by ID with `--package`.
 
-| Flag                                         | Behavior                                                                                                                                                                                                                      |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--install project` (default in interactive) | Merge into `.claude/settings.json` and copy scripts to `.claude/hooks/`. Backs up the existing settings file before any modification. Idempotent — running it twice adds zero handlers the second time.                       |
-| `--install global`                           | Same as project, but targets `~/.claude/settings.json` and `~/.claude/hooks/` for all projects                                                                                                                                |
-| `--output PATH`                              | **Preview mode** — writes a standalone `{PATH}/hooks.json` + `{PATH}/hooks/*.sh` bundle for inspection or manual merge. Does NOT touch `settings.json`. Use this if you want to review the proposed changes before activating |
-| `--dry-run`                                  | Prints the proposed `settings.json` after merge, exits 0, writes nothing                                                                                                                                                      |
+#### Install scopes
+
+| Scope         | Target                                         | Behavior                                                                                                                          |
+| ------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `project`     | `.claude/settings.json` + `.claude/hooks/`     | Merge handlers + copy scripts for this repo. Backs up the existing settings file first; idempotent — re-running adds nothing new. |
+| `workstation` | `~/.claude/settings.json` + `~/.claude/hooks/` | Same, for all your projects. Script command paths are rewritten to `$HOME`.                                                       |
 
 #### Output layout
 
@@ -733,28 +715,25 @@ The three artifact layers complement each other:
 #### Interactive mode
 
 ```bash
-codify hooks
-# → Select preset (linting, security-guardrails, convention-enforcement, all)
-# → Select activation mode (project / global / preview)
+codify catalog
+# → Ecosystem: claude
+# → Package type: Hooks
+# → Install scope: project or workstation
+# → Multi-select the hook bundles to install
 ```
 
 #### CLI mode
 
 ```bash
-# Activate everything for the current project (default flow)
-codify hooks --preset all --install project
+# Activate everything for the current project
+codify catalog --type hook --package linting,security-guardrails,convention-enforcement --scope project
 
-# Globally for all your projects
-codify hooks --preset all --install global
+# Just linting, at workstation scope (all your projects)
+codify catalog --type hook --package linting --scope workstation
 
-# Preview only (write bundle, don't touch settings.json)
-codify hooks --preset linting --output ./tmp/preview
-
-# See the proposed merge without writing anything
-codify hooks --preset all --install project --dry-run
+# Browse available hook bundles with installed markers
+codify catalog --list --type hook
 ```
-
-> Hooks are English-only by design (deterministic shell scripts, no LLM personalization), so `codify hooks` has no `--locale` flag.
 
 #### Verify activation
 
@@ -783,15 +762,14 @@ The bash scripts use regex patterns, not AST parsing. They stop **careless** age
 #### Options
 
 ```bash
-codify hooks [flags]
+codify catalog --type hook [flags]
 ```
 
-| Flag            | Description                                                          | Default                             |
-| --------------- | -------------------------------------------------------------------- | ----------------------------------- |
-| `--preset` `-p` | `linting`, `security-guardrails`, `convention-enforcement`, or `all` | _(interactive)_                     |
-| `--install`     | Install scope: `global` or `project` (auto-activates)                | _(interactive — default `project`)_ |
-| `--output` `-o` | Preview directory: write standalone bundle, no settings change       | —                                   |
-| `--dry-run`     | Print the proposed `settings.json` merge but write nothing           | `false`                             |
+| Flag        | Description                                                                                   | Default         |
+| ----------- | --------------------------------------------------------------------------------------------- | --------------- |
+| `--package` | Hook bundle IDs: `linting`, `security-guardrails`, `convention-enforcement` (comma-separated) | _(interactive)_ |
+| `--scope`   | Install scope: `project` or `workstation` (alias: `global`)                                   | `project`       |
+| `--list`    | Browse available hook bundles instead of installing                                           | `false`         |
 
 ---
 
@@ -1535,9 +1513,10 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 
 **Behavior layer**
 
-- ✅ `skills` — 4 architecture presets (mirroring context presets) + testing + conventions; static + personalized modes; multi-ecosystem (claude, codex, antigravity)
+- ✅ `catalog` — unified install surface for **skills + hooks** (ADR-0010). Interactive wizard, `--list` browsing with source badges + installed markers, non-interactive `--type/--package/--scope`; skills support `--mode personalized` (LLM-adapted). Claude ecosystem (others return later)
+- ✅ `skills` (via catalog) — architecture (neutral/clean-ddd/hexagonal/event-driven) + testing + conventions; static + personalized modes
+- ✅ `hooks` (via catalog) — linting, security-guardrails, convention-enforcement; auto-install with settings.json backup + idempotent merge
 - ✅ `workflows` — spec-driven-change, bug-fix, release-cycle; static + personalized; claude (native skills) + antigravity (native annotations)
-- ✅ `hooks` — linting, security-guardrails, convention-enforcement; auto-install with backup + idempotent merge; `--output` preview and `--dry-run`
 
 **Bootstrap layer**
 
