@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -109,17 +110,31 @@ func catalogRegistry() *targetinstaller.Registry {
 	return targetinstaller.NewRegistry(mustClaudeInstaller())
 }
 
-// embeddedService is the static path: packages ship as their embedded
-// template. Used for browsing (List/Installed) and static installs — no API
+// localSourceRoot is the convention directory for personal/team packages,
+// composed on top of the built-in catalog. Missing dir = no local packages.
+func localSourceRoot() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".codify", "sources")
+	}
+	return filepath.Join(home, ".codify", "sources")
+}
+
+// embeddedService is the static path: built-in embedded packages composed with
+// any local packages under ~/.codify/sources/ (local overrides built-in on ID
+// collision). Used for browsing (List/Installed) and static installs — no API
 // key required.
 func embeddedService() *command.CatalogService {
-	source := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
+	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
+	local := packagesource.NewLocalDirectorySource(localSourceRoot())
+	source := packagesource.NewCompositeSource(embedded, local) // local overrides embedded
 	return command.NewCatalogService(source, catalogRegistry())
 }
 
-// personalizedService is the LLM path: skills are adapted to projectContext
-// before install, via the PersonalizingSource decorator. Requires a usable
-// model + API key.
+// personalizedService is the LLM path: built-in skills are adapted to
+// projectContext via the PersonalizingSource decorator, composed with local
+// packages (which install statically — local packages are pre-authored, not
+// LLM-adapted). Requires a usable model + API key.
 func personalizedService(ctx context.Context, model, projectContext string) (*command.CatalogService, error) {
 	apiKey, err := llm.ResolveAPIKey(model)
 	if err != nil {
@@ -130,7 +145,9 @@ func personalizedService(ctx context.Context, model, projectContext string) (*co
 		return nil, fmt.Errorf("create LLM provider: %w", err)
 	}
 	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
-	source := packagesource.NewPersonalizingSource(embedded, provider, projectContext, "en", "claude")
+	personalizing := packagesource.NewPersonalizingSource(embedded, provider, projectContext, "en", "claude")
+	local := packagesource.NewLocalDirectorySource(localSourceRoot())
+	source := packagesource.NewCompositeSource(personalizing, local)
 	return command.NewCatalogService(source, catalogRegistry()), nil
 }
 

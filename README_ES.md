@@ -403,6 +403,8 @@ Los paquetes se instalan individualmente por ID (`--package <id,...>`). Navega l
 
 Los temas de arquitectura son espejo de los cuatro `--preset` de generacion de contexto, asi que las skills `hexagonal-port`/`adapter-pattern` se alinean con AGENTS.md/CONTEXT.md generados con `--preset hexagonal`.
 
+> **Paquetes personales / de equipo:** pon los tuyos en `~/.codify/sources/<id>/` — un manifest `codify-package.yaml` + el contenido (`SKILL.md`, o `hooks.json` + scripts para hooks). Aparecen en `codify catalog` con badge `[local-fs]`, junto a los built-in, y sobreescriben un built-in del mismo ID. _(Track D — las fuentes git/marketplace vienen a continuación; ver ADR-0012.)_
+
 #### Opciones (`codify catalog`, tipo skill)
 
 ```bash

@@ -421,6 +421,8 @@ Packages are installed individually by ID (`--package <id,...>`). Browse the liv
 
 The architecture themes mirror the four `--preset` options for context generation, so skills installed for `hexagonal-port`/`adapter-pattern` line up with AGENTS.md/CONTEXT.md generated under `--preset hexagonal`.
 
+> **Personal / team packages:** drop your own under `~/.codify/sources/<id>/` — a `codify-package.yaml` manifest plus the content (`SKILL.md`, or `hooks.json` + scripts for hooks). They appear in `codify catalog` badged `[local-fs]`, alongside the built-ins, and override a built-in of the same ID. _(Track D — git/marketplace sources land next; see ADR-0012.)_
+
 #### Options (`codify catalog`, skill type)
 
 ```bash
