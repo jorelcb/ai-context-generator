@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`codify catalog` command** — the unified surface for browsing and installing ecosystem packages (ADR-0010). Interactive wizard (ecosystem → type → mode → packages → scope), `--list` browsing with source badges and installed markers, and non-interactive install (`--type skill --package a,b --scope project|workstation`). Skills support `--mode personalized` (LLM-adapts the template to your project via `--context`/`--model`), modeled as a `PersonalizingSource` decorator so the install path is unchanged. MVP covers the Claude ecosystem (skills + hooks); `codify skills`/`codify hooks` remain for now and are folded in incrementally.
+- **`codify catalog` command** — the unified surface for browsing and installing ecosystem packages (ADR-0010). Interactive wizard (ecosystem → type → mode → packages → scope), `--list` browsing with source badges and installed markers, and non-interactive install (`--type skill --package a,b --scope project|workstation`). Skills support `--mode personalized` (LLM-adapts the template to your project via `--context`/`--model`), modeled as a `PersonalizingSource` decorator so the install path is unchanged. It is now the single surface for skills + hooks (the standalone `codify skills`/`codify hooks` commands were removed). MVP covers the Claude ecosystem.
 - **`packagesource.PersonalizingSource`** — a `PackageSource` decorator that LLM-adapts skill packages before install; delegates List/Kind and non-skill Fetch to the inner embedded source. Keeps `CatalogService` and the installer untouched.
 - **`CatalogService`** (application) — orchestrates the package ports: `Available`, `Installed`, and `Install`, driven once and reused by the CLI (and later `config`/`init`).
 - **`catalog.PackageManifest`** — a single Target-tagged descriptor for any installable artifact (skill, hook, and later workflow), independent of origin, with Claude metadata (triggers, allowed-tools, user-invocable), source ref and checksum fields.
@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **BREAKING:** the standalone `codify skills` and `codify hooks` commands. Both are now installed through `codify catalog` (skills support `--mode personalized`). `config`/`init` route their opt-in skill/hook install through the catalog. The catalog surface is Claude-only for now, so skill install for codex/antigravity targets is deferred until the catalog gains those ecosystems; the application-layer generators remain available via the MCP server.
 - **BREAKING:** `codify hooks --locale` flag (hooks are deterministic English-only scripts with no LLM personalization). `HookConfig.Locale` field removed.
 - **BREAKING:** the `locale` argument on the `generate_hooks`, `commit_guidance`, and `version_guidance` MCP tools.
 - **BREAKING:** `templates/es/skills` and `templates/es/hooks` subtrees. Locale templates remain for context, specs, idioms, and workflows.

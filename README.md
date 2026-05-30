@@ -356,6 +356,8 @@ codify generate my-api \
 
 ### 🧩 Agent Skills
 
+> **Note (Track D):** the standalone `codify skills` command was removed — skills now install through **`codify catalog`** (the unified packages surface). Static: `codify catalog --type skill --package <id,...> --scope project|workstation`. Personalized (LLM-adapted): add `--mode personalized --context "<project>" --model <id>`. Or run `codify catalog` for the interactive wizard. The conceptual content below still applies; command examples are being migrated to the catalog syntax.
+
 Skills are reusable [Agent Skills](https://agentskills.io) (SKILL.md files) that teach your agent _how_ to perform specific tasks — following Conventional Commits, applying DDD patterns, doing code reviews, versioning releases. They complement context files: context tells the agent _what_ your project is, skills tell it _how_ to do things right.
 
 #### Two modes
@@ -683,6 +685,8 @@ codify workflows [flags]
 ---
 
 ### 🪝 Hooks
+
+> **Note (Track D):** the standalone `codify hooks` command was removed — hooks now install through **`codify catalog`**: `codify catalog --type hook --package linting,security-guardrails,convention-enforcement --scope project|workstation`, or run `codify catalog` for the interactive wizard. The conceptual content below still applies; command examples are being migrated to the catalog syntax.
 
 Hooks are **deterministic guardrails** for Claude Code. Where skills (prompts) and workflows (orchestration) rely on the LLM doing the right thing, hooks are shell scripts that **always** run on lifecycle events (`PreToolUse`, `PostToolUse`, etc.) — they enforce rules every single time, by exit code.
 

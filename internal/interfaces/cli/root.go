@@ -31,12 +31,12 @@ Lifecycle phases:
        config              generate            check
        init                analyze             update
                            spec                audit
-                           skills              watch
+                           catalog             watch
                            workflows           usage
-                           hooks               resolve
+                                               resolve
 
   • Bootstrap (one-time)  — set up the workstation (config) or a project (init)
-  • Equip      (per need) — generate context, install skills/workflows/hooks, write specs
+  • Equip      (per need) — generate context, install catalog packages (skills/hooks) + workflows, write specs
   • Maintain   (ongoing)  — detect drift, regenerate, audit commits, track usage`,
 	Version: Version,
 	// PersistentPreRunE corre antes de cada subcomando, lo cual habilita el
@@ -93,7 +93,7 @@ func init() {
 	// Register lifecycle phase groups. Order here drives display order in --help.
 	rootCmd.AddGroup(
 		&cobra.Group{ID: groupBootstrap, Title: "Bootstrap (one-time setup):"},
-		&cobra.Group{ID: groupEquip, Title: "Equip (install context, skills, workflows, hooks, specs):"},
+		&cobra.Group{ID: groupEquip, Title: "Equip (install context, catalog packages, workflows, specs):"},
 		&cobra.Group{ID: groupMaintain, Title: "Maintain (ongoing lifecycle: drift, audit, usage):"},
 		&cobra.Group{ID: groupSystem, Title: "System:"},
 	)
@@ -106,9 +106,7 @@ func init() {
 	rootCmd.AddCommand(withGroup(commands.NewAnalyzeCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewSpecCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewCatalogCmd(), groupEquip))
-	rootCmd.AddCommand(withGroup(commands.NewSkillsCmd(), groupEquip))
 	rootCmd.AddCommand(withGroup(commands.NewWorkflowsCmd(), groupEquip))
-	rootCmd.AddCommand(withGroup(commands.NewHooksCmd(), groupEquip))
 
 	rootCmd.AddCommand(withGroup(commands.NewCheckCmd(), groupMaintain))
 	rootCmd.AddCommand(withGroup(commands.NewUpdateCmd(), groupMaintain))
