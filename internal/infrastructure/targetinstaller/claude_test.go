@@ -28,7 +28,7 @@ func TestClaudeInstaller_Handles(t *testing.T) {
 	}{
 		{catalog.TargetClaudeSkill, true},
 		{catalog.TargetClaudeHook, true},
-		{catalog.TargetGeminiExt, false},
+		{catalog.TargetCodifySDDStandard, false},
 		{catalog.TargetAntigravityWF, false},
 	}
 	for _, tc := range cases {

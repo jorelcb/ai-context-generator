@@ -52,12 +52,14 @@ const (
 	TargetClaudePlugin Target = "claude-plugin"
 	// TargetClaudeSlash: a slash command installed under .claude/commands/.
 	TargetClaudeSlash Target = "claude-slash-command"
-	// TargetGeminiExt: a Gemini CLI extension. Concrete shape to be defined
-	// when D.5 (GeminiInstaller) lands.
-	TargetGeminiExt Target = "gemini-extension"
 	// TargetAntigravityWF: an Antigravity workflow (flat .md with execution
 	// annotations). Workflows are exempt from the catalog UX (ADR-0010 §5)
 	// but remain installable via flags.
+	//
+	// Note: there is no Gemini CLI target. Gemini CLI is being deprecated in
+	// favor of Antigravity CLI (ADR-0012 §4); codify aligns early and does
+	// not model gemini-extension packages. (The Gemini *model* API, used for
+	// generation, is unaffected and lives in infrastructure/llm.)
 	TargetAntigravityWF Target = "antigravity-workflow"
 
 	// Behavior packages — declarative metadata that a generic adapter
@@ -169,8 +171,6 @@ type PackageManifest struct {
 
 	// Claude is populated for any claude-* Target.
 	Claude *ClaudeMetadata
-	// Gemini is populated for any gemini-* Target. Shape TBD (D.5).
-	Gemini *GeminiMetadata
 	// SDD is populated for TargetCodifySDDStandard. Carries the declarative
 	// spec the runtime registry consumes to register a new SpecStandard.
 	SDD *SDDMetadata
@@ -201,14 +201,6 @@ type ClaudeMetadata struct {
 	// HookEvents (only for TargetClaudeHook) lists the lifecycle events
 	// the hook bundle reacts to: PreToolUse, PostToolUse, etc.
 	HookEvents []string
-}
-
-// GeminiMetadata carries Gemini-specific structured metadata. Shape to be
-// defined when D.5 (GeminiInstaller) lands. Stub now to keep the manifest
-// forward-compatible without requiring struct edits when Gemini support
-// arrives.
-type GeminiMetadata struct {
-	// Reserved for future fields.
 }
 
 // SDDMetadata is the declarative spec for behavior packages of type
