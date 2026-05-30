@@ -111,7 +111,7 @@ func TestLocalSource_MalformedManifest_Errors(t *testing.T) {
 
 func TestLocalSource_UnsupportedTarget_Errors(t *testing.T) {
 	root := t.TempDir()
-	writePackage(t, root, "p", "id: p\ntarget: gemini-extension\n", map[string]string{})
+	writePackage(t, root, "p", "id: p\ntarget: codify-sdd-standard\n", map[string]string{})
 	if _, err := NewLocalDirectorySource(root).List(context.Background()); err == nil {
 		t.Fatal("expected error on unsupported target")
 	}

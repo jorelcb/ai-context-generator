@@ -17,7 +17,6 @@ func TestTargetConstants_StableValues(t *testing.T) {
 		{string(TargetClaudeHook), "claude-hook"},
 		{string(TargetClaudePlugin), "claude-plugin"},
 		{string(TargetClaudeSlash), "claude-slash-command"},
-		{string(TargetGeminiExt), "gemini-extension"},
 		{string(TargetAntigravityWF), "antigravity-workflow"},
 		{string(TargetCodifySDDStandard), "codify-sdd-standard"},
 	}
@@ -83,10 +82,10 @@ func TestPackageManifest_TargetMetadataIsExclusive(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "claude-skill with Gemini metadata is invalid",
+			name: "claude-skill with SDD metadata is invalid",
 			manifest: PackageManifest{
 				ID: "x", Target: TargetClaudeSkill,
-				Gemini: &GeminiMetadata{},
+				SDD: &SDDMetadata{},
 			},
 			valid: false,
 		},
@@ -116,15 +115,13 @@ func TestPackageManifest_TargetMetadataIsExclusive(t *testing.T) {
 func manifestMetadataMatchesTarget(m PackageManifest) bool {
 	switch m.Target {
 	case TargetClaudeSkill, TargetClaudeHook, TargetClaudePlugin, TargetClaudeSlash:
-		return m.Claude != nil && m.Gemini == nil && m.SDD == nil
-	case TargetGeminiExt:
-		return m.Gemini != nil && m.Claude == nil && m.SDD == nil
+		return m.Claude != nil && m.SDD == nil
 	case TargetCodifySDDStandard:
-		return m.SDD != nil && m.Claude == nil && m.Gemini == nil
+		return m.SDD != nil && m.Claude == nil
 	case TargetAntigravityWF:
 		// Antigravity no tiene typed metadata todavía — ningún sub-struct
 		// debe estar populado.
-		return m.Claude == nil && m.Gemini == nil && m.SDD == nil
+		return m.Claude == nil && m.SDD == nil
 	default:
 		return true // Target desconocido: el validator a nivel install registry decidirá
 	}

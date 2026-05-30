@@ -18,7 +18,7 @@ func TestRegistry_For(t *testing.T) {
 		t.Errorf("For(claude-skill) returned a different installer")
 	}
 
-	if _, err := reg.For(catalog.TargetGeminiExt); err == nil {
+	if _, err := reg.For(catalog.TargetCodifySDDStandard); err == nil {
 		t.Error("expected error routing an unregistered target")
 	}
 }

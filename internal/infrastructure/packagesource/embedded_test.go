@@ -199,7 +199,7 @@ func TestEmbeddedSource_Fetch_UnsupportedTarget(t *testing.T) {
 	src := NewEmbeddedSource(root.TemplatesFS, "2.3.0")
 	m := catalog.PackageManifest{
 		ID:     "anything",
-		Target: catalog.TargetGeminiExt, // no soportado en v0
+		Target: catalog.TargetCodifySDDStandard, // no soportado por EmbeddedSource (solo skill+hook)
 	}
 	_, err := src.Fetch(context.Background(), m)
 	if err == nil {
