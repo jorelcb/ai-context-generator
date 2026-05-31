@@ -64,7 +64,7 @@ type Config struct {
 func BuiltinDefaults() Config {
 	return Config{
 		Version:     SchemaVersion,
-		Preset:      "clean-ddd", // ADR-001: cambia a "neutral" en v2.0
+		Preset:      "neutral", // ADR-001 fase 3: neutral es el default v2.x (clean-ddd sigue siendo un preset elegible)
 		Locale:      "en",
 		Target:      "claude",
 		Language:    "",

@@ -54,27 +54,27 @@ For the conceptual phase model see [`docs/lifecycle-matrix.md`](lifecycle-matrix
 
 ## ⚙️ System
 
-| Command            | What it does                                                                                                                           | Scope       | API key?                                         | Detail                                         |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------ | ---------------------------------------------- |
-| `codify serve`     | Start as MCP (Model Context Protocol) server. Exposes tools for Claude Code, Codex CLI, Gemini CLI. Transports: stdio (default), HTTP. | —           | Some tools yes (generative), some no (read-only) | [README §MCP Server](../README.md#-mcp-server) |
-| `codify list`      | List generated projects.                                                                                                               | Workstation | No                                               | —                                              |
-| `codify --version` | Print the binary version.                                                                                                              | —           | No                                               | —                                              |
-| `codify --help`    | Print the phase diagram + grouped command index.                                                                                       | —           | No                                               | —                                              |
+| Command            | What it does                                                                                                                                | Scope       | API key?                                         | Detail                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------ | ---------------------------------------------- |
+| `codify serve`     | Start as MCP (Model Context Protocol) server. Exposes tools for any MCP client (Claude Code, Codex CLI). Transports: stdio (default), HTTP. | —           | Some tools yes (generative), some no (read-only) | [README §MCP Server](../README.md#-mcp-server) |
+| `codify list`      | List generated projects.                                                                                                                    | Workstation | No                                               | —                                              |
+| `codify --version` | Print the binary version.                                                                                                                   | —           | No                                               | —                                              |
+| `codify --help`    | Print the phase diagram + grouped command index.                                                                                            | —           | No                                               | —                                              |
 
 ---
 
 ## Common flags (apply to most commands)
 
-| Flag                                       | Effect                                                                                                                                                 |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--locale <en\|es>`                        | Output language for LLM-generated artifacts (context, specs, idioms, personalized skills). Not accepted by `hooks` — hooks are English-only by design. |
-| `--preset <name>`                          | Architectural preset (`clean-ddd`, `neutral`, etc.). Overrides project/global config.                                                                  |
-| `--language <go\|typescript\|python\|...>` | Target language for idiomatic guides.                                                                                                                  |
-| `--model <id>`                             | LLM model override (e.g. `claude-sonnet-4-6`, `gemini-2.5-flash`).                                                                                     |
-| `--target <claude\|codex\|antigravity>`    | Target ecosystem for skill/workflow/hook delivery.                                                                                                     |
-| `--no-auto-config`                         | Skip the soft auto-launch of `codify config` for this invocation.                                                                                      |
-| `--from-file <path>` (where applicable)    | Read description / input from a file instead of inline prompt.                                                                                         |
-| `--with-specs` (on `generate`/`analyze`)   | Run the spec pipeline after context generation in a single invocation.                                                                                 |
+| Flag                                       | Effect                                                                                                                                                            |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--locale <en\|es>`                        | Output language for LLM-generated artifacts (context, specs, idioms, personalized skills). The `hook` package type ignores it — hooks are English-only by design. |
+| `--preset <name>`                          | Architectural preset (`clean-ddd`, `neutral`, etc.). Overrides project/global config.                                                                             |
+| `--language <go\|typescript\|python\|...>` | Target language for idiomatic guides.                                                                                                                             |
+| `--model <id>`                             | LLM model override (e.g. `claude-sonnet-4-6`, `gemini-2.5-flash`).                                                                                                |
+| `--target <claude\|codex\|antigravity>`    | Target ecosystem for skill/workflow/hook delivery.                                                                                                                |
+| `--no-auto-config`                         | Skip the soft auto-launch of `codify config` for this invocation.                                                                                                 |
+| `--from-file <path>` (where applicable)    | Read description / input from a file instead of inline prompt.                                                                                                    |
+| `--with-specs` (on `generate`/`analyze`)   | Run the spec pipeline after context generation in a single invocation.                                                                                            |
 
 ---
 

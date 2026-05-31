@@ -7,8 +7,8 @@ import (
 
 func TestBuiltinDefaults(t *testing.T) {
 	cfg := BuiltinDefaults()
-	if cfg.Preset != "clean-ddd" {
-		t.Errorf("default preset: got %q, want %q", cfg.Preset, "clean-ddd")
+	if cfg.Preset != "neutral" {
+		t.Errorf("default preset: got %q, want %q", cfg.Preset, "neutral")
 	}
 	if cfg.Locale != "en" {
 		t.Errorf("default locale: got %q, want %q", cfg.Locale, "en")

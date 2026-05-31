@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Skill + hook templates are now locale-free.** Relocated `templates/en/skills` → `templates/skills` and `templates/en/hooks` → `templates/hooks`. The skills `--locale` flag is retained because it still governs the LLM output language in personalized mode; only the template lookup becomes locale-free.
+- **Built-in default preset is now `neutral`** (completes ADR-001 phase 3). `BuiltinDefaults().Preset` was still `clean-ddd` even though the CLI flags, MCP tools, and docs had already moved to `neutral` — so a user with no preset configured silently got `clean-ddd` context, contradicting the docs. The binary default now matches: an unconfigured `generate`/`init` produces neutral (no architectural opinion) context. `clean-ddd` remains a first-class preset (`--preset clean-ddd` or `codify config set preset clean-ddd`).
+
+### Fixed
+
+- **Stale references to the removed `codify skills` / `codify hooks` commands.** `config`/`init` retry hints and "Next steps", plus `docs/{getting-started,lifecycle-matrix,troubleshooting,command-reference}.md`, pointed users at commands that no longer exist; they now point at `codify catalog --type skill|hook`.
+- **MCP `generate_specs` spec reference is no longer hardcoded.** The `## Specifications` block appended to AGENTS.md now sources its file names from the resolved SDD standard's bootstrap artifacts (registry-driven) instead of literal `specs/CONSTITUTION.md` strings, mirroring the CLI. Behavior unchanged for the default OpenSpec path.
+- **Dropped Gemini CLI MCP setup docs** from `README`/`README_ES` and the `codify serve` description, aligning with its deprecation (ADR-0012 §4). The Gemini _model/API_ provider is unaffected.
 
 ### Removed
 

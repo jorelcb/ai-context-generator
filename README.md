@@ -1242,23 +1242,7 @@ Add to your project's `.mcp.json`:
 codex mcp add codify -- codify serve
 ```
 
-### Gemini CLI
-
-Add to `~/.gemini/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "codify": {
-      "command": "codify",
-      "args": ["serve"],
-      "env": {
-        "GEMINI_API_KEY": "AI..."
-      }
-    }
-  }
-}
-```
+> `codify serve` speaks standard MCP, so any MCP-capable client can connect. (Gemini CLI setup was dropped — it is being deprecated in favor of Antigravity; ADR-0012 §4.)
 
 > Set the API key(s) for the provider(s) you want to use. The provider is auto-detected from the `model` parameter. If the binary is not in your PATH, use the full path (e.g., `/Users/you/go/bin/codify`).
 
