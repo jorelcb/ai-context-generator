@@ -133,6 +133,47 @@ func TestRecorder_RecordAndForget(t *testing.T) {
 	}
 }
 
+func TestRecorder_Recorded_MapsEntries(t *testing.T) {
+	dir := t.TempDir()
+	fixedPath := func(catalog.Scope) (string, error) { return filepath.Join(dir, "workstation.lock"), nil }
+	rec := NewRecorderWith(fixedPath, func() time.Time { return time.Date(2026, 5, 31, 9, 0, 0, 0, time.UTC) })
+	ctx := context.Background()
+
+	// Missing lockfile → empty, no error.
+	got, err := rec.Recorded(ctx, catalog.ScopeWorkstation)
+	if err != nil {
+		t.Fatalf("Recorded missing: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("expected empty for missing lockfile, got %+v", got)
+	}
+
+	manifests := []catalog.PackageManifest{
+		{ID: "ddd-entity", Target: catalog.TargetClaudeSkill, Version: "2.3.0", Source: catalog.SourceRef{Kind: "embedded"}, SourceChecksum: "abc"},
+	}
+	if err := rec.Record(ctx, catalog.ScopeWorkstation, manifests); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+
+	got, err = rec.Recorded(ctx, catalog.ScopeWorkstation)
+	if err != nil {
+		t.Fatalf("Recorded: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 recorded, got %d", len(got))
+	}
+	p := got[0]
+	if p.ID != "ddd-entity" || p.Target != catalog.TargetClaudeSkill || p.Version != "2.3.0" {
+		t.Errorf("entry not mapped: %+v", p)
+	}
+	if p.Scope != catalog.ScopeWorkstation {
+		t.Errorf("scope not set: %q", p.Scope)
+	}
+	if p.InstalledChecksum != "abc" || p.InstalledAt != "2026-05-31T09:00:00Z" {
+		t.Errorf("checksum/installedAt not mapped: %+v", p)
+	}
+}
+
 func TestRecorder_RecordEmpty_NoOp(t *testing.T) {
 	dir := t.TempDir()
 	rec := NewRecorderWith(func(catalog.Scope) (string, error) { return filepath.Join(dir, "x.lock"), nil }, time.Now)

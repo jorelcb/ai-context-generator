@@ -31,6 +31,7 @@ type catalogParams struct {
 	context     string
 	marketplace string
 	list        bool
+	status      bool
 }
 
 // defaultMarketplace is the trusted, Anthropic-managed plugin directory used
@@ -62,8 +63,13 @@ default the Anthropic-managed directory.
 Modes:
   Interactive (no flags, TTY): pick ecosystem → type → packages → scope.
   List:        codify catalog --list [--type skill|hook|plugin] [--scope project]
+  Status:      codify catalog --status [--scope project|workstation]
   Install:     codify catalog --type skill  --package ddd-entity,hexagonal-port --scope project
                codify catalog --type plugin --package gopls-lsp --scope workstation
+
+Status compares codify's lockfile (~/.codify/workstation.lock,
+.codify/project.lock — what codify recorded installing) against what's
+actually on disk, flagging packages that drifted (recorded but now missing).
 
 Scopes:
   project      .claude/ in the current repository
@@ -87,6 +93,7 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 	cmd.Flags().StringVar(&p.context, "context", "", "Project context for personalized mode")
 	cmd.Flags().StringVar(&p.marketplace, "marketplace", defaultMarketplace, "Plugin marketplace (owner/repo or marketplace.json URL); used with --type plugin")
 	cmd.Flags().BoolVar(&p.list, "list", false, "List available packages instead of installing")
+	cmd.Flags().BoolVar(&p.status, "status", false, "Show lockfile status: recorded installs vs live state (drift)")
 
 	return cmd
 }
@@ -100,6 +107,10 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 	}
 
 	ctx := context.Background()
+
+	if p.status {
+		return catalogStatus(ctx, p)
+	}
 
 	if p.list {
 		return catalogList(ctx, p)
@@ -213,6 +224,71 @@ func personalizedService(ctx context.Context, model, projectContext string) (*co
 	local := packagesource.NewLocalDirectorySource(localSourceRoot())
 	source := packagesource.NewCompositeSource(personalizing, local)
 	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder()), nil
+}
+
+// statusService builds the service used by `--status`: it needs the full
+// installer registry (to query live state for every recorded target) and a
+// lockfile reader. The source is unused by Status, so the embedded source is
+// passed as a harmless placeholder.
+func statusService() *command.CatalogService {
+	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
+	return command.NewCatalogService(embedded, catalogRegistry()).WithReader(lockfile.NewRecorder())
+}
+
+// catalogStatus prints, per scope, how codify's recorded installs compare to
+// what's actually on disk — the drift check the lockfile exists to power.
+// Without --scope it reports both workstation and project lockfiles.
+func catalogStatus(ctx context.Context, p catalogParams) error {
+	var scopes []catalog.Scope
+	if p.scope != "" {
+		s, err := resolveScope(p.scope)
+		if err != nil {
+			return err
+		}
+		scopes = []catalog.Scope{s}
+	} else {
+		scopes = []catalog.Scope{catalog.ScopeWorkstation, catalog.ScopeProject}
+	}
+
+	svc := statusService()
+	fmt.Println()
+	fmt.Println("Lockfile status · codify's recorded installs vs live state")
+	fmt.Println(strings.Repeat("─", 58))
+
+	anyDrift := false
+	for _, scope := range scopes {
+		report, err := svc.Status(ctx, scope)
+		if err != nil {
+			return err
+		}
+		path, _ := lockfile.PathForScope(scope)
+		fmt.Printf("\n%s  (%s)\n", scope, path)
+		if len(report.Entries) == 0 {
+			fmt.Println("  (no packages recorded)")
+			continue
+		}
+		for _, e := range report.Entries {
+			marker, note := "✓", ""
+			if e.Status == command.DriftMissing {
+				marker, note = "✗", "  ← missing (recorded but not on disk)"
+				anyDrift = true
+			}
+			ver := e.Package.Version
+			if ver == "" {
+				ver = "-"
+			}
+			fmt.Printf("  %s %-26s [%s] %s%s\n", marker, e.Package.ID, e.Package.Target, ver, note)
+		}
+	}
+
+	fmt.Println()
+	if anyDrift {
+		fmt.Println("Drift detected: ✗ packages are recorded in the lockfile but missing on disk.")
+		fmt.Println("Reinstall with: codify catalog --type <skill|hook|plugin> --package <id,...> --scope <scope>")
+	} else {
+		fmt.Println("In sync: every recorded package is present on disk.")
+	}
+	return nil
 }
 
 // mustClaudeInstaller builds a ClaudeInstaller against the real cwd/home. On
