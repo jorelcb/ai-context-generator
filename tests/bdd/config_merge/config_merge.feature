@@ -7,7 +7,7 @@ Feature: Config merge precedence
     Given no user config exists
     And no project config exists
     When I load the effective config
-    Then the effective preset should be "clean-ddd"
+    Then the effective preset should be "neutral"
     And the effective locale should be "en"
     And the effective target should be "claude"
 

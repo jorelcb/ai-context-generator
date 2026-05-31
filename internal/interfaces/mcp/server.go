@@ -18,6 +18,7 @@ import (
 	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
 	"github.com/jorelcb/codify/internal/infrastructure/llm"
 	"github.com/jorelcb/codify/internal/infrastructure/scanner"
+	"github.com/jorelcb/codify/internal/infrastructure/sdd"
 	infratemplate "github.com/jorelcb/codify/internal/infrastructure/template"
 )
 
@@ -681,28 +682,38 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model stri
 		return nil, err
 	}
 
-	// Update AGENTS.md with specs reference
+	// Update AGENTS.md with a specs reference, sourcing the file names from the
+	// resolved SDD standard (default OpenSpec for the MCP path) instead of
+	// hardcoding them, so the list stays in sync with the standard's layout.
 	agentsPath := filepath.Join(fromContextPath, "AGENTS.md")
 	content, readErr := os.ReadFile(agentsPath)
 	if readErr == nil && !strings.Contains(string(content), "specs/") {
-		var specsRef string
-		if locale == "es" {
-			specsRef = "\n## Especificaciones\n\n" +
-				"- Constitucion del proyecto: `specs/CONSTITUTION.md`\n" +
-				"- Especificaciones de features: `specs/SPEC.md`\n" +
-				"- Diseno tecnico y plan: `specs/PLAN.md`\n" +
-				"- Desglose de tareas: `specs/TASKS.md`\n"
-		} else {
-			specsRef = "\n## Specifications\n\n" +
-				"- Project constitution: `specs/CONSTITUTION.md`\n" +
-				"- Feature specifications: `specs/SPEC.md`\n" +
-				"- Technical design and plan: `specs/PLAN.md`\n" +
-				"- Task breakdown: `specs/TASKS.md`\n"
+		if standard, sErr := sdd.NewDefaultRegistry().Resolve("", "", ""); sErr == nil {
+			specsRef := specsReferenceSection(locale, standard)
+			_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0o644)
 		}
-		_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0o644)
 	}
 
 	return result, nil
+}
+
+// specsReferenceSection builds the "## Specifications" block appended to
+// AGENTS.md, listing each of the standard's bootstrap artifacts under specs/.
+// The MCP spec path uses a flat layout, mirroring buildSpecsReferenceSection in
+// the CLI so both interfaces describe specs identically.
+func specsReferenceSection(locale string, standard service.SpecStandard) string {
+	header := "\n## Specifications\n\n"
+	if locale == "es" {
+		header = "\n## Especificaciones\n\n"
+	}
+	var sb strings.Builder
+	sb.WriteString(header)
+	for _, a := range standard.BootstrapArtifacts() {
+		sb.WriteString("- `specs/")
+		sb.WriteString(a.FileName)
+		sb.WriteString("`\n")
+	}
+	return sb.String()
 }
 
 func executeStaticSkillsMCP(config *dto.SkillsConfig, guides []service.TemplateGuide) (*dto.GenerationResult, error) {

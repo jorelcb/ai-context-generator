@@ -225,7 +225,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	if err := promptInstallSkills(target, "project"); err != nil {
 		fmt.Fprintf(os.Stderr, "\nWarning: project skills install step failed: %v\n", err)
-		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify skills --install project'.")
+		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --type skill --scope project'.")
 	}
 
 	if err := promptInstallWorkflows(target, locale, "project"); err != nil {
@@ -236,11 +236,11 @@ func runInit(cmd *cobra.Command, args []string) error {
 	if target == "claude" {
 		if err := promptInstallHooks("project"); err != nil {
 			fmt.Fprintf(os.Stderr, "\nWarning: project hooks install step failed: %v\n", err)
-			fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify hooks --install project'.")
+			fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --type hook --scope project'.")
 		}
 	}
 
-	printInitNextSteps(target)
+	printInitNextSteps()
 
 	return nil
 }
@@ -249,7 +249,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 // fase del lifecycle (Equip / Maintain), siguiendo el modelo Bootstrap → Equip
 // → Maintain documentado en --help. Pensado para que el usuario que recién
 // terminó init sepa qué viene después sin tener que leer docs.
-func printInitNextSteps(target string) {
+func printInitNextSteps() {
 	fmt.Println()
 	fmt.Println("✓ Project bootstrapped successfully.")
 	fmt.Println()
@@ -258,11 +258,8 @@ func printInitNextSteps(target string) {
 	fmt.Println()
 	fmt.Println("Equip (when you need more agent equipment):")
 	fmt.Println("  codify spec       Generate SDD specification files from this context")
-	fmt.Println("  codify skills     Re-run the interactive skills installer")
+	fmt.Println("  codify catalog    Browse & install skills, hooks, and plugins")
 	fmt.Println("  codify workflows  Re-run the interactive workflows installer")
-	if target == "claude" {
-		fmt.Println("  codify hooks      Re-run the interactive hooks installer")
-	}
 	fmt.Println()
 	fmt.Println("Maintain (as your project evolves):")
 	fmt.Println("  codify check      Detect drift between artifacts and current project state")

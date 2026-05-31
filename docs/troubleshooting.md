@@ -6,17 +6,17 @@ Quick reference for the errors most people hit on first contact with Codify. If 
 
 ## Common errors
 
-| Error / Symptom | Cause | Fix |
-|---|---|---|
-| `ANTHROPIC_API_KEY or GEMINI_API_KEY environment variable is required` | LLM-backed command without an API key in the env | `export ANTHROPIC_API_KEY=...` (or Gemini); for read-only commands like `check`, `audit --rules-only`, `usage`, none is needed |
-| `preset 'default' was removed in Codify v2.0.0...` | Carried `--preset default` from a v1.x script or `~/.codify/config.yml` | `codify config set preset clean-ddd` (v1.x behavior) or `... preset neutral` (v2.0 default). Or pass `--preset clean-ddd` explicitly |
-| `No snapshot at .codify/state.json...` (exit 2) on `check` / `update` / `watch` | Project not bootstrapped — never ran `init` / `generate` / `analyze` | Run one of those first, or `codify reset-state` if `state.json` was deleted by accident |
-| `codify update` refuses with "Only hand-edits to generated artifacts detected" | You edited AGENTS.md by hand and `update` doesn't want to overwrite intent | `codify update --accept-current` (= `reset-state`) to make your edits the new baseline, or `--force` to regenerate (loses edits) |
-| `codify watch` exits with "no watchable directories" | `state.json` exists but its registered paths are all missing | `codify reset-state` to recompute against the current FS |
-| `Codify isn't configured globally yet. Run interactive setup now?` prompt blocks scripts | Auto-launch SOFT prompt fires in a TTY without `~/.codify/config.yml` | Pass `--no-auto-config`, or `export CODIFY_NO_AUTO_CONFIG=1`, or `touch ~/.codify/.no-auto-config` |
-| `codify hooks` works but Claude Code doesn't run them | `.claude/settings.json` not loaded by your Claude Code version | Check Claude Code is v2.1.85+ (required for `convention-enforcement`); verify with `claude /hooks` |
-| `audit --with-llm` falls back to rules-only with WARNING | Missing API key OR LLM call failed | Same fix as the API-key error; rules-only still produced its findings |
-| Hooks scripts skip silently (e.g. `lint.sh` does nothing) | Required tool (gofmt, ruff, prettier, etc.) not installed | `command -v <tool>` to verify; install whichever you want enforced |
+| Error / Symptom                                                                          | Cause                                                                      | Fix                                                                                                                                  |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `ANTHROPIC_API_KEY or GEMINI_API_KEY environment variable is required`                   | LLM-backed command without an API key in the env                           | `export ANTHROPIC_API_KEY=...` (or Gemini); for read-only commands like `check`, `audit --rules-only`, `usage`, none is needed       |
+| `preset 'default' was removed in Codify v2.0.0...`                                       | Carried `--preset default` from a v1.x script or `~/.codify/config.yml`    | `codify config set preset clean-ddd` (v1.x behavior) or `... preset neutral` (v2.0 default). Or pass `--preset clean-ddd` explicitly |
+| `No snapshot at .codify/state.json...` (exit 2) on `check` / `update` / `watch`          | Project not bootstrapped — never ran `init` / `generate` / `analyze`       | Run one of those first, or `codify reset-state` if `state.json` was deleted by accident                                              |
+| `codify update` refuses with "Only hand-edits to generated artifacts detected"           | You edited AGENTS.md by hand and `update` doesn't want to overwrite intent | `codify update --accept-current` (= `reset-state`) to make your edits the new baseline, or `--force` to regenerate (loses edits)     |
+| `codify watch` exits with "no watchable directories"                                     | `state.json` exists but its registered paths are all missing               | `codify reset-state` to recompute against the current FS                                                                             |
+| `Codify isn't configured globally yet. Run interactive setup now?` prompt blocks scripts | Auto-launch SOFT prompt fires in a TTY without `~/.codify/config.yml`      | Pass `--no-auto-config`, or `export CODIFY_NO_AUTO_CONFIG=1`, or `touch ~/.codify/.no-auto-config`                                   |
+| Hooks installed via `codify catalog --type hook` but Claude Code doesn't run them        | `.claude/settings.json` not loaded by your Claude Code version             | Check Claude Code is v2.1.85+ (required for `convention-enforcement`); verify with `claude /hooks`                                   |
+| `audit --with-llm` falls back to rules-only with WARNING                                 | Missing API key OR LLM call failed                                         | Same fix as the API-key error; rules-only still produced its findings                                                                |
+| Hooks scripts skip silently (e.g. `lint.sh` does nothing)                                | Required tool (gofmt, ruff, prettier, etc.) not installed                  | `command -v <tool>` to verify; install whichever you want enforced                                                                   |
 
 ---
 

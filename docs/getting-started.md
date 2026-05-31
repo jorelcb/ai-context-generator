@@ -49,7 +49,7 @@ Codify · Bootstrap (workstation)
 
 ? Default model: claude-sonnet-4-6
 ? Default locale: en
-? Default architectural preset: clean-ddd
+? Default architectural preset: neutral
 
 ✓ Saved /Users/<you>/.codify/config.yml
 
@@ -70,7 +70,7 @@ Update workstation defaults later:
   codify config set <key> <value>
 ```
 
-> **Soft auto-launch:** the first time you run any interactive Codify command without a global config, this wizard is *offered* automatically (never forced). Three opt-out paths: `--no-auto-config` flag, `CODIFY_NO_AUTO_CONFIG=1` env, or `~/.codify/.no-auto-config` marker file.
+> **Soft auto-launch:** the first time you run any interactive Codify command without a global config, this wizard is _offered_ automatically (never forced). Three opt-out paths: `--no-auto-config` flag, `CODIFY_NO_AUTO_CONFIG=1` env, or `~/.codify/.no-auto-config` marker file.
 
 ---
 
@@ -102,7 +102,7 @@ Codify · Bootstrap (project)
 ? Project description:
 > Payments API in Go with microservices, Stripe integration, DDD/Clean Architecture, BDD tests with Godog.
 
-? Architectural preset is 'clean-ddd' (from global default). Override? [y/N] N
+? Architectural preset is 'neutral' (from global default). Override? [y/N] N
 ? Language: go
 ? Output directory: .
 
@@ -122,9 +122,8 @@ Next steps
 
 Equip (when you need more agent equipment):
   codify spec       Generate SDD specification files from this context
-  codify skills     Re-run the interactive skills installer
+  codify catalog    Browse & install skills, hooks, and plugins
   codify workflows  Re-run the interactive workflows installer
-  codify hooks      Re-run the interactive hooks installer
 
 Maintain (as your project evolves):
   codify check      Detect drift between artifacts and current project state
@@ -157,13 +156,13 @@ After bootstrap, equip the project with the layers you actually need. Each comma
 codify spec payments-api --from-context ./output/payments-api/
 
 # Reusable agent skills (architecture, testing, conventions)
-codify skills
+codify catalog --type skill
 
 # Multi-step workflow recipes (bug-fix, release-cycle, spec-driven-change)
 codify workflows
 
 # Deterministic guardrails on Claude Code lifecycle events
-codify hooks
+codify catalog --type hook
 ```
 
 ---
@@ -193,9 +192,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version: '1.23' }
+        with: { go-version: "1.23" }
       - run: go install github.com/jorelcb/codify/cmd/codify@latest
-      - run: codify check    # exit 1 if drift detected
+      - run: codify check # exit 1 if drift detected
 ```
 
 ---
@@ -210,9 +209,9 @@ export ANTHROPIC_API_KEY="sk-ant-..."   # for Claude (default)
 export GEMINI_API_KEY="AI..."           # for Gemini
 ```
 
-| No API key required | API key required |
-|---|---|
-| `config`, `init` (existing scan), `check`, `reset-state`, `audit` (rules-only), `usage`, `hooks`, `skills` (static), `workflows` (static), MCP read-only tools | `generate`, `analyze`, `spec`, `skills --mode personalized`, `workflows --mode personalized`, `update`, `audit --with-llm` |
+| No API key required                                                                                                                                                 | API key required                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `config`, `init` (existing scan), `check`, `reset-state`, `audit` (rules-only), `usage`, `catalog` (static skills/hooks), `workflows` (static), MCP read-only tools | `generate`, `analyze`, `spec`, `catalog --mode personalized`, `workflows --mode personalized`, `update`, `audit --with-llm` |
 
 ---
 
