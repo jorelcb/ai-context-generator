@@ -46,6 +46,7 @@ func (r *Recorder) Record(_ context.Context, scope catalog.Scope, installed []ca
 			Target:      string(m.Target),
 			Version:     m.Version,
 			SourceKind:  m.Source.Kind,
+			SourceURI:   m.Source.URI,
 			Checksum:    m.SourceChecksum,
 			InstalledAt: ts,
 		})
@@ -73,6 +74,7 @@ func (r *Recorder) Recorded(_ context.Context, scope catalog.Scope) ([]catalog.I
 			Version:           e.Version,
 			Target:            catalog.Target(e.Target),
 			Scope:             scope,
+			SourceURI:         e.SourceURI,
 			InstalledAt:       e.InstalledAt,
 			InstalledChecksum: e.Checksum,
 		})

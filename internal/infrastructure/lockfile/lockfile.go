@@ -36,10 +36,16 @@ type Lockfile struct {
 
 // Entry is one recorded package install.
 type Entry struct {
-	ID          string `json:"id"`
-	Target      string `json:"target"`
-	Version     string `json:"version,omitempty"`
-	SourceKind  string `json:"sourceKind,omitempty"`
+	ID      string `json:"id"`
+	Target  string `json:"target"`
+	Version string `json:"version,omitempty"`
+	// SourceKind identifies the originating PackageSource (e.g. "embedded",
+	// "local-fs", "claude-marketplace").
+	SourceKind string `json:"sourceKind,omitempty"`
+	// SourceURI is the source-specific locator needed to rebuild the source on
+	// re-apply (sync): the marketplace ref for plugins, the directory for
+	// local-fs. Empty for embedded. Mirrors PackageManifest.Source.URI.
+	SourceURI   string `json:"sourceURI,omitempty"`
 	Checksum    string `json:"checksum,omitempty"`
 	InstalledAt string `json:"installedAt"`
 }
