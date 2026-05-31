@@ -33,13 +33,20 @@ type ClaudePluginInstaller struct {
 }
 
 // NewClaudePluginInstaller builds an installer that shells out to the real
-// `claude` binary and reads ~/.claude for installed state.
+// `claude` binary and reads the agent config for installed state. Honors
+// CLAUDE_CONFIG_DIR (the same override the `claude` subprocess uses) so codify
+// and the agent agree on which config they read/write; falls back to
+// ~/.claude.
 func NewClaudePluginInstaller() (*ClaudePluginInstaller, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("claude plugin installer: resolve home: %w", err)
+	configDir := os.Getenv("CLAUDE_CONFIG_DIR")
+	if configDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("claude plugin installer: resolve home: %w", err)
+		}
+		configDir = filepath.Join(home, ".claude")
 	}
-	return &ClaudePluginInstaller{runner: NewExecRunner(), configDir: filepath.Join(home, ".claude")}, nil
+	return &ClaudePluginInstaller{runner: NewExecRunner(), configDir: configDir}, nil
 }
 
 // NewClaudePluginInstallerWith injects a CommandRunner and config dir (tests).

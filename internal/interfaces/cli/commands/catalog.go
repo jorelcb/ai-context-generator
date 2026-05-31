@@ -21,21 +21,26 @@ import (
 
 // catalogParams groups the flags of `codify catalog`.
 type catalogParams struct {
-	ecosystem string
-	pkgType   string
-	packages  string
-	scope     string
-	mode      string
-	model     string
-	context   string
-	list      bool
+	ecosystem   string
+	pkgType     string
+	packages    string
+	scope       string
+	mode        string
+	model       string
+	context     string
+	marketplace string
+	list        bool
 }
 
-// typeToTarget maps a user-facing catalog type to a Claude Target. MVP covers
-// the two shipped types; plugins/slash-commands join as they materialize.
+// defaultMarketplace is the trusted, Anthropic-managed plugin directory used
+// when `--type plugin` is requested without an explicit `--marketplace`.
+const defaultMarketplace = "anthropics/claude-plugins-official"
+
+// typeToTarget maps a user-facing catalog type to a Claude Target.
 var typeToTarget = map[string]catalog.Target{
-	"skill": catalog.TargetClaudeSkill,
-	"hook":  catalog.TargetClaudeHook,
+	"skill":  catalog.TargetClaudeSkill,
+	"hook":   catalog.TargetClaudeHook,
+	"plugin": catalog.TargetClaudePlugin,
 }
 
 // NewCatalogCmd creates the `catalog` command — the unified surface for
@@ -45,25 +50,26 @@ func NewCatalogCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "catalog",
-		Short: "Browse and install ecosystem packages (skills, hooks)",
+		Short: "Browse and install ecosystem packages (skills, hooks, plugins)",
 		Long: `Browse and install packages from codify's catalog into your agent.
 
-A package maps one-to-one to a native ecosystem primitive — a Claude skill or
-a Claude hook today. The catalog reads from a package source (the built-in
-embedded catalog for now) and installs through the per-ecosystem installer.
+A package maps one-to-one to a native ecosystem primitive — a Claude skill,
+hook, or plugin. Skills and hooks come from the built-in/local catalog; plugins
+come from a Claude plugin marketplace (a '.claude-plugin/marketplace.json'),
+default the Anthropic-managed directory.
 
 Modes:
   Interactive (no flags, TTY): pick ecosystem → type → packages → scope.
-  List:        codify catalog --list [--type skill] [--scope project]
-  Install:     codify catalog --type skill --package ddd-entity,hexagonal-port --scope project
+  List:        codify catalog --list [--type skill|hook|plugin] [--scope project]
+  Install:     codify catalog --type skill  --package ddd-entity,hexagonal-port --scope project
+               codify catalog --type plugin --package gopls-lsp --scope workstation
 
 Scopes:
   project      .claude/ in the current repository
   workstation  ~/.claude/ shared across all your projects (alias: global)
 
-Note: this is the new home for skills/hooks selection (ADR-0010). The standalone
-'codify skills' and 'codify hooks' commands remain for now and are folded in
-incrementally.`,
+Plugins are installed by delegating to Claude Code's own plugin CLI (requires
+'claude' on PATH); see --marketplace to point at another marketplace.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			explicit := make(map[string]bool)
 			cmd.Flags().Visit(func(f *pflag.Flag) { explicit[f.Name] = true })
@@ -72,12 +78,13 @@ incrementally.`,
 	}
 
 	cmd.Flags().StringVar(&p.ecosystem, "ecosystem", "claude", "Target ecosystem (MVP: claude)")
-	cmd.Flags().StringVar(&p.pkgType, "type", "", "Package type: skill or hook")
+	cmd.Flags().StringVar(&p.pkgType, "type", "", "Package type: skill, hook, or plugin")
 	cmd.Flags().StringVar(&p.packages, "package", "", "Comma-separated package IDs to install")
 	cmd.Flags().StringVar(&p.scope, "scope", "", "Install scope: project or workstation (alias: global)")
 	cmd.Flags().StringVar(&p.mode, "mode", "static", "Skill mode: static (embedded template) or personalized (LLM-adapted)")
 	cmd.Flags().StringVar(&p.model, "model", "", "LLM model for personalized mode (e.g. claude-sonnet-4-6)")
 	cmd.Flags().StringVar(&p.context, "context", "", "Project context for personalized mode")
+	cmd.Flags().StringVar(&p.marketplace, "marketplace", defaultMarketplace, "Plugin marketplace (owner/repo or marketplace.json URL); used with --type plugin")
 	cmd.Flags().BoolVar(&p.list, "list", false, "List available packages instead of installing")
 
 	return cmd
@@ -91,7 +98,7 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 	ctx := context.Background()
 
 	if p.list {
-		return catalogList(ctx, embeddedService(), p)
+		return catalogList(ctx, p)
 	}
 
 	// Non-interactive install when the actionable flags are present.
@@ -105,9 +112,27 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 	return catalogInteractive(ctx, p)
 }
 
-// catalogRegistry wires the per-ecosystem installers.
+// catalogRegistry wires the Claude installers: skills/hooks (filesystem) and
+// plugins (delegated to the native plugin CLI). The registry routes by Target.
 func catalogRegistry() *targetinstaller.Registry {
-	return targetinstaller.NewRegistry(mustClaudeInstaller())
+	return targetinstaller.NewRegistry(mustClaudeInstaller(), mustClaudePluginInstaller())
+}
+
+// pluginService browses + installs from a Claude plugin marketplace. Plugins
+// install by delegating to the agent's plugin CLI (ClaudePluginInstaller).
+func pluginService(marketplaceRef string) *command.CatalogService {
+	source := packagesource.NewPluginMarketplaceSource(marketplaceRef)
+	return command.NewCatalogService(source, catalogRegistry())
+}
+
+// browseService returns the read service for a type. Plugins read from the
+// marketplace (network); skills/hooks read the static embedded+local catalog
+// (no API key, no network).
+func browseService(tp string, p catalogParams) *command.CatalogService {
+	if tp == "plugin" {
+		return pluginService(p.marketplace)
+	}
+	return embeddedService()
 }
 
 // localSourceRoot is the convention directory for personal/team packages,
@@ -162,6 +187,17 @@ func mustClaudeInstaller() *targetinstaller.ClaudeInstaller {
 	return inst
 }
 
+// mustClaudePluginInstaller builds a ClaudePluginInstaller. On failure to
+// resolve home it falls back to a relative config dir; the actual install
+// still surfaces a clear error if `claude` is absent.
+func mustClaudePluginInstaller() *targetinstaller.ClaudePluginInstaller {
+	inst, err := targetinstaller.NewClaudePluginInstaller()
+	if err != nil {
+		return targetinstaller.NewClaudePluginInstallerWith(targetinstaller.NewExecRunner(), ".claude")
+	}
+	return inst
+}
+
 func resolveScope(s string) (catalog.Scope, error) {
 	switch s {
 	case "project":
@@ -175,7 +211,7 @@ func resolveScope(s string) (catalog.Scope, error) {
 
 // catalogList prints available packages, grouped by type, badged with their
 // source, and marked when already installed in the resolved scope.
-func catalogList(ctx context.Context, svc *command.CatalogService, p catalogParams) error {
+func catalogList(ctx context.Context, p catalogParams) error {
 	scope := catalog.ScopeProject
 	if p.scope != "" {
 		s, err := resolveScope(p.scope)
@@ -185,10 +221,12 @@ func catalogList(ctx context.Context, svc *command.CatalogService, p catalogPara
 		scope = s
 	}
 
+	// Default browse is skill+hook (local/built-in, fast). Plugins require an
+	// explicit `--type plugin` since listing them hits the marketplace network.
 	types := []string{"skill", "hook"}
 	if p.pkgType != "" {
 		if _, ok := typeToTarget[p.pkgType]; !ok {
-			return fmt.Errorf("invalid type %q (use skill or hook)", p.pkgType)
+			return fmt.Errorf("invalid type %q (use skill, hook, or plugin)", p.pkgType)
 		}
 		types = []string{p.pkgType}
 	}
@@ -199,6 +237,7 @@ func catalogList(ctx context.Context, svc *command.CatalogService, p catalogPara
 
 	for _, tp := range types {
 		target := typeToTarget[tp]
+		svc := browseService(tp, p)
 		available, err := svc.Available(ctx, target)
 		if err != nil {
 			return err
@@ -224,38 +263,42 @@ func catalogList(ctx context.Context, svc *command.CatalogService, p catalogPara
 		}
 	}
 	fmt.Println()
-	fmt.Println("Install with: codify catalog --type <skill|hook> --package <id,...> --scope <project|workstation>")
+	fmt.Println("Install with: codify catalog --type <skill|hook|plugin> --package <id,...> --scope <project|workstation>")
 	return nil
 }
 
-// installService returns the CatalogService for an install, routing skills in
-// personalized mode through the LLM source and everything else through the
-// static embedded source. Personalized mode applies to skills only; for other
-// targets it falls back to static with a notice.
-func installService(ctx context.Context, mode string, target catalog.Target, model, projectContext string) (*command.CatalogService, error) {
-	if mode == "personalized" {
-		if target != catalog.TargetClaudeSkill {
-			fmt.Fprintf(os.Stderr, "→ personalized mode applies to skills only; installing %q statically\n", target)
+// installService returns the CatalogService for installing the given type.
+// Plugins use the marketplace source (+ plugin installer). Skills in
+// personalized mode use the LLM source; everything else the static
+// embedded+local catalog. Reads mode/model/context/marketplace from p (the
+// interactive flow stuffs its resolved values back into p first).
+func installService(ctx context.Context, tp string, p catalogParams) (*command.CatalogService, error) {
+	if tp == "plugin" {
+		return pluginService(p.marketplace), nil
+	}
+	if p.mode == "personalized" {
+		if typeToTarget[tp] != catalog.TargetClaudeSkill {
+			fmt.Fprintf(os.Stderr, "→ personalized mode applies to skills only; installing %q statically\n", tp)
 			return embeddedService(), nil
 		}
-		if projectContext == "" {
+		if p.context == "" {
 			return nil, fmt.Errorf("personalized mode requires --context (a project description)")
 		}
-		if model == "" {
+		if p.model == "" {
 			return nil, fmt.Errorf("personalized mode requires --model (or run interactively to pick one)")
 		}
-		return personalizedService(ctx, model, projectContext)
+		return personalizedService(ctx, p.model, p.context)
 	}
 	return embeddedService(), nil
 }
 
 func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 	if p.pkgType == "" {
-		return fmt.Errorf("--type is required for install (skill or hook)")
+		return fmt.Errorf("--type is required for install (skill, hook, or plugin)")
 	}
 	target, ok := typeToTarget[p.pkgType]
 	if !ok {
-		return fmt.Errorf("invalid type %q (use skill or hook)", p.pkgType)
+		return fmt.Errorf("invalid type %q (use skill, hook, or plugin)", p.pkgType)
 	}
 	ids := splitCSV(p.packages)
 	if len(ids) == 0 {
@@ -270,7 +313,7 @@ func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 		return err
 	}
 
-	svc, err := installService(ctx, p.mode, target, p.model, p.context)
+	svc, err := installService(ctx, p.pkgType, p)
 	if err != nil {
 		return err
 	}
@@ -288,6 +331,7 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 	tp, err := promptSelect("Package type", []selectOption{
 		{"Skills (prompt-based behaviors)", "skill"},
 		{"Hooks (deterministic guardrails)", "hook"},
+		{"Plugins (Claude marketplace bundles)", "plugin"},
 	}, "skill")
 	if err != nil {
 		return err
@@ -339,8 +383,12 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 	}
 
 	// Step 5 — package multi-select, marking already-installed entries.
-	// Browsing always uses the static source (no API key needed to list).
-	browse := embeddedService()
+	// Browsing uses the type's read source (marketplace for plugins; static
+	// embedded+local for skills/hooks — no API key needed to list).
+	if tp == "plugin" {
+		fmt.Fprintf(os.Stderr, "→ Fetching plugins from %s …\n", p.marketplace)
+	}
+	browse := browseService(tp, p)
 	available, err := browse.Available(ctx, target)
 	if err != nil {
 		return err
@@ -380,7 +428,10 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 		return nil
 	}
 
-	svc, err := installService(ctx, mode, target, model, projectContext)
+	// Carry the interactively-resolved values into p so installService reads
+	// them uniformly with the flag path.
+	p.mode, p.model, p.context = mode, model, projectContext
+	svc, err := installService(ctx, tp, p)
 	if err != nil {
 		return err
 	}
@@ -411,6 +462,8 @@ func typeLabel(tp string) string {
 		return "Skills"
 	case "hook":
 		return "Hooks"
+	case "plugin":
+		return "Plugins"
 	default:
 		return tp
 	}

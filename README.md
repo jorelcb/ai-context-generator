@@ -775,6 +775,32 @@ codify catalog --type hook [flags]
 
 ---
 
+### 🧩 Plugins
+
+Plugins are **Claude Code plugins** — native bundles (skills + hooks + agents + MCP servers + commands) distributed through a [plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces). `codify catalog` browses a marketplace and **delegates install to Claude Code's own plugin CLI** (the agent owns the plugin cache, namespacing and versioning — codify doesn't re-implement it), so `claude` must be on your `PATH`.
+
+```bash
+# Browse the Anthropic-managed directory (default marketplace)
+codify catalog --list --type plugin
+
+# Install a plugin at workstation scope
+codify catalog --type plugin --package gopls-lsp --scope workstation
+
+# Point at another marketplace (owner/repo or a marketplace.json URL)
+codify catalog --type plugin --marketplace acme/claude-plugins --list
+```
+
+| Flag            | Description                                                 | Default                              |
+| --------------- | ----------------------------------------------------------- | ------------------------------------ |
+| `--package`     | Plugin IDs to install (comma-separated)                     | _(interactive)_                      |
+| `--scope`       | Install scope: `project` or `workstation` (alias: `global`) | `project`                            |
+| `--marketplace` | Marketplace: `owner/repo` or a `marketplace.json` URL       | `anthropics/claude-plugins-official` |
+| `--list`        | Browse available plugins instead of installing              | `false`                              |
+
+> Plugins are installed by shelling out to `claude plugin marketplace add` + `claude plugin install`; if `claude` is not found, codify prints the exact manual commands. (See ADR-0012 for the standards/mechanic rationale.)
+
+---
+
 ## 🔧 Maintain phase (ongoing lifecycle)
 
 > **Ongoing.** These commands operate on an already-equipped project. They detect drift, regenerate stale artifacts, audit commits, and keep cost transparent. Apply equally to greenfield and brownfield projects.

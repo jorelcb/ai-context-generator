@@ -757,6 +757,32 @@ codify catalog --type hook [flags]
 
 ---
 
+### 🧩 Plugins
+
+Los plugins son **plugins de Claude Code** — bundles nativos (skills + hooks + agents + servidores MCP + commands) distribuidos vía un [marketplace de plugins](https://code.claude.com/docs/en/plugin-marketplaces). `codify catalog` navega un marketplace y **delega el install al propio CLI de plugins de Claude Code** (el agente posee el cache, namespacing y versionado — codify no lo reimplementa), así que `claude` debe estar en tu `PATH`.
+
+```bash
+# Navega el directorio gestionado por Anthropic (marketplace default)
+codify catalog --list --type plugin
+
+# Instala un plugin en scope workstation
+codify catalog --type plugin --package gopls-lsp --scope workstation
+
+# Apunta a otro marketplace (owner/repo o URL a marketplace.json)
+codify catalog --type plugin --marketplace acme/claude-plugins --list
+```
+
+| Flag            | Descripcion                                              | Default                              |
+| --------------- | -------------------------------------------------------- | ------------------------------------ |
+| `--package`     | IDs de plugins a instalar (separados por coma)           | _(interactivo)_                      |
+| `--scope`       | Scope: `project` o `workstation` (alias: `global`)       | `project`                            |
+| `--marketplace` | Marketplace: `owner/repo` o una URL a `marketplace.json` | `anthropics/claude-plugins-official` |
+| `--list`        | Navega los plugins disponibles en vez de instalar        | `false`                              |
+
+> Los plugins se instalan ejecutando `claude plugin marketplace add` + `claude plugin install`; si no se encuentra `claude`, codify imprime los comandos manuales exactos. (Ver ADR-0012 para el rationale de estándares/mecánica.)
+
+---
+
 ## 🔧 Maintain (lifecycle continuo)
 
 > **Continuo.** Estos comandos operan sobre un proyecto ya equipado. Detectan drift, regeneran artefactos desactualizados, auditan commits y mantienen el costo transparente. Aplican igual a proyectos greenfield y brownfield.
