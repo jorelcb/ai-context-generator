@@ -33,6 +33,7 @@ type catalogParams struct {
 	list        bool
 	status      bool
 	uninstall   bool
+	sync        bool
 }
 
 // defaultMarketplace is the trusted, Anthropic-managed plugin directory used
@@ -65,9 +66,14 @@ Modes:
   Interactive (no flags, TTY): pick ecosystem → type → packages → scope.
   List:        codify catalog --list [--type skill|hook|plugin] [--scope project]
   Status:      codify catalog --status [--scope project|workstation]
+  Sync:        codify catalog --sync [--scope project|workstation]
   Install:     codify catalog --type skill  --package ddd-entity,hexagonal-port --scope project
                codify catalog --type plugin --package gopls-lsp --scope workstation
   Uninstall:   codify catalog --uninstall --type skill --package ddd-entity --scope project
+
+Sync re-applies a scope's lockfile: it reinstalls every recorded package that
+is missing on disk (onboarding a new machine/repo from a committed lockfile).
+Plugins are skipped — their marketplace ref is not yet stored in the lockfile.
 
 Status compares codify's lockfile (~/.codify/workstation.lock,
 .codify/project.lock — what codify recorded installing) against what's
@@ -97,6 +103,7 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 	cmd.Flags().BoolVar(&p.list, "list", false, "List available packages instead of installing")
 	cmd.Flags().BoolVar(&p.status, "status", false, "Show lockfile status: recorded installs vs live state (drift)")
 	cmd.Flags().BoolVar(&p.uninstall, "uninstall", false, "Uninstall packages (with --type/--package/--scope) and drop them from the lockfile")
+	cmd.Flags().BoolVar(&p.sync, "sync", false, "Re-apply the scope's lockfile: reinstall recorded packages missing on disk")
 
 	return cmd
 }
@@ -117,6 +124,10 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 
 	if p.uninstall {
 		return catalogUninstall(ctx, p)
+	}
+
+	if p.sync {
+		return catalogSync(ctx, p)
 	}
 
 	if p.list {
@@ -352,6 +363,116 @@ func catalogUninstall(ctx context.Context, p catalogParams) error {
 		}
 	}
 	return err
+}
+
+// ecoTypeForTarget reverses targetFor: it maps an installed Target back to the
+// (ecosystem, user-facing type) the install services are keyed on, so sync can
+// rebuild the right source/installer for a recorded package.
+func ecoTypeForTarget(t catalog.Target) (ecosystem, tp string, ok bool) {
+	switch t {
+	case catalog.TargetClaudeSkill:
+		return "claude", "skill", true
+	case catalog.TargetClaudeHook:
+		return "claude", "hook", true
+	case catalog.TargetClaudePlugin:
+		return "claude", "plugin", true
+	case catalog.TargetAntigravitySkill:
+		return "antigravity", "skill", true
+	default:
+		return "", "", false
+	}
+}
+
+// catalogSync re-applies a scope's lockfile: it reinstalls every recorded
+// package that is currently missing on disk. This is the reproducibility path —
+// onboard a new machine or repo from a committed lockfile, or repair drift that
+// `--status` flagged. It reuses Status (to find what's missing) and Install
+// (per target), so the restore goes through the same paths as a fresh install
+// and re-records the lockfile idempotently.
+//
+// Plugins are skipped: their marketplace ref is not yet stored in the lockfile,
+// so the source can't be rebuilt from a recorded entry alone (see PR follow-up).
+func catalogSync(ctx context.Context, p catalogParams) error {
+	scopeStr := p.scope
+	if scopeStr == "" {
+		scopeStr = "project"
+	}
+	scope, err := resolveScope(scopeStr)
+	if err != nil {
+		return err
+	}
+
+	report, err := statusService().Status(ctx, scope)
+	if err != nil {
+		return err
+	}
+
+	// Collect missing entries grouped by target (deterministic order).
+	missingByTarget := map[catalog.Target][]string{}
+	for _, e := range report.Entries {
+		if e.Status == command.DriftMissing {
+			missingByTarget[e.Package.Target] = append(missingByTarget[e.Package.Target], e.Package.ID)
+		}
+	}
+
+	fmt.Println()
+	fmt.Printf("Syncing lockfile · scope: %s\n", scope)
+	fmt.Println(strings.Repeat("─", 48))
+	if len(missingByTarget) == 0 {
+		fmt.Println("Already in sync — every recorded package is present on disk.")
+		return nil
+	}
+
+	targets := make([]catalog.Target, 0, len(missingByTarget))
+	for t := range missingByTarget {
+		targets = append(targets, t)
+	}
+	sort.Slice(targets, func(i, j int) bool { return targets[i] < targets[j] })
+
+	restored, skipped := 0, 0
+	for _, target := range targets {
+		ids := missingByTarget[target]
+		sort.Strings(ids)
+
+		ecosystem, tp, ok := ecoTypeForTarget(target)
+		if !ok || tp == "plugin" {
+			reason := "unsupported target"
+			if tp == "plugin" {
+				reason = "plugin marketplace ref not stored in lockfile"
+			}
+			for _, id := range ids {
+				fmt.Printf("  ⊘ %-26s [%s] skipped (%s)\n", id, target, reason)
+			}
+			skipped += len(ids)
+			continue
+		}
+
+		// Static restore path (sync re-applies recorded packages from the
+		// built-in/local catalog; personalized re-adaptation is not reproducible).
+		sp := p
+		sp.mode = "static"
+		svc, err := installService(ctx, ecosystem, tp, sp)
+		if err != nil {
+			return err
+		}
+		out, err := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
+		if err != nil {
+			printInstallOutcome(out, scope)
+			return err
+		}
+		for _, id := range out.Installed {
+			fmt.Printf("  ✓ %-26s [%s] restored\n", id, target)
+		}
+		restored += len(out.Installed)
+		for _, id := range out.NotFound {
+			fmt.Printf("  ⊘ %-26s [%s] skipped (no longer in catalog)\n", id, target)
+		}
+		skipped += len(out.NotFound)
+	}
+
+	fmt.Println()
+	fmt.Printf("Sync complete: %d restored, %d skipped.\n", restored, skipped)
+	return nil
 }
 
 // mustClaudeInstaller builds a ClaudeInstaller against the real cwd/home. On
