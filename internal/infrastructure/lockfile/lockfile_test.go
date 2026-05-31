@@ -100,7 +100,7 @@ func TestRecorder_RecordAndForget(t *testing.T) {
 
 	manifests := []catalog.PackageManifest{
 		{ID: "ddd-entity", Target: catalog.TargetClaudeSkill, Version: "2.3.0", Source: catalog.SourceRef{Kind: "embedded"}, SourceChecksum: "abc"},
-		{ID: "gopls-lsp", Target: catalog.TargetClaudePlugin, Version: "1.0.0", Source: catalog.SourceRef{Kind: "claude-marketplace"}},
+		{ID: "gopls-lsp", Target: catalog.TargetClaudePlugin, Version: "1.0.0", Source: catalog.SourceRef{Kind: "claude-marketplace", URI: "anthropics/claude-plugins-official"}},
 	}
 	if err := rec.Record(ctx, catalog.ScopeProject, manifests); err != nil {
 		t.Fatalf("Record: %v", err)
@@ -110,14 +110,21 @@ func TestRecorder_RecordAndForget(t *testing.T) {
 	if len(lf.Packages) != 2 {
 		t.Fatalf("expected 2 recorded, got %d", len(lf.Packages))
 	}
-	var ddd *Entry
+	var ddd, plugin *Entry
 	for i := range lf.Packages {
-		if lf.Packages[i].ID == "ddd-entity" {
+		switch lf.Packages[i].ID {
+		case "ddd-entity":
 			ddd = &lf.Packages[i]
+		case "gopls-lsp":
+			plugin = &lf.Packages[i]
 		}
 	}
 	if ddd == nil || ddd.Version != "2.3.0" || ddd.SourceKind != "embedded" || ddd.Checksum != "abc" {
 		t.Errorf("ddd entry wrong: %+v", ddd)
+	}
+	// The marketplace ref (Source.URI) is recorded so sync can rebuild the source.
+	if plugin == nil || plugin.SourceURI != "anthropics/claude-plugins-official" {
+		t.Errorf("plugin SourceURI not recorded: %+v", plugin)
 	}
 	if ddd.InstalledAt != "2026-05-31T12:00:00Z" {
 		t.Errorf("installedAt not stamped from clock: %q", ddd.InstalledAt)
@@ -150,6 +157,7 @@ func TestRecorder_Recorded_MapsEntries(t *testing.T) {
 
 	manifests := []catalog.PackageManifest{
 		{ID: "ddd-entity", Target: catalog.TargetClaudeSkill, Version: "2.3.0", Source: catalog.SourceRef{Kind: "embedded"}, SourceChecksum: "abc"},
+		{ID: "gopls-lsp", Target: catalog.TargetClaudePlugin, Version: "1.0.0", Source: catalog.SourceRef{Kind: "claude-marketplace", URI: "owner/repo"}},
 	}
 	if err := rec.Record(ctx, catalog.ScopeWorkstation, manifests); err != nil {
 		t.Fatalf("Record: %v", err)
@@ -159,11 +167,15 @@ func TestRecorder_Recorded_MapsEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Recorded: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("expected 1 recorded, got %d", len(got))
+	if len(got) != 2 {
+		t.Fatalf("expected 2 recorded, got %d", len(got))
 	}
-	p := got[0]
-	if p.ID != "ddd-entity" || p.Target != catalog.TargetClaudeSkill || p.Version != "2.3.0" {
+	byID := map[string]catalog.InstalledPackage{}
+	for _, p := range got {
+		byID[p.ID] = p
+	}
+	p := byID["ddd-entity"]
+	if p.Target != catalog.TargetClaudeSkill || p.Version != "2.3.0" {
 		t.Errorf("entry not mapped: %+v", p)
 	}
 	if p.Scope != catalog.ScopeWorkstation {
@@ -171,6 +183,10 @@ func TestRecorder_Recorded_MapsEntries(t *testing.T) {
 	}
 	if p.InstalledChecksum != "abc" || p.InstalledAt != "2026-05-31T09:00:00Z" {
 		t.Errorf("checksum/installedAt not mapped: %+v", p)
+	}
+	// SourceURI flows back so sync can rebuild a plugin's marketplace source.
+	if uri := byID["gopls-lsp"].SourceURI; uri != "owner/repo" {
+		t.Errorf("SourceURI not mapped to InstalledPackage: %q", uri)
 	}
 }
 

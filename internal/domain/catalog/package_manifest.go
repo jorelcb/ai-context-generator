@@ -362,6 +362,12 @@ type InstalledPackage struct {
 	Target Target
 	// Scope identifies where the package was installed.
 	Scope Scope
+	// SourceURI is the source-specific locator the package came from (the
+	// marketplace ref for plugins, the directory for local-fs; empty for
+	// embedded). Provenance carried by the lockfile reader so re-apply (sync)
+	// can rebuild the originating source. Live installers leave it empty —
+	// they enumerate what's on disk, not where it came from.
+	SourceURI string
 	// InstalledAt is an ISO 8601 timestamp captured at install time.
 	InstalledAt string
 	// InstalledChecksum is a hash of the file(s) as installed. Differs

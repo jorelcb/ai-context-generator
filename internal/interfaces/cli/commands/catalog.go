@@ -390,8 +390,8 @@ func ecoTypeForTarget(t catalog.Target) (ecosystem, tp string, ok bool) {
 // (per target), so the restore goes through the same paths as a fresh install
 // and re-records the lockfile idempotently.
 //
-// Plugins are skipped: their marketplace ref is not yet stored in the lockfile,
-// so the source can't be rebuilt from a recorded entry alone (see PR follow-up).
+// Plugins are reinstalled from their recorded marketplace ref (Source.URI),
+// sub-grouped by ref; entries from older lockfiles without one are skipped.
 func catalogSync(ctx context.Context, p catalogParams) error {
 	scopeStr := p.scope
 	if scopeStr == "" {
@@ -407,11 +407,12 @@ func catalogSync(ctx context.Context, p catalogParams) error {
 		return err
 	}
 
-	// Collect missing entries grouped by target (deterministic order).
-	missingByTarget := map[catalog.Target][]string{}
+	// Collect missing entries grouped by target (deterministic order). Keep the
+	// full package so plugins can be sub-grouped by their recorded source ref.
+	missingByTarget := map[catalog.Target][]catalog.InstalledPackage{}
 	for _, e := range report.Entries {
 		if e.Status == command.DriftMissing {
-			missingByTarget[e.Package.Target] = append(missingByTarget[e.Package.Target], e.Package.ID)
+			missingByTarget[e.Package.Target] = append(missingByTarget[e.Package.Target], e.Package)
 		}
 	}
 
@@ -431,48 +432,110 @@ func catalogSync(ctx context.Context, p catalogParams) error {
 
 	restored, skipped := 0, 0
 	for _, target := range targets {
-		ids := missingByTarget[target]
-		sort.Strings(ids)
+		pkgs := missingByTarget[target]
+		sort.Slice(pkgs, func(i, j int) bool { return pkgs[i].ID < pkgs[j].ID })
 
 		ecosystem, tp, ok := ecoTypeForTarget(target)
-		if !ok || tp == "plugin" {
-			reason := "unsupported target"
-			if tp == "plugin" {
-				reason = "plugin marketplace ref not stored in lockfile"
+		if !ok {
+			for _, pk := range pkgs {
+				fmt.Printf("  ⊘ %-26s [%s] skipped (unsupported target)\n", pk.ID, target)
 			}
-			for _, id := range ids {
-				fmt.Printf("  ⊘ %-26s [%s] skipped (%s)\n", id, target, reason)
-			}
-			skipped += len(ids)
+			skipped += len(pkgs)
 			continue
 		}
 
-		// Static restore path (sync re-applies recorded packages from the
-		// built-in/local catalog; personalized re-adaptation is not reproducible).
+		// Plugins re-install from their recorded marketplace ref (Source.URI),
+		// sub-grouped by ref. Entries without one (older lockfiles) can't be
+		// rebuilt, so they're skipped.
+		if tp == "plugin" {
+			r, s, err := syncPlugins(ctx, p, target, pkgs, scope)
+			if err != nil {
+				return err
+			}
+			restored += r
+			skipped += s
+			continue
+		}
+
+		// Static restore path for skills/hooks (built-in/local catalog;
+		// personalized re-adaptation is not reproducible).
 		sp := p
 		sp.mode = "static"
 		svc, err := installService(ctx, ecosystem, tp, sp)
 		if err != nil {
 			return err
 		}
-		out, err := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
+		ids := make([]string, len(pkgs))
+		for i, pk := range pkgs {
+			ids[i] = pk.ID
+		}
+		r, s, err := syncInstall(ctx, svc, target, ids, scope)
 		if err != nil {
-			printInstallOutcome(out, scope)
 			return err
 		}
-		for _, id := range out.Installed {
-			fmt.Printf("  ✓ %-26s [%s] restored\n", id, target)
-		}
-		restored += len(out.Installed)
-		for _, id := range out.NotFound {
-			fmt.Printf("  ⊘ %-26s [%s] skipped (no longer in catalog)\n", id, target)
-		}
-		skipped += len(out.NotFound)
+		restored += r
+		skipped += s
 	}
 
 	fmt.Println()
 	fmt.Printf("Sync complete: %d restored, %d skipped.\n", restored, skipped)
 	return nil
+}
+
+// syncPlugins reinstalls missing plugin packages, sub-grouped by their recorded
+// marketplace ref so each group rebuilds the right marketplace source. Entries
+// without a recorded ref are skipped.
+func syncPlugins(ctx context.Context, p catalogParams, target catalog.Target, pkgs []catalog.InstalledPackage, scope catalog.Scope) (restored, skipped int, err error) {
+	byRef := map[string][]string{}
+	for _, pk := range pkgs {
+		if pk.SourceURI == "" {
+			fmt.Printf("  ⊘ %-26s [%s] skipped (no marketplace ref recorded)\n", pk.ID, target)
+			skipped++
+			continue
+		}
+		byRef[pk.SourceURI] = append(byRef[pk.SourceURI], pk.ID)
+	}
+
+	refs := make([]string, 0, len(byRef))
+	for ref := range byRef {
+		refs = append(refs, ref)
+	}
+	sort.Strings(refs)
+
+	for _, ref := range refs {
+		ids := byRef[ref]
+		sort.Strings(ids)
+		sp := p
+		sp.marketplace = ref
+		svc, serr := installService(ctx, "claude", "plugin", sp)
+		if serr != nil {
+			return restored, skipped, serr
+		}
+		r, s, ierr := syncInstall(ctx, svc, target, ids, scope)
+		if ierr != nil {
+			return restored + r, skipped + s, ierr
+		}
+		restored += r
+		skipped += s
+	}
+	return restored, skipped, nil
+}
+
+// syncInstall runs one Install batch for sync and prints per-package results,
+// returning (restored, skipped) counts.
+func syncInstall(ctx context.Context, svc *command.CatalogService, target catalog.Target, ids []string, scope catalog.Scope) (restored, skipped int, err error) {
+	out, ierr := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
+	if ierr != nil {
+		printInstallOutcome(out, scope)
+		return len(out.Installed), 0, ierr
+	}
+	for _, id := range out.Installed {
+		fmt.Printf("  ✓ %-26s [%s] restored\n", id, target)
+	}
+	for _, id := range out.NotFound {
+		fmt.Printf("  ⊘ %-26s [%s] skipped (no longer in catalog)\n", id, target)
+	}
+	return len(out.Installed), len(out.NotFound), nil
 }
 
 // mustClaudeInstaller builds a ClaudeInstaller against the real cwd/home. On
