@@ -53,6 +53,33 @@ func (r *Recorder) Record(_ context.Context, scope catalog.Scope, installed []ca
 	return lf.Save()
 }
 
+// Recorded reads the scope's lockfile back into the domain's InstalledPackage
+// shape — codify's intended state, for drift comparison against live state.
+// A missing lockfile yields an empty slice (not an error). It satisfies the
+// application's LockfileReader port.
+func (r *Recorder) Recorded(_ context.Context, scope catalog.Scope) ([]catalog.InstalledPackage, error) {
+	path, err := r.pathForScope(scope)
+	if err != nil {
+		return nil, err
+	}
+	lf, err := Load(path)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]catalog.InstalledPackage, 0, len(lf.Packages))
+	for _, e := range lf.Packages {
+		out = append(out, catalog.InstalledPackage{
+			ID:                e.ID,
+			Version:           e.Version,
+			Target:            catalog.Target(e.Target),
+			Scope:             scope,
+			InstalledAt:       e.InstalledAt,
+			InstalledChecksum: e.Checksum,
+		})
+	}
+	return out, nil
+}
+
 // Forget removes the given package IDs of a target from the scope's lockfile
 // (used by uninstall). Saving only when something changed.
 func (r *Recorder) Forget(_ context.Context, scope catalog.Scope, ids []string, target catalog.Target) error {

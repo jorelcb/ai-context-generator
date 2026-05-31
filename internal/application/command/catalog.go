@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jorelcb/codify/internal/domain/catalog"
@@ -23,6 +24,15 @@ type InstallRecorder interface {
 	Record(ctx context.Context, scope catalog.Scope, installed []catalog.PackageManifest) error
 }
 
+// LockfileReader reads the per-scope lockfile back into the domain's
+// InstalledPackage shape — codify's *intended* state (what it recorded
+// installing). Defined here as a behavior so CatalogService stays decoupled
+// from the concrete lockfile; the infra lockfile.Recorder satisfies it.
+// Optional — Status requires it, but install/list do not.
+type LockfileReader interface {
+	Recorded(ctx context.Context, scope catalog.Scope) ([]catalog.InstalledPackage, error)
+}
+
 // CatalogService orchestrates the read/write package ports behind the
 // `catalog` command (ADR-0010): it lists what a PackageSource offers, reports
 // what a TargetInstaller has on disk, and installs selected packages by
@@ -35,6 +45,7 @@ type CatalogService struct {
 	source   catalog.PackageSource
 	registry InstallerRegistry
 	recorder InstallRecorder // optional; records installs into the lockfile
+	reader   LockfileReader  // optional; reads the lockfile back for Status
 }
 
 // NewCatalogService wires the source (where packages come from) and the
@@ -47,6 +58,13 @@ func NewCatalogService(source catalog.PackageSource, registry InstallerRegistry)
 // recorded per scope. Returns the service for chaining.
 func (s *CatalogService) WithRecorder(r InstallRecorder) *CatalogService {
 	s.recorder = r
+	return s
+}
+
+// WithReader attaches a lockfile reader so Status can compare codify's
+// recorded installs against live state. Returns the service for chaining.
+func (s *CatalogService) WithReader(r LockfileReader) *CatalogService {
+	s.reader = r
 	return s
 }
 
@@ -146,4 +164,91 @@ func (s *CatalogService) Install(ctx context.Context, req InstallRequest) (Insta
 	}
 
 	return outcome, nil
+}
+
+// DriftStatus classifies a recorded package against the ecosystems' live
+// state.
+type DriftStatus string
+
+const (
+	// DriftInSync — recorded in the lockfile and present on disk.
+	DriftInSync DriftStatus = "in-sync"
+	// DriftMissing — recorded in the lockfile but absent on disk (removed by
+	// hand, or never finished installing).
+	DriftMissing DriftStatus = "missing"
+)
+
+// DriftEntry pairs a recorded package with its current drift status.
+type DriftEntry struct {
+	Package catalog.InstalledPackage
+	Status  DriftStatus
+}
+
+// DriftReport is the result of comparing a scope's lockfile (codify's intended
+// state) against the installers' live state.
+type DriftReport struct {
+	Scope   catalog.Scope
+	Entries []DriftEntry
+}
+
+// Missing returns the count of recorded packages absent on disk.
+func (r DriftReport) Missing() int {
+	n := 0
+	for _, e := range r.Entries {
+		if e.Status == DriftMissing {
+			n++
+		}
+	}
+	return n
+}
+
+// Status compares the scope's lockfile against the live install state and
+// reports drift per recorded package. It reads only what codify recorded
+// (the lockfile is the source of truth for intent); a package present on disk
+// but never recorded is out of scope here — Status answers "is everything I
+// installed still there?", the reproducibility question.
+func (s *CatalogService) Status(ctx context.Context, scope catalog.Scope) (DriftReport, error) {
+	report := DriftReport{Scope: scope}
+	if s.reader == nil {
+		return report, errors.New("catalog: no lockfile reader configured")
+	}
+	recorded, err := s.reader.Recorded(ctx, scope)
+	if err != nil {
+		return report, fmt.Errorf("catalog: read lockfile: %w", err)
+	}
+
+	// Query each distinct recorded target's installer once and index its live
+	// packages by (target, id).
+	type key struct {
+		target catalog.Target
+		id     string
+	}
+	live := make(map[key]bool)
+	queried := make(map[catalog.Target]bool)
+	for _, r := range recorded {
+		if queried[r.Target] {
+			continue
+		}
+		queried[r.Target] = true
+		inst, err := s.registry.For(r.Target)
+		if err != nil {
+			continue // no installer for the target → its packages read as missing
+		}
+		list, err := inst.InstalledList(ctx, scope)
+		if err != nil {
+			return report, fmt.Errorf("catalog: live state for %s: %w", r.Target, err)
+		}
+		for _, p := range list {
+			live[key{p.Target, p.ID}] = true
+		}
+	}
+
+	for _, r := range recorded {
+		st := DriftMissing
+		if live[key{r.Target, r.ID}] {
+			st = DriftInSync
+		}
+		report.Entries = append(report.Entries, DriftEntry{Package: r, Status: st})
+	}
+	return report, nil
 }

@@ -60,6 +60,76 @@ func TestCatalogService_Install_RecordsToLockfile(t *testing.T) {
 	}
 }
 
+// fakeReader serves a fixed recorded set (the lockfile).
+type fakeReader struct{ recorded []catalog.InstalledPackage }
+
+func (f *fakeReader) Recorded(_ context.Context, _ catalog.Scope) ([]catalog.InstalledPackage, error) {
+	return f.recorded, nil
+}
+
+// fakeInstaller reports a fixed live set; routes every target to itself.
+type fakeInstaller struct{ live []catalog.InstalledPackage }
+
+func (f *fakeInstaller) Handles(catalog.Target) bool { return true }
+func (f *fakeInstaller) Install(context.Context, catalog.PackageManifest, catalog.PackageContent, catalog.Scope) error {
+	return nil
+}
+
+func (f *fakeInstaller) Uninstall(context.Context, catalog.PackageManifest, catalog.Scope) error {
+	return nil
+}
+
+func (f *fakeInstaller) InstalledList(context.Context, catalog.Scope) ([]catalog.InstalledPackage, error) {
+	return f.live, nil
+}
+
+type fakeRegistry struct{ inst catalog.TargetInstaller }
+
+func (r fakeRegistry) For(catalog.Target) (catalog.TargetInstaller, error) { return r.inst, nil }
+
+func TestCatalogService_Status_ReportsDrift(t *testing.T) {
+	reader := &fakeReader{recorded: []catalog.InstalledPackage{
+		{ID: "ddd-entity", Target: catalog.TargetClaudeSkill, Version: "2.3.0"},
+		{ID: "linting", Target: catalog.TargetClaudeSkill, Version: "1.0.0"}, // removed by hand
+	}}
+	// Live state: only ddd-entity remains.
+	reg := fakeRegistry{inst: &fakeInstaller{live: []catalog.InstalledPackage{
+		{ID: "ddd-entity", Target: catalog.TargetClaudeSkill},
+	}}}
+	svc := command.NewCatalogService(nil, reg).WithReader(reader)
+
+	report, err := svc.Status(context.Background(), catalog.ScopeProject)
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if report.Scope != catalog.ScopeProject {
+		t.Errorf("report scope: %q", report.Scope)
+	}
+	if len(report.Entries) != 2 {
+		t.Fatalf("expected 2 entries, got %d", len(report.Entries))
+	}
+	got := map[string]command.DriftStatus{}
+	for _, e := range report.Entries {
+		got[e.Package.ID] = e.Status
+	}
+	if got["ddd-entity"] != command.DriftInSync {
+		t.Errorf("ddd-entity should be in-sync, got %q", got["ddd-entity"])
+	}
+	if got["linting"] != command.DriftMissing {
+		t.Errorf("linting should be missing, got %q", got["linting"])
+	}
+	if report.Missing() != 1 {
+		t.Errorf("Missing() = %d, want 1", report.Missing())
+	}
+}
+
+func TestCatalogService_Status_NoReader_Errors(t *testing.T) {
+	svc, _ := newService(t)
+	if _, err := svc.Status(context.Background(), catalog.ScopeProject); err == nil {
+		t.Fatal("expected error when no reader configured")
+	}
+}
+
 func TestCatalogService_Available_FiltersByTarget(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()
