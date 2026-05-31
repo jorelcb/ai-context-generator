@@ -386,7 +386,7 @@ codify catalog --list --type skill
 | `project`     | `./.claude/skills/` | Committed a git, compartido con el equipo |
 | `workstation` | `~/.claude/skills/` | Accesible desde cualquier proyecto        |
 
-El catalog apunta al ecosistema **Claude** por ahora; el install de skills para Codex/Antigravity vuelve cuando el catalog gane esos ecosistemas.
+Las skills también se instalan para **Antigravity CLI**: `codify catalog --ecosystem antigravity --type skill --package <id> --scope project|workstation` las escribe (con frontmatter de Antigravity) planas en `~/.gemini/antigravity-cli/skills/` (workstation) o `.agents/skills/` (project). Gemini CLI está deprecado y sin soporte (ADR-0012 §4).
 
 #### Catalogo de skills
 
