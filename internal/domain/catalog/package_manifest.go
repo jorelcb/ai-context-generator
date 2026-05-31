@@ -88,6 +88,12 @@ const (
 	ScopeProject Scope = "project"
 )
 
+// MetaKeyMarketplace is the PackageManifest.Metadata key carrying the
+// marketplace name a plugin belongs to. Written by a plugin marketplace
+// source and read by the plugin installer to address `<id>@<marketplace>`.
+// Shared contract between the two infrastructure adapters.
+const MetaKeyMarketplace = "marketplace"
+
 // PackageRef points to another package by ID and optional version.
 // Used in Dependencies and Conflicts to express relationships between
 // packages without requiring the referenced package to be resolved at

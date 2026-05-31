@@ -17,10 +17,6 @@ import (
 // catalog.PackageSource contract.
 var _ catalog.PackageSource = (*PluginMarketplaceSource)(nil)
 
-// marketplaceMetaKey is the PackageManifest.Metadata key under which the
-// marketplace name is stored, so the installer can build `<id>@<marketplace>`.
-const marketplaceMetaKey = "marketplace"
-
 // PluginMarketplaceSource is a catalog.PackageSource over a Claude-style
 // plugin marketplace — the `.claude-plugin/marketplace.json` catalog format
 // (ADR-0012). It reads the marketplace.json and emits one TargetClaudePlugin
@@ -105,7 +101,7 @@ func (s *PluginMarketplaceSource) List(ctx context.Context) ([]catalog.PackageMa
 			Description: p.Description,
 			Target:      catalog.TargetClaudePlugin,
 			Source:      catalog.SourceRef{Kind: s.Kind(), URI: s.ref},
-			Metadata:    map[string]string{marketplaceMetaKey: doc.Name},
+			Metadata:    map[string]string{catalog.MetaKeyMarketplace: doc.Name},
 		}
 		if p.Category != "" {
 			m.Metadata["category"] = p.Category
@@ -138,7 +134,7 @@ func MarketplaceName(m catalog.PackageManifest) string {
 	if m.Metadata == nil {
 		return ""
 	}
-	return m.Metadata[marketplaceMetaKey]
+	return m.Metadata[catalog.MetaKeyMarketplace]
 }
 
 // httpFetchMarketplace is the default fetcher. It accepts either a full
