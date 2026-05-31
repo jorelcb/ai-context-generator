@@ -18,9 +18,10 @@ import (
 // into the user's settings.json and copying the auxiliary scripts to the
 // agent's hooks directory.
 //
-// Replaces the v1.19.0 manual-merge ceremony. The user runs
-// `codify hooks --install project|global` and the hooks are immediately
-// active — no manual settings.json edit required.
+// Replaces the v1.19.0 manual-merge ceremony: the hooks are merged and
+// immediately active — no manual settings.json edit required. Driven by the
+// MCP `generate_hooks` tool (CLI hook install goes through `codify catalog
+// --type hook`, which uses the catalog's ClaudeInstaller).
 //
 // The command is idempotent: running it twice with the same preset adds
 // zero handlers on the second run (matched by exact command string).

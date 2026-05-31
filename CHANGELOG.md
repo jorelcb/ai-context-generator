@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - Track D: package catalog (model, sources, installers, `catalog` command)
+## [3.0.0] - 2026-05-31 - Track D: package catalog + lockfile (multi-ecosystem install, reproducibility)
 
 > Track D (ADR-0010): a unified package model, a read-side package source and a write-side ecosystem installer, surfaced through a new `codify catalog` command. Plus the greenfield decision to make distributable artifacts (skills + hooks) locale-free — English-only by design, so the ES locale subtree for skills/hooks is dropped rather than maintained.
 
