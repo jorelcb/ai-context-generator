@@ -77,7 +77,7 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 		},
 	}
 
-	cmd.Flags().StringVar(&p.ecosystem, "ecosystem", "claude", "Target ecosystem (MVP: claude)")
+	cmd.Flags().StringVar(&p.ecosystem, "ecosystem", "claude", "Target ecosystem: claude or antigravity")
 	cmd.Flags().StringVar(&p.pkgType, "type", "", "Package type: skill, hook, or plugin")
 	cmd.Flags().StringVar(&p.packages, "package", "", "Comma-separated package IDs to install")
 	cmd.Flags().StringVar(&p.scope, "scope", "", "Install scope: project or workstation (alias: global)")
@@ -91,8 +91,11 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 }
 
 func runCatalog(p catalogParams, explicit map[string]bool) error {
-	if p.ecosystem != "" && p.ecosystem != "claude" {
-		return fmt.Errorf("ecosystem %q not supported yet (MVP: claude)", p.ecosystem)
+	if p.ecosystem == "" {
+		p.ecosystem = "claude"
+	}
+	if p.ecosystem != "claude" && p.ecosystem != "antigravity" {
+		return fmt.Errorf("ecosystem %q not supported (claude or antigravity)", p.ecosystem)
 	}
 
 	ctx := context.Background()
@@ -112,10 +115,33 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 	return catalogInteractive(ctx, p)
 }
 
-// catalogRegistry wires the Claude installers: skills/hooks (filesystem) and
-// plugins (delegated to the native plugin CLI). The registry routes by Target.
+// catalogRegistry wires every installer the catalog can route to: Claude
+// skills/hooks (filesystem), Claude plugins (native CLI), and Antigravity
+// skills (filesystem). The registry routes by Target.
 func catalogRegistry() *targetinstaller.Registry {
-	return targetinstaller.NewRegistry(mustClaudeInstaller(), mustClaudePluginInstaller())
+	return targetinstaller.NewRegistry(
+		mustClaudeInstaller(),
+		mustClaudePluginInstaller(),
+		mustAntigravityInstaller(),
+	)
+}
+
+// targetFor resolves the Target for an ecosystem + user-facing type.
+// Antigravity supports skills only for now (ADR-0012 §5: its plugin
+// marketplace model is immature).
+func targetFor(ecosystem, tp string) (catalog.Target, error) {
+	switch ecosystem {
+	case "antigravity":
+		if tp == "skill" {
+			return catalog.TargetAntigravitySkill, nil
+		}
+		return "", fmt.Errorf("antigravity supports type 'skill' only for now (got %q)", tp)
+	default: // claude
+		if t, ok := typeToTarget[tp]; ok {
+			return t, nil
+		}
+		return "", fmt.Errorf("invalid type %q (use skill, hook, or plugin)", tp)
+	}
 }
 
 // pluginService browses + installs from a Claude plugin marketplace. Plugins
@@ -125,10 +151,22 @@ func pluginService(marketplaceRef string) *command.CatalogService {
 	return command.NewCatalogService(source, catalogRegistry())
 }
 
-// browseService returns the read service for a type. Plugins read from the
-// marketplace (network); skills/hooks read the static embedded+local catalog
-// (no API key, no network).
-func browseService(tp string, p catalogParams) *command.CatalogService {
+// antigravityService browses + installs Antigravity skills (the built-in
+// skills re-framed with Antigravity frontmatter, written to the agy skill
+// dirs). Static only — no LLM personalization for Antigravity v0.
+func antigravityService() *command.CatalogService {
+	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
+	source := packagesource.NewAntigravitySkillSource(embedded)
+	return command.NewCatalogService(source, catalogRegistry())
+}
+
+// browseService returns the read service for an ecosystem + type. Antigravity
+// reads its skill source; Claude plugins read the marketplace (network);
+// Claude skills/hooks read the static embedded+local catalog (no API key).
+func browseService(ecosystem, tp string, p catalogParams) *command.CatalogService {
+	if ecosystem == "antigravity" {
+		return antigravityService()
+	}
 	if tp == "plugin" {
 		return pluginService(p.marketplace)
 	}
@@ -187,6 +225,16 @@ func mustClaudeInstaller() *targetinstaller.ClaudeInstaller {
 	return inst
 }
 
+// mustAntigravityInstaller builds an AntigravityInstaller against the real
+// home/cwd, falling back to relative roots on failure.
+func mustAntigravityInstaller() *targetinstaller.AntigravityInstaller {
+	inst, err := targetinstaller.NewAntigravityInstaller()
+	if err != nil {
+		return targetinstaller.NewAntigravityInstallerWithRoots(".", ".")
+	}
+	return inst
+}
+
 // mustClaudePluginInstaller builds a ClaudePluginInstaller. On failure to
 // resolve home it falls back to a relative config dir; the actual install
 // still surfaces a clear error if `claude` is absent.
@@ -221,23 +269,30 @@ func catalogList(ctx context.Context, p catalogParams) error {
 		scope = s
 	}
 
-	// Default browse is skill+hook (local/built-in, fast). Plugins require an
-	// explicit `--type plugin` since listing them hits the marketplace network.
+	// Default browse types per ecosystem. Antigravity is skills-only;
+	// Claude defaults to skill+hook (plugins require explicit --type plugin
+	// since listing them hits the marketplace network).
 	types := []string{"skill", "hook"}
+	if p.ecosystem == "antigravity" {
+		types = []string{"skill"}
+	}
 	if p.pkgType != "" {
-		if _, ok := typeToTarget[p.pkgType]; !ok {
-			return fmt.Errorf("invalid type %q (use skill, hook, or plugin)", p.pkgType)
+		if _, err := targetFor(p.ecosystem, p.pkgType); err != nil {
+			return err
 		}
 		types = []string{p.pkgType}
 	}
 
 	fmt.Println()
-	fmt.Printf("Catalog · ecosystem: claude · scope: %s\n", scope)
+	fmt.Printf("Catalog · ecosystem: %s · scope: %s\n", p.ecosystem, scope)
 	fmt.Println(strings.Repeat("─", 48))
 
 	for _, tp := range types {
-		target := typeToTarget[tp]
-		svc := browseService(tp, p)
+		target, err := targetFor(p.ecosystem, tp)
+		if err != nil {
+			return err
+		}
+		svc := browseService(p.ecosystem, tp, p)
 		available, err := svc.Available(ctx, target)
 		if err != nil {
 			return err
@@ -272,7 +327,10 @@ func catalogList(ctx context.Context, p catalogParams) error {
 // personalized mode use the LLM source; everything else the static
 // embedded+local catalog. Reads mode/model/context/marketplace from p (the
 // interactive flow stuffs its resolved values back into p first).
-func installService(ctx context.Context, tp string, p catalogParams) (*command.CatalogService, error) {
+func installService(ctx context.Context, ecosystem, tp string, p catalogParams) (*command.CatalogService, error) {
+	if ecosystem == "antigravity" {
+		return antigravityService(), nil // skills only, static
+	}
 	if tp == "plugin" {
 		return pluginService(p.marketplace), nil
 	}
@@ -296,9 +354,9 @@ func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 	if p.pkgType == "" {
 		return fmt.Errorf("--type is required for install (skill, hook, or plugin)")
 	}
-	target, ok := typeToTarget[p.pkgType]
-	if !ok {
-		return fmt.Errorf("invalid type %q (use skill, hook, or plugin)", p.pkgType)
+	target, err := targetFor(p.ecosystem, p.pkgType)
+	if err != nil {
+		return err
 	}
 	ids := splitCSV(p.packages)
 	if len(ids) == 0 {
@@ -313,7 +371,7 @@ func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 		return err
 	}
 
-	svc, err := installService(ctx, p.pkgType, p)
+	svc, err := installService(ctx, p.ecosystem, p.pkgType, p)
 	if err != nil {
 		return err
 	}
@@ -323,26 +381,39 @@ func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 }
 
 func catalogInteractive(ctx context.Context, p catalogParams) error {
-	// Step 1 — ecosystem. MVP ships Claude only; auto-select with a notice
-	// rather than a single-option menu.
-	fmt.Fprintln(os.Stderr, "→ Ecosystem: claude (the only one supported in this version)")
-
-	// Step 2 — type tab.
-	tp, err := promptSelect("Package type", []selectOption{
-		{"Skills (prompt-based behaviors)", "skill"},
-		{"Hooks (deterministic guardrails)", "hook"},
-		{"Plugins (Claude marketplace bundles)", "plugin"},
-	}, "skill")
+	// Step 1 — ecosystem.
+	ecosystem, err := promptSelect("Target ecosystem", []selectOption{
+		{"Claude Code", "claude"},
+		{"Antigravity CLI", "antigravity"},
+	}, "claude")
 	if err != nil {
 		return err
 	}
-	target := typeToTarget[tp]
+	p.ecosystem = ecosystem
 
-	// Step 3 — mode (skills only; hooks are catalog-driven, no LLM).
+	// Step 2 — type tab (per ecosystem; Antigravity is skills-only for now).
+	typeOpts := []selectOption{{"Skills (prompt-based behaviors)", "skill"}}
+	if ecosystem == "claude" {
+		typeOpts = append(typeOpts,
+			selectOption{"Hooks (deterministic guardrails)", "hook"},
+			selectOption{"Plugins (Claude marketplace bundles)", "plugin"},
+		)
+	}
+	tp, err := promptSelect("Package type", typeOpts, "skill")
+	if err != nil {
+		return err
+	}
+	target, err := targetFor(ecosystem, tp)
+	if err != nil {
+		return err
+	}
+
+	// Step 3 — mode (Claude skills only; hooks/plugins and Antigravity are
+	// static, no LLM).
 	mode := "static"
 	model := p.model
 	projectContext := p.context
-	if tp == "skill" {
+	if ecosystem == "claude" && tp == "skill" {
 		mode, err = promptSelect("Skill mode", []selectOption{
 			{"Static (instant, embedded template)", "static"},
 			{"Personalized (LLM-adapted to your project)", "personalized"},
@@ -388,7 +459,7 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 	if tp == "plugin" {
 		fmt.Fprintf(os.Stderr, "→ Fetching plugins from %s …\n", p.marketplace)
 	}
-	browse := browseService(tp, p)
+	browse := browseService(p.ecosystem, tp, p)
 	available, err := browse.Available(ctx, target)
 	if err != nil {
 		return err
@@ -431,7 +502,7 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 	// Carry the interactively-resolved values into p so installService reads
 	// them uniformly with the flag path.
 	p.mode, p.model, p.context = mode, model, projectContext
-	svc, err := installService(ctx, tp, p)
+	svc, err := installService(ctx, p.ecosystem, tp, p)
 	if err != nil {
 		return err
 	}

@@ -52,6 +52,11 @@ const (
 	TargetClaudePlugin Target = "claude-plugin"
 	// TargetClaudeSlash: a slash command installed under .claude/commands/.
 	TargetClaudeSlash Target = "claude-slash-command"
+	// TargetAntigravitySkill: an Agent-Skills markdown file installed flat
+	// under ~/.gemini/antigravity-cli/skills/<id>.md (global) or
+	// <project>/.agents/skills/<id>.md (workspace). Written directly by the
+	// AntigravityInstaller — no CLI delegation. See ADR-0012 §5.
+	TargetAntigravitySkill Target = "antigravity-skill"
 	// TargetAntigravityWF: an Antigravity workflow (flat .md with execution
 	// annotations). Workflows are exempt from the catalog UX (ADR-0010 §5)
 	// but remain installable via flags.
