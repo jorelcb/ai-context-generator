@@ -33,6 +33,15 @@ type LockfileReader interface {
 	Recorded(ctx context.Context, scope catalog.Scope) ([]catalog.InstalledPackage, error)
 }
 
+// LockfileForgetter drops uninstalled packages from the per-scope lockfile so
+// it keeps reflecting what is actually installed. Defined here as a behavior,
+// like the other lockfile ports; the infra lockfile.Recorder satisfies it.
+// Optional — Uninstall removes files regardless; a nil forgetter just skips
+// the bookkeeping.
+type LockfileForgetter interface {
+	Forget(ctx context.Context, scope catalog.Scope, ids []string, target catalog.Target) error
+}
+
 // CatalogService orchestrates the read/write package ports behind the
 // `catalog` command (ADR-0010): it lists what a PackageSource offers, reports
 // what a TargetInstaller has on disk, and installs selected packages by
@@ -42,10 +51,11 @@ type LockfileReader interface {
 // and init, drive — so the orchestration is tested once, here, independent
 // of the presentation layer.
 type CatalogService struct {
-	source   catalog.PackageSource
-	registry InstallerRegistry
-	recorder InstallRecorder // optional; records installs into the lockfile
-	reader   LockfileReader  // optional; reads the lockfile back for Status
+	source    catalog.PackageSource
+	registry  InstallerRegistry
+	recorder  InstallRecorder   // optional; records installs into the lockfile
+	reader    LockfileReader    // optional; reads the lockfile back for Status
+	forgetter LockfileForgetter // optional; drops uninstalls from the lockfile
 }
 
 // NewCatalogService wires the source (where packages come from) and the
@@ -65,6 +75,13 @@ func (s *CatalogService) WithRecorder(r InstallRecorder) *CatalogService {
 // recorded installs against live state. Returns the service for chaining.
 func (s *CatalogService) WithReader(r LockfileReader) *CatalogService {
 	s.reader = r
+	return s
+}
+
+// WithForgetter attaches a lockfile forgetter so Uninstall keeps the lockfile
+// in sync. Returns the service for chaining.
+func (s *CatalogService) WithForgetter(f LockfileForgetter) *CatalogService {
+	s.forgetter = f
 	return s
 }
 
@@ -160,6 +177,54 @@ func (s *CatalogService) Install(ctx context.Context, req InstallRequest) (Insta
 	if s.recorder != nil && len(installed) > 0 {
 		if err := s.recorder.Record(ctx, req.Scope, installed); err != nil {
 			return outcome, fmt.Errorf("catalog: record lockfile: %w", err)
+		}
+	}
+
+	return outcome, nil
+}
+
+// UninstallRequest describes a batch uninstall: remove each ID of Target from
+// Scope. Metadata carries optional Target-specific hints (e.g. the marketplace
+// ref for plugins), threaded onto each manifest.
+type UninstallRequest struct {
+	Target   catalog.Target
+	IDs      []string
+	Scope    catalog.Scope
+	Metadata map[string]string
+}
+
+// UninstallOutcome lists the IDs removed.
+type UninstallOutcome struct {
+	Removed []string
+}
+
+// Uninstall removes each requested package from disk and then forgets the
+// removed IDs from the scope's lockfile. Uninstall is idempotent per the
+// TargetInstaller contract (removing an absent package is a no-op), so a
+// package missing on disk but recorded still gets forgotten — which is exactly
+// how a user prunes a drifted lockfile entry. Fails loud on the first remove
+// error, returning the partial outcome.
+func (s *CatalogService) Uninstall(ctx context.Context, req UninstallRequest) (UninstallOutcome, error) {
+	var outcome UninstallOutcome
+
+	inst, err := s.registry.For(req.Target)
+	if err != nil {
+		return outcome, err
+	}
+
+	for _, id := range req.IDs {
+		m := catalog.PackageManifest{ID: id, Target: req.Target, Metadata: req.Metadata}
+		if err := inst.Uninstall(ctx, m, req.Scope); err != nil {
+			return outcome, fmt.Errorf("catalog: uninstall %q: %w", id, err)
+		}
+		outcome.Removed = append(outcome.Removed, id)
+	}
+
+	// Drop the removed IDs from the lockfile so it keeps reflecting what is
+	// installed (best-effort bookkeeping, like Record).
+	if s.forgetter != nil && len(outcome.Removed) > 0 {
+		if err := s.forgetter.Forget(ctx, req.Scope, outcome.Removed, req.Target); err != nil {
+			return outcome, fmt.Errorf("catalog: forget lockfile: %w", err)
 		}
 	}
 

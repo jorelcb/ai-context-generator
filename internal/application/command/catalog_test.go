@@ -123,6 +123,87 @@ func TestCatalogService_Status_ReportsDrift(t *testing.T) {
 	}
 }
 
+// fakeForgetter captures Forget calls.
+type fakeForgetter struct {
+	scope  catalog.Scope
+	ids    []string
+	target catalog.Target
+}
+
+func (f *fakeForgetter) Forget(_ context.Context, scope catalog.Scope, ids []string, target catalog.Target) error {
+	f.scope, f.ids, f.target = scope, ids, target
+	return nil
+}
+
+func TestCatalogService_Uninstall_RemovesAndForgets(t *testing.T) {
+	dir := t.TempDir()
+	src := packagesource.NewEmbeddedSource(root.TemplatesFS, "test")
+	reg := targetinstaller.NewRegistry(targetinstaller.NewClaudeInstallerWithRoots(dir, dir))
+	fgt := &fakeForgetter{}
+	svc := command.NewCatalogService(src, reg).WithForgetter(fgt)
+	ctx := context.Background()
+
+	// Install first so there's something on disk to remove.
+	if _, err := svc.Install(ctx, command.InstallRequest{
+		Target: catalog.TargetClaudeSkill,
+		IDs:    []string{"ddd-entity"},
+		Scope:  catalog.ScopeProject,
+	}); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "skills", "ddd-entity", "SKILL.md")); err != nil {
+		t.Fatalf("precondition: SKILL.md not installed: %v", err)
+	}
+
+	out, err := svc.Uninstall(ctx, command.UninstallRequest{
+		Target: catalog.TargetClaudeSkill,
+		IDs:    []string{"ddd-entity"},
+		Scope:  catalog.ScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if len(out.Removed) != 1 || out.Removed[0] != "ddd-entity" {
+		t.Fatalf("expected ddd-entity removed, got %+v", out.Removed)
+	}
+	// File gone.
+	if _, err := os.Stat(filepath.Join(dir, ".claude", "skills", "ddd-entity")); !os.IsNotExist(err) {
+		t.Errorf("skill dir should be removed, stat err = %v", err)
+	}
+	// Forgotten from the lockfile with the right scope/target.
+	if fgt.scope != catalog.ScopeProject || fgt.target != catalog.TargetClaudeSkill {
+		t.Errorf("forget scope/target wrong: %q/%q", fgt.scope, fgt.target)
+	}
+	if len(fgt.ids) != 1 || fgt.ids[0] != "ddd-entity" {
+		t.Errorf("forget ids wrong: %+v", fgt.ids)
+	}
+}
+
+func TestCatalogService_Uninstall_Idempotent_PrunesDriftedEntry(t *testing.T) {
+	dir := t.TempDir()
+	src := packagesource.NewEmbeddedSource(root.TemplatesFS, "test")
+	reg := targetinstaller.NewRegistry(targetinstaller.NewClaudeInstallerWithRoots(dir, dir))
+	fgt := &fakeForgetter{}
+	svc := command.NewCatalogService(src, reg).WithForgetter(fgt)
+
+	// Nothing on disk — uninstall is a no-op remove, but still forgets the
+	// entry (pruning a drifted lockfile record).
+	out, err := svc.Uninstall(context.Background(), command.UninstallRequest{
+		Target: catalog.TargetClaudeSkill,
+		IDs:    []string{"ghost"},
+		Scope:  catalog.ScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("Uninstall idempotent: %v", err)
+	}
+	if len(out.Removed) != 1 || out.Removed[0] != "ghost" {
+		t.Errorf("expected ghost removed (idempotent), got %+v", out.Removed)
+	}
+	if len(fgt.ids) != 1 || fgt.ids[0] != "ghost" {
+		t.Errorf("drifted entry not forgotten: %+v", fgt.ids)
+	}
+}
+
 func TestCatalogService_Status_NoReader_Errors(t *testing.T) {
 	svc, _ := newService(t)
 	if _, err := svc.Status(context.Background(), catalog.ScopeProject); err == nil {

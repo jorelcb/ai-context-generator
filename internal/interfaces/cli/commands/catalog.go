@@ -32,6 +32,7 @@ type catalogParams struct {
 	marketplace string
 	list        bool
 	status      bool
+	uninstall   bool
 }
 
 // defaultMarketplace is the trusted, Anthropic-managed plugin directory used
@@ -66,6 +67,7 @@ Modes:
   Status:      codify catalog --status [--scope project|workstation]
   Install:     codify catalog --type skill  --package ddd-entity,hexagonal-port --scope project
                codify catalog --type plugin --package gopls-lsp --scope workstation
+  Uninstall:   codify catalog --uninstall --type skill --package ddd-entity --scope project
 
 Status compares codify's lockfile (~/.codify/workstation.lock,
 .codify/project.lock — what codify recorded installing) against what's
@@ -94,6 +96,7 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 	cmd.Flags().StringVar(&p.marketplace, "marketplace", defaultMarketplace, "Plugin marketplace (owner/repo or marketplace.json URL); used with --type plugin")
 	cmd.Flags().BoolVar(&p.list, "list", false, "List available packages instead of installing")
 	cmd.Flags().BoolVar(&p.status, "status", false, "Show lockfile status: recorded installs vs live state (drift)")
+	cmd.Flags().BoolVar(&p.uninstall, "uninstall", false, "Uninstall packages (with --type/--package/--scope) and drop them from the lockfile")
 
 	return cmd
 }
@@ -110,6 +113,10 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 
 	if p.status {
 		return catalogStatus(ctx, p)
+	}
+
+	if p.uninstall {
+		return catalogUninstall(ctx, p)
 	}
 
 	if p.list {
@@ -289,6 +296,62 @@ func catalogStatus(ctx context.Context, p catalogParams) error {
 		fmt.Println("In sync: every recorded package is present on disk.")
 	}
 	return nil
+}
+
+// uninstallService builds the service used by `--uninstall`: the full
+// installer registry (to route the removal to the right ecosystem) plus a
+// lockfile forgetter (to drop the removed entries). The source is unused by
+// Uninstall, so the embedded source is a harmless placeholder.
+func uninstallService() *command.CatalogService {
+	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
+	return command.NewCatalogService(embedded, catalogRegistry()).WithForgetter(lockfile.NewRecorder())
+}
+
+// catalogUninstall removes the requested packages from disk and drops them
+// from the lockfile. Removal is idempotent, so it also serves to prune a
+// drifted lockfile entry whose files are already gone.
+func catalogUninstall(ctx context.Context, p catalogParams) error {
+	if p.pkgType == "" {
+		return fmt.Errorf("--type is required for uninstall (skill, hook, or plugin)")
+	}
+	target, err := targetFor(p.ecosystem, p.pkgType)
+	if err != nil {
+		return err
+	}
+	ids := splitCSV(p.packages)
+	if len(ids) == 0 {
+		return fmt.Errorf("--package is required for uninstall (comma-separated IDs)")
+	}
+	scopeStr := p.scope
+	if scopeStr == "" {
+		scopeStr = "project"
+	}
+	scope, err := resolveScope(scopeStr)
+	if err != nil {
+		return err
+	}
+
+	// Plugins need the marketplace ref to address the uninstall; pass it along
+	// when the type is plugin (the installer treats it as optional).
+	var meta map[string]string
+	if p.pkgType == "plugin" && p.marketplace != "" {
+		meta = map[string]string{catalog.MetaKeyMarketplace: p.marketplace}
+	}
+
+	svc := uninstallService()
+	out, err := svc.Uninstall(ctx, command.UninstallRequest{
+		Target:   target,
+		IDs:      ids,
+		Scope:    scope,
+		Metadata: meta,
+	})
+	if len(out.Removed) > 0 {
+		fmt.Printf("\nUninstalled %d package(s) from %s scope:\n", len(out.Removed), scope)
+		for _, id := range out.Removed {
+			fmt.Printf("  ✓ %s\n", id)
+		}
+	}
+	return err
 }
 
 // mustClaudeInstaller builds a ClaudeInstaller against the real cwd/home. On
