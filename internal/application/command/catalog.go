@@ -15,6 +15,14 @@ type InstallerRegistry interface {
 	For(t catalog.Target) (catalog.TargetInstaller, error)
 }
 
+// InstallRecorder records successfully-installed packages into a per-scope
+// lockfile (ADR-0010 §6, D.9). Defined here as a behavior so CatalogService
+// stays decoupled from the concrete lockfile; the infra lockfile.Recorder
+// satisfies it. Optional — a nil recorder simply skips lockfile bookkeeping.
+type InstallRecorder interface {
+	Record(ctx context.Context, scope catalog.Scope, installed []catalog.PackageManifest) error
+}
+
 // CatalogService orchestrates the read/write package ports behind the
 // `catalog` command (ADR-0010): it lists what a PackageSource offers, reports
 // what a TargetInstaller has on disk, and installs selected packages by
@@ -26,12 +34,20 @@ type InstallerRegistry interface {
 type CatalogService struct {
 	source   catalog.PackageSource
 	registry InstallerRegistry
+	recorder InstallRecorder // optional; records installs into the lockfile
 }
 
 // NewCatalogService wires the source (where packages come from) and the
 // installer registry (where they go).
 func NewCatalogService(source catalog.PackageSource, registry InstallerRegistry) *CatalogService {
 	return &CatalogService{source: source, registry: registry}
+}
+
+// WithRecorder attaches a lockfile recorder so successful installs are
+// recorded per scope. Returns the service for chaining.
+func (s *CatalogService) WithRecorder(r InstallRecorder) *CatalogService {
+	s.recorder = r
+	return s
 }
 
 // Available returns the packages the source offers. When target is non-empty,
@@ -102,6 +118,7 @@ func (s *CatalogService) Install(ctx context.Context, req InstallRequest) (Insta
 		}
 	}
 
+	var installed []catalog.PackageManifest
 	for _, id := range req.IDs {
 		m, ok := index[id]
 		if !ok {
@@ -116,6 +133,16 @@ func (s *CatalogService) Install(ctx context.Context, req InstallRequest) (Insta
 			return outcome, fmt.Errorf("catalog: install %q: %w", id, err)
 		}
 		outcome.Installed = append(outcome.Installed, id)
+		installed = append(installed, m)
+	}
+
+	// Record the installs into the scope's lockfile (best-effort bookkeeping —
+	// the packages are already on disk, so a lockfile-write failure is
+	// surfaced but does not undo the install).
+	if s.recorder != nil && len(installed) > 0 {
+		if err := s.recorder.Record(ctx, req.Scope, installed); err != nil {
+			return outcome, fmt.Errorf("catalog: record lockfile: %w", err)
+		}
 	}
 
 	return outcome, nil

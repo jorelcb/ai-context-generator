@@ -21,6 +21,45 @@ func newService(t *testing.T) (*command.CatalogService, string) {
 	return command.NewCatalogService(src, reg), dir
 }
 
+// fakeRecorder captures Record calls.
+type fakeRecorder struct {
+	scope    catalog.Scope
+	recorded []catalog.PackageManifest
+}
+
+func (f *fakeRecorder) Record(_ context.Context, scope catalog.Scope, installed []catalog.PackageManifest) error {
+	f.scope = scope
+	f.recorded = append(f.recorded, installed...)
+	return nil
+}
+
+func TestCatalogService_Install_RecordsToLockfile(t *testing.T) {
+	dir := t.TempDir()
+	src := packagesource.NewEmbeddedSource(root.TemplatesFS, "test")
+	reg := targetinstaller.NewRegistry(targetinstaller.NewClaudeInstallerWithRoots(dir, dir))
+	rec := &fakeRecorder{}
+	svc := command.NewCatalogService(src, reg).WithRecorder(rec)
+
+	_, err := svc.Install(context.Background(), command.InstallRequest{
+		Target: catalog.TargetClaudeSkill,
+		IDs:    []string{"ddd-entity", "does-not-exist"},
+		Scope:  catalog.ScopeProject,
+	})
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	// Only the successfully-installed manifest is recorded (not the NotFound).
+	if len(rec.recorded) != 1 || rec.recorded[0].ID != "ddd-entity" {
+		t.Fatalf("expected only ddd-entity recorded, got %+v", rec.recorded)
+	}
+	if rec.scope != catalog.ScopeProject {
+		t.Errorf("recorder scope: got %q, want project", rec.scope)
+	}
+	if rec.recorded[0].Target != catalog.TargetClaudeSkill {
+		t.Errorf("recorded manifest carries the target: %+v", rec.recorded[0])
+	}
+}
+
 func TestCatalogService_Available_FiltersByTarget(t *testing.T) {
 	svc, _ := newService(t)
 	ctx := context.Background()

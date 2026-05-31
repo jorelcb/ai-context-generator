@@ -15,6 +15,7 @@ import (
 	"github.com/jorelcb/codify/internal/application/command"
 	"github.com/jorelcb/codify/internal/domain/catalog"
 	"github.com/jorelcb/codify/internal/infrastructure/llm"
+	"github.com/jorelcb/codify/internal/infrastructure/lockfile"
 	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
 	"github.com/jorelcb/codify/internal/infrastructure/targetinstaller"
 )
@@ -148,7 +149,7 @@ func targetFor(ecosystem, tp string) (catalog.Target, error) {
 // install by delegating to the agent's plugin CLI (ClaudePluginInstaller).
 func pluginService(marketplaceRef string) *command.CatalogService {
 	source := packagesource.NewPluginMarketplaceSource(marketplaceRef)
-	return command.NewCatalogService(source, catalogRegistry())
+	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder())
 }
 
 // antigravityService browses + installs Antigravity skills (the built-in
@@ -157,7 +158,7 @@ func pluginService(marketplaceRef string) *command.CatalogService {
 func antigravityService() *command.CatalogService {
 	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
 	source := packagesource.NewAntigravitySkillSource(embedded)
-	return command.NewCatalogService(source, catalogRegistry())
+	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder())
 }
 
 // browseService returns the read service for an ecosystem + type. Antigravity
@@ -191,7 +192,7 @@ func embeddedService() *command.CatalogService {
 	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
 	local := packagesource.NewLocalDirectorySource(localSourceRoot())
 	source := packagesource.NewCompositeSource(embedded, local) // local overrides embedded
-	return command.NewCatalogService(source, catalogRegistry())
+	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder())
 }
 
 // personalizedService is the LLM path: built-in skills are adapted to
@@ -211,7 +212,7 @@ func personalizedService(ctx context.Context, model, projectContext string) (*co
 	personalizing := packagesource.NewPersonalizingSource(embedded, provider, projectContext, "en", "claude")
 	local := packagesource.NewLocalDirectorySource(localSourceRoot())
 	source := packagesource.NewCompositeSource(personalizing, local)
-	return command.NewCatalogService(source, catalogRegistry()), nil
+	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder()), nil
 }
 
 // mustClaudeInstaller builds a ClaudeInstaller against the real cwd/home. On
