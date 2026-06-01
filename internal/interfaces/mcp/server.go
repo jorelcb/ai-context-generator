@@ -83,6 +83,7 @@ func generateContextTool() server.ServerTool {
 		mcp.WithString("locale", mcp.Description("Output language: en (English) or es (Spanish)"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
 		mcp.WithBoolean("with_specs", mcp.Description("Also generate SDD spec files after context generation")),
+		mcp.WithString("sdd_standard", mcp.Description("SDD standard for with_specs: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleGenerateContext}
@@ -96,6 +97,7 @@ func generateSpecsTool() server.ServerTool {
 		mcp.WithString("from_context", mcp.Required(), mcp.Description("Path to existing output directory with context files")),
 		mcp.WithString("locale", mcp.Description("Output language: en or es"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
+		mcp.WithString("sdd_standard", mcp.Description("SDD standard: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleGenerateSpecs}
@@ -112,6 +114,7 @@ func analyzeProjectTool() server.ServerTool {
 		mcp.WithString("locale", mcp.Description("Output language: en or es"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
 		mcp.WithBoolean("with_specs", mcp.Description("Also generate SDD spec files after context generation")),
+		mcp.WithString("sdd_standard", mcp.Description("SDD standard for with_specs: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleAnalyzeProject}
@@ -190,6 +193,7 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 	locale := stringArgDefault(request, "locale", "en")
 	model := stringArgDefault(request, "model", "")
 	withSpecs := boolArg(request, "with_specs")
+	sddStandard := stringArgDefault(request, "sdd_standard", "")
 
 	result, err := executeGenerate(ctx, name, description, language, preset, locale, model)
 	if err != nil {
@@ -207,7 +211,7 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 	}
 
 	if withSpecs {
-		specResult, err := executeSpecs(ctx, name, result.OutputPath, locale, model)
+		specResult, err := executeSpecs(ctx, name, result.OutputPath, locale, model, sddStandard)
 		if err != nil {
 			sb.WriteString(fmt.Sprintf("\nSpec generation failed: %v\n", err))
 		} else {
@@ -228,8 +232,9 @@ func handleGenerateSpecs(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	fromContext := stringArg(request, "from_context")
 	locale := stringArgDefault(request, "locale", "en")
 	model := stringArgDefault(request, "model", "")
+	sddStandard := stringArgDefault(request, "sdd_standard", "")
 
-	result, err := executeSpecs(ctx, name, fromContext, locale, model)
+	result, err := executeSpecs(ctx, name, fromContext, locale, model, sddStandard)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Spec generation failed: %v", err)), nil
 	}
@@ -255,6 +260,7 @@ func handleAnalyzeProject(ctx context.Context, request mcp.CallToolRequest) (*mc
 	locale := stringArgDefault(request, "locale", "en")
 	model := stringArgDefault(request, "model", "")
 	withSpecs := boolArg(request, "with_specs")
+	sddStandard := stringArgDefault(request, "sdd_standard", "")
 
 	// Resolve path
 	absPath, err := filepath.Abs(projectPath)
@@ -301,7 +307,7 @@ func handleAnalyzeProject(ctx context.Context, request mcp.CallToolRequest) (*mc
 	}
 
 	if withSpecs {
-		specResult, err := executeSpecs(ctx, name, result.OutputPath, locale, model)
+		specResult, err := executeSpecs(ctx, name, result.OutputPath, locale, model, sddStandard)
 		if err != nil {
 			sb.WriteString(fmt.Sprintf("\nSpec generation failed: %v\n", err))
 		} else {
@@ -632,16 +638,51 @@ func executeGenerateWithMode(ctx context.Context, name, description, language, p
 	return generateCmd.Execute(ctx, config, guides)
 }
 
-// specTemplateMapping maps spec template file names to their guide names.
-var specTemplateMapping = map[string]string{
-	"constitution.template": "constitution",
-	"spec.template":         "spec",
-	"plan.template":         "plan",
-	"tasks.template":        "tasks",
+// loadSpecGuides loads the spec template guides for the active SDD standard from
+// the embedded FS, stamped with the standard's per-standard output file names.
+// It is the single template-loading path for the MCP spec flow and is covered by
+// a regression test (TestLoadSpecGuides...) — the v3.0.0 break was precisely a
+// wrong, removed template path loaded here while no test exercised it.
+func loadSpecGuides(locale string, standard service.SpecStandard) ([]service.TemplateGuide, error) {
+	loader := infratemplate.NewFileSystemTemplateLoaderWithMapping(
+		root.TemplatesFS, sdd.SpecTemplatePath(locale, standard), sdd.SpecTemplateMapping(standard),
+	)
+	guides, err := loader.LoadAll()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load spec templates for standard %q: %w", standard.ID(), err)
+	}
+	return sdd.ApplySpecOutputNames(guides, standard), nil
 }
 
-func executeSpecs(ctx context.Context, name, fromContextPath, locale, model string) (*dto.GenerationResult, error) {
+// slugifySpecFeatureID derives a filesystem-safe feature id from a project name,
+// used for the FeatureGrouped layout (Spec-Kit) where specs live under
+// specs/<feature-id>/. Unused for the flat OpenSpec layout.
+func slugifySpecFeatureID(name string) string {
+	var b strings.Builder
+	prevDash := false
+	for _, r := range strings.ToLower(strings.TrimSpace(name)) {
+		switch {
+		case (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9'):
+			b.WriteRune(r)
+			prevDash = false
+		default:
+			if !prevDash {
+				b.WriteByte('-')
+				prevDash = true
+			}
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
+func executeSpecs(ctx context.Context, name, fromContextPath, locale, model, sddStandard string) (*dto.GenerationResult, error) {
 	apiKey, err := llm.ResolveAPIKey(model)
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve the active SDD standard (explicit arg wins; default OpenSpec).
+	standard, err := sdd.NewDefaultRegistry().Resolve(sddStandard, "", "")
 	if err != nil {
 		return nil, err
 	}
@@ -652,12 +693,9 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model stri
 		return nil, fmt.Errorf("failed to read existing context: %w", err)
 	}
 
-	templateLoader := infratemplate.NewFileSystemTemplateLoaderWithMapping(
-		root.TemplatesFS, filepath.Join("templates", locale, "spec"), specTemplateMapping,
-	)
-	guides, err := templateLoader.LoadAll()
+	guides, err := loadSpecGuides(locale, standard)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load spec templates: %w", err)
+		return nil, err
 	}
 
 	provider, err := llm.NewProvider(ctx, model, apiKey, nil)
@@ -675,6 +713,12 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model stri
 		OutputPath:      fromContextPath,
 		Model:           model,
 		Locale:          locale,
+		Layout:          standard.OutputLayout(),
+		StandardID:      standard.ID(),
+		StandardHints:   standard.SystemPromptHints(locale),
+	}
+	if standard.OutputLayout() == service.LayoutFeatureGrouped {
+		config.FeatureID = slugifySpecFeatureID(name)
 	}
 
 	result, err := specCmd.Execute(ctx, config, existingContext, guides)
@@ -682,16 +726,13 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model stri
 		return nil, err
 	}
 
-	// Update AGENTS.md with a specs reference, sourcing the file names from the
-	// resolved SDD standard (default OpenSpec for the MCP path) instead of
-	// hardcoding them, so the list stays in sync with the standard's layout.
+	// Update AGENTS.md with a specs reference, reusing the resolved standard so
+	// the listed file names match the layout that was actually generated.
 	agentsPath := filepath.Join(fromContextPath, "AGENTS.md")
 	content, readErr := os.ReadFile(agentsPath)
 	if readErr == nil && !strings.Contains(string(content), "specs/") {
-		if standard, sErr := sdd.NewDefaultRegistry().Resolve("", "", ""); sErr == nil {
-			specsRef := specsReferenceSection(locale, standard)
-			_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0o644)
-		}
+		specsRef := specsReferenceSection(locale, standard)
+		_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0o644)
 	}
 
 	return result, nil
