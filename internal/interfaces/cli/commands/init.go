@@ -223,21 +223,16 @@ func runInit(cmd *cobra.Command, args []string) error {
 		target = "claude"
 	}
 
-	if err := promptInstallSkills(target, "project"); err != nil {
-		fmt.Fprintf(os.Stderr, "\nWarning: project skills install step failed: %v\n", err)
-		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --type skill --scope project'.")
+	// Equip skills + hooks + plugins through the one shared selector (ADR-0010
+	// Decision 6 — same surface as `codify catalog`, scoped to this project).
+	if err := PromptInstallPackages(target, "project"); err != nil {
+		fmt.Fprintf(os.Stderr, "\nWarning: project package install step failed: %v\n", err)
+		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --scope project'.")
 	}
 
 	if err := promptInstallWorkflows(target, locale, "project"); err != nil {
 		fmt.Fprintf(os.Stderr, "\nWarning: project workflows install step failed: %v\n", err)
 		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify workflows --install project'.")
-	}
-
-	if target == "claude" {
-		if err := promptInstallHooks("project"); err != nil {
-			fmt.Fprintf(os.Stderr, "\nWarning: project hooks install step failed: %v\n", err)
-			fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --type hook --scope project'.")
-		}
 	}
 
 	printInitNextSteps()

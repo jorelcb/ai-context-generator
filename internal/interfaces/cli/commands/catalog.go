@@ -742,6 +742,15 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 		return err
 	}
 
+	return runCatalogSelector(ctx, p, ecosystem, scope, scopeStr)
+}
+
+// runCatalogSelector builds the tabs from live catalog data, runs the rich
+// selector, and installs the accumulated cross-tab selection grouped per type.
+// It is the single selector surface shared by `catalog` (standalone), `config`
+// (workstation) and `init` (project) — ADR-0010 Decision 6. Callers resolve
+// ecosystem + scope first.
+func runCatalogSelector(ctx context.Context, p catalogParams, ecosystem string, scope catalog.Scope, scopeStr string) error {
 	// Build one tab per package type, best-effort: a type that fails to list
 	// (e.g. plugins offline) is skipped with a warning rather than aborting.
 	specs := buildTabSpecs(ctx, p, ecosystem, scope)
@@ -754,11 +763,7 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 	if err != nil {
 		return err
 	}
-	if result.Cancelled {
-		fmt.Println("Cancelled.")
-		return nil
-	}
-	if len(result.Selected) == 0 {
+	if result.Cancelled || len(result.Selected) == 0 {
 		fmt.Println("Nothing selected.")
 		return nil
 	}
