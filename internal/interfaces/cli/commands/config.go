@@ -129,21 +129,16 @@ func runConfigWizard(repo *infraconfig.Repository, path string) error {
 	}
 	fmt.Printf("\n✓ Saved %s\n", path)
 
-	if err := promptInstallSkills(target, "global"); err != nil {
-		fmt.Fprintf(os.Stderr, "\nWarning: global skills install step failed: %v\n", err)
-		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --type skill --scope workstation'.")
+	// Equip skills + hooks + plugins through the one shared selector (ADR-0010
+	// Decision 6 — same surface as `codify catalog`, scoped to workstation).
+	if err := PromptInstallPackages(target, "global"); err != nil {
+		fmt.Fprintf(os.Stderr, "\nWarning: global package install step failed: %v\n", err)
+		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --scope workstation'.")
 	}
 
 	if err := promptInstallWorkflows(target, locale, "global"); err != nil {
 		fmt.Fprintf(os.Stderr, "\nWarning: global workflows install step failed: %v\n", err)
 		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify workflows --install global'.")
-	}
-
-	if target == "claude" {
-		if err := promptInstallHooks("global"); err != nil {
-			fmt.Fprintf(os.Stderr, "\nWarning: global hooks install step failed: %v\n", err)
-			fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --type hook --scope workstation'.")
-		}
 	}
 
 	printConfigNextSteps()
