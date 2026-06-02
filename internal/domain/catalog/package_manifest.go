@@ -99,6 +99,20 @@ const (
 // Shared contract between the two infrastructure adapters.
 const MetaKeyMarketplace = "marketplace"
 
+// MetaKeyCategory is the PackageManifest.Metadata key carrying the
+// source-declared category used to group packages in the catalog tree. It is
+// whatever the SOURCE declares — the `category` field of a marketplace.json
+// entry, or the authored category of an embedded skill — NOT a codify-imposed
+// taxonomy. Empty when the source declares none (the tree then renders the
+// type's packages as a flat list). Shared so the writers (marketplace source,
+// embedded converter) and the reader (catalog UI builder) cannot drift.
+const MetaKeyCategory = "category"
+
+// MetaKeyTags is the PackageManifest.Metadata key carrying comma-joined,
+// source-declared tags (marketplace.json `tags`). Reserved for fuzzy filtering
+// inside the tree; not used for structure.
+const MetaKeyTags = "tags"
+
 // PackageRef points to another package by ID and optional version.
 // Used in Dependencies and Conflicts to express relationships between
 // packages without requiring the referenced package to be resolved at

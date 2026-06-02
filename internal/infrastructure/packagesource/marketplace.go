@@ -104,10 +104,10 @@ func (s *PluginMarketplaceSource) List(ctx context.Context) ([]catalog.PackageMa
 			Metadata:    map[string]string{catalog.MetaKeyMarketplace: doc.Name},
 		}
 		if p.Category != "" {
-			m.Metadata["category"] = p.Category
+			m.Metadata[catalog.MetaKeyCategory] = p.Category
 		}
 		if len(p.Tags) > 0 {
-			m.Metadata["tags"] = strings.Join(p.Tags, ",")
+			m.Metadata[catalog.MetaKeyTags] = strings.Join(p.Tags, ",")
 		}
 		m.SourceChecksum = computeManifestChecksum(m)
 		out = append(out, m)
