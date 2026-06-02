@@ -18,6 +18,7 @@ import (
 	"github.com/jorelcb/codify/internal/infrastructure/lockfile"
 	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
 	"github.com/jorelcb/codify/internal/infrastructure/targetinstaller"
+	tuicatalog "github.com/jorelcb/codify/internal/interfaces/cli/tui/catalog"
 )
 
 // catalogParams groups the flags of `codify catalog`.
@@ -704,8 +705,21 @@ func catalogInstallFromFlags(ctx context.Context, p catalogParams) error {
 	return err
 }
 
+// typesForEcosystem returns the package types shown as tabs for an ecosystem.
+// Antigravity is skills-only for now (ADR-0012 §5).
+func typesForEcosystem(ecosystem string) []string {
+	if ecosystem == "antigravity" {
+		return []string{"skill"}
+	}
+	return []string{"skill", "hook", "plugin"}
+}
+
+// catalogInteractive runs the rich TUI selector (ADR-0013): pick ecosystem +
+// scope, then a tabs+tree+checkbox selector that accumulates a cross-tab
+// selection, then install grouped per type. Replaces the v3.0.0 sequential
+// huh wizard. Only reached with a TTY (runCatalog guards non-TTY → flags).
 func catalogInteractive(ctx context.Context, p catalogParams) error {
-	// Step 1 — ecosystem.
+	// Pre-step 1 — ecosystem (ADR-0010 Decision 3: ecosystem first).
 	ecosystem, err := promptSelect("Target ecosystem", []selectOption{
 		{"Claude Code", "claude"},
 		{"Antigravity CLI", "antigravity"},
@@ -715,56 +729,7 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 	}
 	p.ecosystem = ecosystem
 
-	// Step 2 — type tab (per ecosystem; Antigravity is skills-only for now).
-	typeOpts := []selectOption{{"Skills (prompt-based behaviors)", "skill"}}
-	if ecosystem == "claude" {
-		typeOpts = append(typeOpts,
-			selectOption{"Hooks (deterministic guardrails)", "hook"},
-			selectOption{"Plugins (Claude marketplace bundles)", "plugin"},
-		)
-	}
-	tp, err := promptSelect("Package type", typeOpts, "skill")
-	if err != nil {
-		return err
-	}
-	target, err := targetFor(ecosystem, tp)
-	if err != nil {
-		return err
-	}
-
-	// Step 3 — mode (Claude skills only; hooks/plugins and Antigravity are
-	// static, no LLM).
-	mode := "static"
-	model := p.model
-	projectContext := p.context
-	if ecosystem == "claude" && tp == "skill" {
-		mode, err = promptSelect("Skill mode", []selectOption{
-			{"Static (instant, embedded template)", "static"},
-			{"Personalized (LLM-adapted to your project)", "personalized"},
-		}, "static")
-		if err != nil {
-			return err
-		}
-		if mode == "personalized" {
-			if projectContext == "" {
-				projectContext, err = promptInput("Describe your project (stack, architecture, domain)", "")
-				if err != nil {
-					return err
-				}
-			}
-			if projectContext == "" {
-				return fmt.Errorf("personalized mode requires a project description")
-			}
-			if model == "" {
-				model, err = promptModel()
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// Step 4 — scope (needed to mark installed state).
+	// Pre-step 2 — scope (needed to mark installed state and to install).
 	scopeStr, err := promptSelect("Install scope", []selectOption{
 		{"Project (.claude/ in this repo)", "project"},
 		{"Workstation (~/.claude/, all projects)", "workstation"},
@@ -777,62 +742,131 @@ func catalogInteractive(ctx context.Context, p catalogParams) error {
 		return err
 	}
 
-	// Step 5 — package multi-select, marking already-installed entries.
-	// Browsing uses the type's read source (marketplace for plugins; static
-	// embedded+local for skills/hooks — no API key needed to list).
-	if tp == "plugin" {
-		fmt.Fprintf(os.Stderr, "→ Fetching plugins from %s …\n", p.marketplace)
+	// Build one tab per package type, best-effort: a type that fails to list
+	// (e.g. plugins offline) is skipped with a warning rather than aborting.
+	specs := buildTabSpecs(ctx, p, ecosystem, scope)
+	if len(specs) == 0 {
+		return fmt.Errorf("no packages available for ecosystem %q", ecosystem)
 	}
-	browse := browseService(p.ecosystem, tp, p)
-	available, err := browse.Available(ctx, target)
+
+	// Rich selector — tabs + tree + accumulated cross-tab selection.
+	result, err := tuicatalog.Run(tuicatalog.Build(scopeStr, ecosystem, specs))
 	if err != nil {
 		return err
 	}
-	if len(available) == 0 {
-		fmt.Printf("No %s packages available.\n", tp)
+	if result.Cancelled {
+		fmt.Println("Cancelled.")
 		return nil
 	}
-	installed, err := browse.Installed(ctx, target, scope)
-	if err != nil {
-		return err
-	}
-	installedSet := make(map[string]bool, len(installed))
-	for _, ip := range installed {
-		installedSet[ip.ID] = true
-	}
-	sort.Slice(available, func(i, j int) bool { return available[i].ID < available[j].ID })
-
-	options := make([]selectOption, 0, len(available))
-	for _, m := range available {
-		label := m.ID
-		if installedSet[m.ID] {
-			label += " (installed)"
-		}
-		if m.Description != "" {
-			label += " — " + m.Description
-		}
-		options = append(options, selectOption{Label: label, Value: m.ID})
-	}
-
-	ids, err := promptMultiSelect(fmt.Sprintf("Select %ss to install", tp), options)
-	if err != nil {
-		return err
-	}
-	if len(ids) == 0 {
+	if len(result.Selected) == 0 {
 		fmt.Println("Nothing selected.")
 		return nil
 	}
 
-	// Carry the interactively-resolved values into p so installService reads
-	// them uniformly with the flag path.
-	p.mode, p.model, p.context = mode, model, projectContext
-	svc, err := installService(ctx, p.ecosystem, tp, p)
+	// Group the accumulated selection by type for per-target install.
+	byType := make(map[string][]string)
+	for _, s := range result.Selected {
+		byType[s.TabType] = append(byType[s.TabType], s.ID)
+	}
+
+	// Skill mode (Claude skills only) — ask once if any skill was selected.
+	p.mode = "static"
+	if ecosystem == "claude" && len(byType["skill"]) > 0 {
+		if err := resolveSkillMode(&p); err != nil {
+			return err
+		}
+	}
+
+	// Install per type, deterministic order.
+	for _, tp := range typesForEcosystem(ecosystem) {
+		ids := byType[tp]
+		if len(ids) == 0 {
+			continue
+		}
+		target, _ := targetFor(ecosystem, tp)
+		svc, serr := installService(ctx, ecosystem, tp, p)
+		if serr != nil {
+			return serr
+		}
+		out, ierr := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
+		printInstallOutcome(out, scope)
+		if ierr != nil {
+			return ierr
+		}
+	}
+	return nil
+}
+
+// buildTabSpecs reads each package type for the ecosystem and maps the manifests
+// to the TUI's domain-agnostic Pkg specs, marking already-installed packages and
+// carrying the source-declared category for tree grouping. Per-type failures are
+// skipped with a warning (offline plugins shouldn't kill the whole selector).
+func buildTabSpecs(ctx context.Context, p catalogParams, ecosystem string, scope catalog.Scope) []tuicatalog.TabSpec {
+	var specs []tuicatalog.TabSpec
+	for _, tp := range typesForEcosystem(ecosystem) {
+		target, terr := targetFor(ecosystem, tp)
+		if terr != nil {
+			continue
+		}
+		if tp == "plugin" {
+			fmt.Fprintf(os.Stderr, "→ Fetching plugins from %s …\n", p.marketplace)
+		}
+		svc := browseService(ecosystem, tp, p)
+		available, aerr := svc.Available(ctx, target)
+		if aerr != nil {
+			fmt.Fprintf(os.Stderr, "→ skipping %s tab: %v\n", tp, aerr)
+			continue
+		}
+		installed, _ := svc.Installed(ctx, target, scope)
+		instSet := make(map[string]bool, len(installed))
+		for _, ip := range installed {
+			instSet[ip.ID] = true
+		}
+		pkgs := make([]tuicatalog.Pkg, 0, len(available))
+		for _, m := range available {
+			pkgs = append(pkgs, tuicatalog.Pkg{
+				ID:        m.ID,
+				Label:     m.Label,
+				Desc:      m.Description,
+				Category:  m.Metadata[catalog.MetaKeyCategory],
+				Installed: instSet[m.ID],
+			})
+		}
+		specs = append(specs, tuicatalog.TabSpec{Name: typeLabel(tp), Type: tp, Pkgs: pkgs})
+	}
+	return specs
+}
+
+// resolveSkillMode prompts for static vs personalized skill generation and, for
+// personalized, gathers the project context + model. Mutates p in place.
+func resolveSkillMode(p *catalogParams) error {
+	mode, err := promptSelect("Skill mode", []selectOption{
+		{"Static (instant, embedded template)", "static"},
+		{"Personalized (LLM-adapted to your project)", "personalized"},
+	}, "static")
 	if err != nil {
 		return err
 	}
-	out, err := svc.Install(ctx, command.InstallRequest{Target: target, IDs: ids, Scope: scope})
-	printInstallOutcome(out, scope)
-	return err
+	p.mode = mode
+	if mode != "personalized" {
+		return nil
+	}
+	if p.context == "" {
+		p.context, err = promptInput("Describe your project (stack, architecture, domain)", "")
+		if err != nil {
+			return err
+		}
+	}
+	if p.context == "" {
+		return fmt.Errorf("personalized mode requires a project description")
+	}
+	if p.model == "" {
+		p.model, err = promptModel()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func printInstallOutcome(out command.InstallOutcome, scope catalog.Scope) {
