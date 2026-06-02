@@ -50,41 +50,10 @@ func resolveSpecStandard(flagValue string) (domainservice.SpecStandard, error) {
 	return registry.Resolve(flagValue, effective.SDDStandard, "")
 }
 
-// specTemplateMapping construye el mapping {filename → guideName} a partir
-// de los artifacts del estándar. Convención: cada artifact con GuideName X
-// se carga desde el template "X.template".
-func specTemplateMapping(std domainservice.SpecStandard) map[string]string {
-	artifacts := std.BootstrapArtifacts()
-	m := make(map[string]string, len(artifacts))
-	for _, a := range artifacts {
-		m[a.GuideName+".template"] = a.GuideName
-	}
-	return m
-}
-
-// applyStandardOutputNames anota cada TemplateGuide con el OutputFileName
-// que el SpecStandard activo dicta para ese guide. Esto permite que el
-// mismo guide name ("spec") emita "SPEC.md" en OpenSpec y "spec.md" en
-// Spec-Kit sin tocar el global fileOutputNames de prompt_builder.
-//
-// Si un guide cargado no aparece en BootstrapArtifacts (escenario raro
-// pero posible si los templates se renombran y los adapters no se
-// actualizan), se deja OutputFileName vacío para que GuideOutputName caiga
-// al fallback global — el mismo comportamiento que antes del refactor.
-func applyStandardOutputNames(guides []domainservice.TemplateGuide, std domainservice.SpecStandard) []domainservice.TemplateGuide {
-	byGuide := make(map[string]string, len(std.BootstrapArtifacts()))
-	for _, a := range std.BootstrapArtifacts() {
-		byGuide[a.GuideName] = a.FileName
-	}
-	out := make([]domainservice.TemplateGuide, 0, len(guides))
-	for _, g := range guides {
-		if name, ok := byGuide[g.Name]; ok {
-			g.OutputFileName = name
-		}
-		out = append(out, g)
-	}
-	return out
-}
+// Los helpers de plantillas de spec (ruta, mapping y output names) viven en el
+// paquete sdd (SpecTemplatePath / SpecTemplateMapping / ApplySpecOutputNames)
+// para que CLI y MCP usen exactamente la misma ruta y no deriven — la regresión
+// de v3.0.0 fue precisamente una ruta duplicada y desincronizada.
 
 // slugifyFeatureID convierte un projectName en un slug seguro para
 // filesystem (lowercase, ASCII, guiones para espacios y caracteres
@@ -273,8 +242,7 @@ func runSpec(projectName, fromContext, output, model, locale, sddStandardFlag st
 	if err != nil {
 		return err
 	}
-	templatePath := filepath.Join("templates", locale, "sdd", standard.TemplateDir(), "spec")
-	templateLoader := infratemplate.NewFileSystemTemplateLoaderWithMapping(root.TemplatesFS, templatePath, specTemplateMapping(standard))
+	templateLoader := infratemplate.NewFileSystemTemplateLoaderWithMapping(root.TemplatesFS, sdd.SpecTemplatePath(locale, standard), sdd.SpecTemplateMapping(standard))
 	guides, err := templateLoader.LoadAll()
 	if err != nil {
 		return fmt.Errorf("failed to load spec templates for standard %q: %w", standard.ID(), err)
@@ -283,7 +251,7 @@ func runSpec(projectName, fromContext, output, model, locale, sddStandardFlag st
 	// 3b. Augment guides with the adapter's per-standard output file names.
 	//     Required because the same guide name (e.g., "spec") maps to
 	//     "SPEC.md" in OpenSpec but "spec.md" in Spec-Kit.
-	guides = applyStandardOutputNames(guides, standard)
+	guides = sdd.ApplySpecOutputNames(guides, standard)
 
 	// 4. Initialize LLM provider
 	provider, err := llm.NewProvider(ctx, model, apiKey, os.Stdout)
@@ -375,7 +343,7 @@ func updateAgentsWithSpecsRef(fromContextPath string, locale string, standard do
 
 	specsRef := buildSpecsReferenceSection(locale, standard, featureID)
 	updated := string(content) + specsRef
-	return os.WriteFile(agentsPath, []byte(updated), 0644)
+	return os.WriteFile(agentsPath, []byte(updated), 0o644)
 }
 
 // buildSpecsReferenceSection renders the markdown block that
