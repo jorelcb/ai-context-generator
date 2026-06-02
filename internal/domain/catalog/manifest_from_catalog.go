@@ -44,6 +44,15 @@ func ManifestsFromSkillsCategory(category *SkillCategory) []PackageManifest {
 	for _, opt := range category.Options {
 		out = append(out, manifestsForSkillOption(opt)...)
 	}
+	// Stamp the source-declared category so the catalog tree groups embedded
+	// skills the same way it groups marketplace plugins (both via
+	// Metadata[MetaKeyCategory]) — uniform, not a codify-imposed taxonomy.
+	for i := range out {
+		if out[i].Metadata == nil {
+			out[i].Metadata = map[string]string{}
+		}
+		out[i].Metadata[MetaKeyCategory] = category.Label
+	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
