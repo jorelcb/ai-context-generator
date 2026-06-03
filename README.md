@@ -368,17 +368,26 @@ Skills install through **`codify catalog`** — the unified surface for ecosyste
 
 #### Interactive mode
 
-Run `codify catalog` and the wizard guides you through every choice:
+Run `codify catalog` and a rich selector opens — horizontal **tabs** per package
+type (Skills · Hooks · Plugins), a **tree** grouped by each package's
+source-declared category, and **checkboxes** with a tri-state parent
+(`[ ]` none / `[~]` some / `[x]` all). Your selection **accumulates across
+tabs**, so you equip skills + hooks + plugins in a single pass:
 
 ```bash
 codify catalog
-# → Ecosystem: claude
-# → Package type: Skills
-# → Mode: static or personalized
-# → If personalized: describe your project, choose model
-# → Install scope: project or workstation
-# → Multi-select the skills to install
+# → Ecosystem: claude          (pre-step)
+# → Scope: project             (pre-step)
+# → Rich selector opens:
+#     ⇥ switch tab · ↑↓ move · → expand · space mark · a mark-all · ⏎ install
+#     marks persist across tabs; ⏎ installs everything selected, in one pass
+# → Skills only: static vs personalized is asked once, if any skill is picked
 ```
+
+The **same selector** is reused by `codify init` (project scope) and `codify
+config` (workstation scope), so you can equip your agent during bootstrap
+(ADR-0010 Decision 6). Terminals without Unicode get an ASCII fallback (force it
+with `CODIFY_ASCII=1`); non-TTY / CI environments fall back to the flags below.
 
 #### CLI mode
 
@@ -405,6 +414,36 @@ codify catalog --list --type skill
 | `workstation` | `~/.claude/skills/` | Available from any project         |
 
 Skills also install for **Antigravity CLI**: `codify catalog --ecosystem antigravity --type skill --package <id> --scope project|workstation` writes them (with Antigravity frontmatter) flat to `~/.gemini/antigravity-cli/skills/` (workstation) or `.agents/skills/` (project). Gemini CLI is deprecated and unsupported (ADR-0012 §4).
+
+#### Declarative mode (catalog-as-code)
+
+Every interactive install also records your picks to a committable, per-scope
+**desired-state file** — `.codify/project.catalog.yml` (project) and
+`~/.codify/workstation.catalog.yml` (workstation). It is the user-authored
+_intent_ (distinct from the lockfile, which is codify's install _record_). Commit
+it and a teammate reproduces your exact setup with one command:
+
+```bash
+codify catalog --apply --scope project     # install everything the file declares
+```
+
+```yaml
+# .codify/project.catalog.yml
+version: 1
+scope: project
+packages:
+  - { ecosystem: claude, id: ddd-entity, type: skill }
+  - { ecosystem: claude, id: conventional-commit, type: hook }
+  - {
+      ecosystem: claude,
+      id: spec-driven-change,
+      type: plugin,
+      source: anthropics/claude-plugins-official,
+    }
+```
+
+> YAML (not TOML) to add no new dependency — codify already uses YAML for config.
+> `--status` / `--sync` operate on the separate lockfile (codify's install record).
 
 #### Skill catalog
 
