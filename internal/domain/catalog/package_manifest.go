@@ -113,10 +113,10 @@ const MetaKeyCategory = "category"
 // inside the tree; not used for structure.
 const MetaKeyTags = "tags"
 
-// PackageRef points to another package by ID and optional version.
-// Used in Dependencies and Conflicts to express relationships between
-// packages without requiring the referenced package to be resolved at
-// declaration time.
+// PackageRef points to another package by ID and optional version. Used by the
+// RESERVED Dependencies and Conflicts fields to express relationships without
+// resolving the referenced package at declaration time. RESERVED: never
+// constructed today — see the note on PackageManifest.Dependencies.
 type PackageRef struct {
 	ID      string
 	Version string // empty = any version
@@ -170,15 +170,20 @@ type PackageManifest struct {
 	Source SourceRef
 
 	// Relationships
+	//
+	// ⚠️ RESERVED — declared but NOT YET HONORED by any code path. No source
+	// populates these today and the catalog UI does not consult them. They are
+	// kept as forward-compat fields, not active capabilities. (The v3.0.0 gap
+	// audit flagged the prior doc comments for overstating that the UI
+	// auto-marked deps / warned on conflicts; it does neither yet.)
 
-	// Dependencies are packages required for this one to function. The
-	// catalog UI auto-marks dependencies when the user selects a package.
-	// Resolution semantics (transitive closure, version pinning) live in
-	// D.4+.
+	// Dependencies are packages required for this one to function. RESERVED:
+	// when honored, the catalog UI would auto-mark them on selection (transitive
+	// closure + version pinning TBD). Currently inert.
 	Dependencies []PackageRef
-	// Conflicts are packages incompatible with this one. The catalog UI
-	// shows a warning and refuses to mark both for install in the same
-	// session.
+	// Conflicts are packages incompatible with this one. RESERVED: when honored,
+	// the catalog UI would warn and refuse to mark both in one session.
+	// Currently inert.
 	Conflicts []PackageRef
 
 	// Verification

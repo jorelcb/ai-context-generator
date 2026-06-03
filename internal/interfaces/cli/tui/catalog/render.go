@@ -33,6 +33,7 @@ type Result struct {
 // lives in the (testable) Catalog.
 type Model struct {
 	cat       *Catalog
+	glyphs    glyphSet
 	width     int
 	height    int
 	warn      string // inline warning (e.g. empty selection on confirm)
@@ -40,9 +41,10 @@ type Model struct {
 	cancelled bool
 }
 
-// NewModel wraps a Catalog for rendering.
+// NewModel wraps a Catalog for rendering, choosing Unicode or ASCII glyphs from
+// the environment (spec §Compatibilidad).
 func NewModel(cat *Catalog) Model {
-	return Model{cat: cat, width: 80}
+	return Model{cat: cat, width: 80, glyphs: pickGlyphs()}
 }
 
 func (m Model) Init() tea.Cmd { return nil }
@@ -115,25 +117,12 @@ func (m Model) View() string {
 	var b strings.Builder
 
 	// --- header: tab bar + scope/total ---
-	var tabs []string
-	for i := range m.cat.Tabs {
-		t := &m.cat.Tabs[i]
-		label := t.Name
-		if n := t.CheckedCount(); n > 0 {
-			label += fmt.Sprintf(" (%d)", n)
-		}
-		if i == m.cat.Active {
-			tabs = append(tabs, activeTabStyle.Render(label))
-		} else {
-			tabs = append(tabs, inactiveTabStyle.Render(label))
-		}
-	}
 	scope := m.cat.Scope
 	if scope == "" {
 		scope = "project"
 	}
 	info := headerInfoStyle.Render(fmt.Sprintf("Scope: %s · %d elegidos", scope, m.cat.TotalChecked()))
-	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, tabs...))
+	b.WriteString(m.renderTabBar())
 	b.WriteString("   ")
 	b.WriteString(info)
 	b.WriteString("\n\n")
@@ -152,10 +141,10 @@ func (m Model) View() string {
 			if !r.HasCats {
 				continue // tab plana (Hooks/Plugins): no se muestra el header sintético
 			}
-			arrow := "▸"
+			arrow := m.glyphs.collapsed
 			counter := ""
 			if cat.Expanded {
-				arrow = "▾"
+				arrow = m.glyphs.expanded
 				counter = fmt.Sprintf("   (%d/%d)", cat.CheckedCount(), len(cat.Leaves))
 			} else if cat.State() == Some {
 				counter = fmt.Sprintf("   (%d/%d)", cat.CheckedCount(), len(cat.Leaves))
@@ -173,7 +162,7 @@ func (m Model) View() string {
 			}
 			extra := ""
 			if leaf.Installed {
-				extra += installedStyle.Render(" ✓ instalado")
+				extra += installedStyle.Render(" " + m.glyphs.installed + " instalado")
 			}
 			if leaf.Desc != "" {
 				extra += "  " + descStyle.Render(leaf.Desc)
@@ -181,7 +170,7 @@ func (m Model) View() string {
 			line = fmt.Sprintf("%s%s %s%s", indent, box, leaf.ID, extra)
 		}
 		if i == m.cat.Cursor {
-			b.WriteString(cursorStyle.Render("❯ ") + line + "\n")
+			b.WriteString(cursorStyle.Render(m.glyphs.cursor+" ") + line + "\n")
 		} else {
 			b.WriteString("  " + line + "\n")
 		}
@@ -197,15 +186,60 @@ func (m Model) View() string {
 }
 
 func (m Model) footerHints() string {
-	base := "↑↓ moverse · espacio marcar · a marcar-todo · ⇥ cambiar tab · ⏎ instalar · q salir"
+	g := m.glyphs
 	r, ok := m.cat.CurrentRow()
 	if ok && r.Kind == RowCategory && r.HasCats {
 		if m.cat.ActiveTab().Categories[r.Cat].Expanded {
-			return "↑↓ moverse · ← colapsar · espacio marcar-categoría · ⇥ tab · ⏎ instalar · q salir"
+			return fmt.Sprintf("%s moverse · %s colapsar · espacio marcar-categoría · %s tab · %s instalar · q salir", g.updown, g.left, g.tab, g.enter)
 		}
-		return "↑↓ moverse · → expandir · espacio marcar-categoría · ⇥ tab · ⏎ instalar · q salir"
+		return fmt.Sprintf("%s moverse · %s expandir · espacio marcar-categoría · %s tab · %s instalar · q salir", g.updown, g.right, g.tab, g.enter)
 	}
-	return base
+	return fmt.Sprintf("%s moverse · espacio marcar · a marcar-todo · %s cambiar tab · %s instalar · q salir", g.updown, g.tab, g.enter)
+}
+
+// renderTabBar draws the tab strip, degrading on overflow (spec §Tabs overflow):
+// tier 1 replaces inactive "(n)" counts with a compact bullet; tier 2 truncates
+// inactive tab names. The active tab is always shown in full.
+func (m Model) renderTabBar() string {
+	full := m.styledTabs(false, 0)
+	if m.width <= 0 || lipgloss.Width(full) <= m.width {
+		return full
+	}
+	if bullets := m.styledTabs(true, 0); lipgloss.Width(bullets) <= m.width {
+		return bullets
+	}
+	return m.styledTabs(true, 6) // truncate inactive names
+}
+
+// styledTabs builds the tab row. bullet=true renders inactive marked tabs with a
+// compact bullet instead of "(n)"; trunc>0 truncates inactive names to trunc
+// runes + an ellipsis.
+func (m Model) styledTabs(bullet bool, trunc int) string {
+	tabs := make([]string, 0, len(m.cat.Tabs))
+	for i := range m.cat.Tabs {
+		t := &m.cat.Tabs[i]
+		active := i == m.cat.Active
+		name := t.Name
+		if trunc > 0 && !active {
+			if rs := []rune(name); len(rs) > trunc {
+				name = string(rs[:trunc]) + m.glyphs.ellipsis
+			}
+		}
+		label := name
+		if n := t.CheckedCount(); n > 0 {
+			if bullet && !active {
+				label += " " + m.glyphs.bullet
+			} else {
+				label += fmt.Sprintf(" (%d)", n)
+			}
+		}
+		if active {
+			tabs = append(tabs, activeTabStyle.Render(label))
+		} else {
+			tabs = append(tabs, inactiveTabStyle.Render(label))
+		}
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
 }
 
 // Run launches the selector and returns the user's selection. The caller must
