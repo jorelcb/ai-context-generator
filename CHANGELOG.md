@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-06-02 - Rich catalog selector + catalog-as-code; MCP spec fix
+
+> Delivers the rich catalog experience agreed in ADR-0010 §3/4/6 (recovered from the v3.0.0 sequential wizard), the declarative "catalog-as-code" backbone, and a fix for the MCP `generate_specs` regression v3.0.0 shipped. Stack decided in ADR-0013 (bubbletea + lipgloss) via a symmetric spike vs tview. No breaking changes.
+
+### Added
+
+- **Rich `codify catalog` selector** (ADR-0013) — a full-screen TUI replacing the sequential wizard: horizontal **tabs** per package type (Skills · Hooks · Plugins), a **tree** grouped by each package's source-declared category, **tri-state checkboxes** (`[ ]`/`[~]`/`[x]`), and a selection that **accumulates across tabs**, so skills + hooks + plugins install in one pass. Built on bubbletea + lipgloss; the selection/tree logic is a terminal-free, unit-tested core (the v3.0.0 "no test caught it" lesson).
+- **Declarative desired-state (catalog-as-code)** — the selector writes your picks to a committable, per-scope file (`.codify/project.catalog.yml`, `~/.codify/workstation.catalog.yml`); **`codify catalog --apply`** installs everything it declares, so a teammate reproduces your setup with one command. YAML (no new TOML dependency). User-authored _intent_, distinct from the lockfile's install _record_.
+- **MCP `sdd_standard` parameter** on `generate_specs` (and the `with_specs` paths) — the MCP spec flow is now genuinely standard-aware (OpenSpec / Spec-Kit), not OpenSpec-only.
+- **ASCII fallback** for terminals without Unicode (`CODIFY_ASCII=1` or a non-UTF-8 locale), plus tab-bar overflow degradation (compact bullet + truncation).
+
+### Changed
+
+- **`codify init` and `codify config` reuse the rich selector** (ADR-0010 Decision 6, dropped in v3.0.0) — equip skills + hooks + plugins during bootstrap through the same surface as `codify catalog`, instead of bespoke per-category prompts. Workflows stay separate (ADR-0010 §5).
+- The catalog tree groups by the **source-declared category** (`marketplace.json` `category`, or an embedded skill's authored category), never a codify-imposed taxonomy; sources that declare none render as a flat list.
+
+### Fixed
+
+- **MCP `generate_specs` runtime regression** — `executeSpecs` loaded spec templates from the legacy path `templates/{locale}/spec` (removed in v2.2.0), erroring before any LLM call and breaking `generate_specs` plus `with_specs: true` on `generate_context`/`analyze_project`. The CLI and MCP now load from a single shared SDD helper, with a regression test exercising the path. (Was listed under v3.0.0 Known issues.)
+
+### Tests
+
+- `go build ./...`, `go test ./...`, `go vet ./...` all green. ~30 new tests: pure-logic selection engine, render frames, builder, desired-state I/O, ASCII/overflow, MCP spec-template regression, and an end-to-end `--apply` install.
+
 ## [3.0.0] - 2026-05-31 - Track D: package catalog + lockfile (multi-ecosystem install, reproducibility)
 
 > Track D (ADR-0010): a unified package model, a read-side package source and a write-side ecosystem installer, surfaced through a new `codify catalog` command. Plus the greenfield decision to make distributable artifacts (skills + hooks) locale-free — English-only by design, so the ES locale subtree for skills/hooks is dropped rather than maintained.
@@ -48,6 +72,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - `go build ./...`, `go test ./...`, and `go vet ./...` all green. EmbeddedSource locale test removed; hook config / install tests updated to drop the locale dimension.
+
+### Known issues (both resolved in 3.1.0)
+
+> Surfaced by the post-release gap audit (`research/V3.0.0_GAP_AUDIT.md`, 2026-05-31).
+
+- **🔴 MCP `generate_specs` failed at runtime.** `executeSpecs` loaded spec templates from the legacy path `templates/{locale}/spec`, removed in v2.2.0 (→ `templates/{locale}/sdd/{openspec,spec-kit}/spec`), so the load errored before any LLM call — breaking `generate_specs` and `with_specs: true` on `generate_context`/`analyze_project`. Uncaught (the path is a runtime string; no test exercised the MCP spec path). The CLI `codify spec` path was unaffected. **✅ Fixed in 3.1.0** (shared SDD helper + regression test).
+- **`codify catalog` rich selector not yet built.** The interactive catalog was a sequential `huh` wizard, not the tabs + tree + accumulated-checkbox selector specified in `research/cli-checkbox-tree-tabs-spec.md` / ADR-0010 §3·4·6, and `config`/`init` did not reuse it. Deferred (never line-itemed into Track D), not regressed. **✅ Built in 3.1.0** (ADR-0013).
 
 ## [2.3.0] - 2026-05-08 - Workflow preset spec-driven-change is now SDD-aware
 
