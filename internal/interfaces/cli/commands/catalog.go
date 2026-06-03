@@ -14,6 +14,7 @@ import (
 	root "github.com/jorelcb/codify"
 	"github.com/jorelcb/codify/internal/application/command"
 	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify/internal/infrastructure/desiredstate"
 	"github.com/jorelcb/codify/internal/infrastructure/llm"
 	"github.com/jorelcb/codify/internal/infrastructure/lockfile"
 	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
@@ -35,6 +36,7 @@ type catalogParams struct {
 	status      bool
 	uninstall   bool
 	sync        bool
+	apply       bool
 }
 
 // defaultMarketplace is the trusted, Anthropic-managed plugin directory used
@@ -64,13 +66,19 @@ come from a Claude plugin marketplace (a '.claude-plugin/marketplace.json'),
 default the Anthropic-managed directory.
 
 Modes:
-  Interactive (no flags, TTY): pick ecosystem → type → packages → scope.
+  Interactive (no flags, TTY): pick ecosystem → scope → rich selector (tabs + tree).
   List:        codify catalog --list [--type skill|hook|plugin] [--scope project]
   Status:      codify catalog --status [--scope project|workstation]
   Sync:        codify catalog --sync [--scope project|workstation]
+  Apply:       codify catalog --apply [--scope project|workstation]
   Install:     codify catalog --type skill  --package ddd-entity,hexagonal-port --scope project
                codify catalog --type plugin --package gopls-lsp --scope workstation
   Uninstall:   codify catalog --uninstall --type skill --package ddd-entity --scope project
+
+The interactive selector writes your picks to a committable desired-state file
+(.codify/project.catalog.yml, ~/.codify/workstation.catalog.yml) — catalog-as-code.
+Apply installs everything listed there, so a teammate reproduces your setup with
+'codify catalog --apply' after checking out the repo.
 
 Sync re-applies a scope's lockfile: it reinstalls every recorded package that
 is missing on disk (onboarding a new machine/repo from a committed lockfile).
@@ -105,6 +113,7 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 	cmd.Flags().BoolVar(&p.status, "status", false, "Show lockfile status: recorded installs vs live state (drift)")
 	cmd.Flags().BoolVar(&p.uninstall, "uninstall", false, "Uninstall packages (with --type/--package/--scope) and drop them from the lockfile")
 	cmd.Flags().BoolVar(&p.sync, "sync", false, "Re-apply the scope's lockfile: reinstall recorded packages missing on disk")
+	cmd.Flags().BoolVar(&p.apply, "apply", false, "Install everything in the scope's desired-state file (.codify/*.catalog.yml)")
 
 	return cmd
 }
@@ -131,6 +140,10 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 		return catalogSync(ctx, p)
 	}
 
+	if p.apply {
+		return catalogApply(ctx, p)
+	}
+
 	if p.list {
 		return catalogList(ctx, p)
 	}
@@ -144,6 +157,137 @@ func runCatalog(p catalogParams, explicit map[string]bool) error {
 		return fmt.Errorf("codify catalog needs a TTY for interactive mode; pass --type and --package for non-interactive install, or --list to browse")
 	}
 	return catalogInteractive(ctx, p)
+}
+
+// recordDesiredState merges the just-selected packages into the scope's
+// desired-state file (.codify/*.catalog.yml) — the user-authored "catalog-as-
+// code" intent (distinct from the lockfile's install record). Best-effort: a
+// write failure warns but never fails the install that already succeeded.
+func recordDesiredState(scope catalog.Scope, ecosystem string, byType map[string][]string, marketplace string) {
+	path, err := desiredstate.PathForScope(scope)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "→ desired-state skipped: %v\n", err)
+		return
+	}
+	ds, err := desiredstate.Load(path, scope)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "→ desired-state skipped: %v\n", err)
+		return
+	}
+	var pkgs []desiredstate.Package
+	for tp, ids := range byType {
+		for _, id := range ids {
+			pk := desiredstate.Package{Ecosystem: ecosystem, ID: id, Type: tp}
+			if tp == "plugin" {
+				pk.Source = marketplace
+			}
+			pkgs = append(pkgs, pk)
+		}
+	}
+	if ds.Add(pkgs...) == 0 {
+		return // nothing new to record
+	}
+	if err := desiredstate.Save(path, ds); err != nil {
+		fmt.Fprintf(os.Stderr, "→ could not write desired-state: %v\n", err)
+		return
+	}
+	fmt.Printf("→ desired state updated: %s\n", path)
+}
+
+// catalogApply installs everything listed in the scope's desired-state file —
+// the reproduce-an-environment path: a teammate checks out the repo and runs
+// `codify catalog --apply` to install exactly what the committed
+// .codify/project.catalog.yml declares. Groups by (ecosystem, type) and routes
+// each group through the normal install path; plugins use their recorded source.
+func catalogApply(ctx context.Context, p catalogParams) error {
+	scopeStr := p.scope
+	if scopeStr == "" {
+		scopeStr = "project"
+	}
+	scope, err := resolveScope(scopeStr)
+	if err != nil {
+		return err
+	}
+	path, err := desiredstate.PathForScope(scope)
+	if err != nil {
+		return err
+	}
+	ds, err := desiredstate.Load(path, scope)
+	if err != nil {
+		return err
+	}
+	if len(ds.Packages) == 0 {
+		fmt.Printf("\nNo desired packages for %s scope (%s).\n", scope, path)
+		return nil
+	}
+
+	fmt.Println()
+	fmt.Printf("Applying desired state · scope: %s · %s\n", scope, path)
+	fmt.Println(strings.Repeat("─", 48))
+
+	// Group ids by ecosystem → type, remembering a plugin source ref if present.
+	type group struct {
+		ids    []string
+		source string
+	}
+	groups := map[string]map[string]*group{}
+	for _, pk := range ds.Packages {
+		eco := pk.Ecosystem
+		if eco == "" {
+			eco = desiredstate.DefaultEcosystem
+		}
+		if groups[eco] == nil {
+			groups[eco] = map[string]*group{}
+		}
+		g := groups[eco][pk.Type]
+		if g == nil {
+			g = &group{}
+			groups[eco][pk.Type] = g
+		}
+		g.ids = append(g.ids, pk.ID)
+		if pk.Source != "" {
+			g.source = pk.Source
+		}
+	}
+
+	ecos := make([]string, 0, len(groups))
+	for eco := range groups {
+		ecos = append(ecos, eco)
+	}
+	sort.Strings(ecos)
+
+	restored, missing := 0, 0
+	for _, eco := range ecos {
+		for _, tp := range typesForEcosystem(eco) {
+			g := groups[eco][tp]
+			if g == nil || len(g.ids) == 0 {
+				continue
+			}
+			target, terr := targetFor(eco, tp)
+			if terr != nil {
+				fmt.Fprintf(os.Stderr, "→ skipping %s/%s: %v\n", eco, tp, terr)
+				continue
+			}
+			ap := p
+			ap.mode = "static"
+			if tp == "plugin" && g.source != "" {
+				ap.marketplace = g.source
+			}
+			svc, serr := installService(ctx, eco, tp, ap)
+			if serr != nil {
+				return serr
+			}
+			out, ierr := svc.Install(ctx, command.InstallRequest{Target: target, IDs: g.ids, Scope: scope})
+			printInstallOutcome(out, scope)
+			restored += len(out.Installed)
+			missing += len(out.NotFound)
+			if ierr != nil {
+				return ierr
+			}
+		}
+	}
+	fmt.Printf("\nApply complete: %d installed, %d not found.\n", restored, missing)
+	return nil
 }
 
 // catalogRegistry wires every installer the catalog can route to: Claude
@@ -799,6 +943,10 @@ func runCatalogSelector(ctx context.Context, p catalogParams, ecosystem string, 
 			return ierr
 		}
 	}
+
+	// Record the selection as desired state (catalog-as-code backbone, ADR-0013):
+	// the committable file a teammate can `codify catalog --apply` to reproduce.
+	recordDesiredState(scope, ecosystem, byType, p.marketplace)
 	return nil
 }
 
