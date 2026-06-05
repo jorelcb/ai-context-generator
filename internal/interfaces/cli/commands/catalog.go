@@ -981,6 +981,9 @@ func buildTabSpecs(ctx context.Context, p catalogParams, ecosystem string, scope
 				ID:        m.ID,
 				Label:     m.Label,
 				Desc:      m.Description,
+				Version:   m.Version,
+				Source:    m.Source.Kind,
+				Tags:      m.Metadata[catalog.MetaKeyTags],
 				Category:  m.Metadata[catalog.MetaKeyCategory],
 				Installed: instSet[m.ID],
 			})

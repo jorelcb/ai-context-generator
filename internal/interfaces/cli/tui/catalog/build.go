@@ -10,6 +10,9 @@ type Pkg struct {
 	ID        string
 	Label     string
 	Desc      string
+	Version   string // semver-ish; shown in the detail panel (R-6)
+	Source    string // origin (Source.Kind); shown in the detail panel
+	Tags      string // comma-joined source-declared tags; detail panel
 	Category  string // source-declared; empty => ungrouped
 	Installed bool
 }
@@ -79,7 +82,15 @@ func leavesSorted(pkgs []Pkg) []Leaf {
 	sort.Slice(cp, func(i, j int) bool { return cp[i].ID < cp[j].ID })
 	leaves := make([]Leaf, 0, len(cp))
 	for _, p := range cp {
-		leaves = append(leaves, Leaf{ID: p.ID, Desc: p.Desc, Installed: p.Installed})
+		leaves = append(leaves, Leaf{
+			ID:        p.ID,
+			Label:     p.Label,
+			Desc:      p.Desc,
+			Version:   p.Version,
+			Source:    p.Source,
+			Tags:      p.Tags,
+			Installed: p.Installed,
+		})
 	}
 	return leaves
 }
