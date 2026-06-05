@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-06-04 - Catalog selector: fuzzy filter + always-visible detail panel
+
+> Polishes the rich catalog selector shipped in v3.1.0 by closing ADR-0010's two MVP open-questions (search/filter and detail view), tracked as R-6. No breaking changes.
+
+### Added
+
+- **Fuzzy filter (`/`)** inside the catalog selector — press `/` to filter the tree live by a case-insensitive subsequence match over each package's id, label and description (fzf-style). The filtered tab shows only matching packages under their category; your selection persists across filtering and clearing, and `a` (toggle-all) becomes filter-aware, acting only on the visible matches. The matcher is in-house — no new dependency.
+- **Always-visible detail panel** — the selector now shows a panel for the package under the cursor: id/label, **version**, **source**, **tags**, install/selection state, and a wrapped description. It sits to the right of the tree on wide terminals (≥96 columns) and stacks below on narrow ones, with the existing ASCII fallback.
+
+### Changed
+
+- The selector threads each package's real version, source kind and tags from its `PackageManifest` into the tree, so the detail panel reflects actual catalog metadata.
+
+### Tests
+
+- `go build ./...`, `go test ./...`, `go vet ./...` all green. New tests cover the fuzzy matcher, the filter mechanics (filtered visibility, cursor positioning, selection persistence, filter-aware toggle-all) in the terminal-free core, plus render frames for the detail panel and filter bar.
+
 ## [3.1.0] - 2026-06-02 - Rich catalog selector + catalog-as-code; MCP spec fix
 
 > Delivers the rich catalog experience agreed in ADR-0010 §3/4/6 (recovered from the v3.0.0 sequential wizard), the declarative "catalog-as-code" backbone, and a fix for the MCP `generate_specs` regression v3.0.0 shipped. Stack decided in ADR-0013 (bubbletea + lipgloss) via a symmetric spike vs tview. No breaking changes.
