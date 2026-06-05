@@ -38,9 +38,13 @@ func (t TriState) Glyph() string {
 // Leaf es un paquete instalable (hoja del árbol).
 type Leaf struct {
 	ID        string
+	Label     string // etiqueta humana (puede diferir del ID); usada en el panel de detalle
 	Desc      string
-	Checked   bool // marcado para instalar en esta sesión
-	Installed bool // ya instalado en el scope activo (marca informativa)
+	Version   string // semver-ish; mostrado en el panel de detalle (R-6)
+	Source    string // origen (Source.Kind: embedded/local-fs/git…); panel de detalle
+	Tags      string // tags coma-separados declarados por el source; panel de detalle
+	Checked   bool   // marcado para instalar en esta sesión
+	Installed bool   // ya instalado en el scope activo (marca informativa)
 }
 
 // Category agrupa paquetes (parte del árbol). Para tabs sin categorías reales
@@ -120,6 +124,14 @@ type Catalog struct {
 	Cursor    int // índice de fila visible dentro de la tab activa
 	Scope     string
 	Ecosystem string
+
+	// Filtro difuso `/` (R-6 / ADR-0010 open-question §1). Query vive en el
+	// núcleo para que la mecánica de filtrado sea unit-testeable sin terminal.
+	// Filtering=true => el input está activo (las teclas se escriben en Query);
+	// con Filtering=false pero Query≠"" el filtro sigue aplicado (committed) y la
+	// navegación normal opera sobre los resultados.
+	Filtering bool
+	Query     string
 }
 
 // RowKind distingue filas de categoría (padre) y de paquete (hoja) en el
@@ -147,8 +159,15 @@ func (c *Catalog) ActiveTab() *Tab { return &c.Tabs[c.Active] }
 // VisibleRows aplana la tab activa a filas visibles, respetando el colapso de
 // cada categoría. Para tabs sin categorías (HasCategories=false) la fila de
 // categoría existe pero el render la oculta y muestra las hojas directamente.
+//
+// Con un filtro activo (Query≠"") el colapso se ignora: solo se muestran las
+// hojas que coinciden y la cabecera de su categoría (las categorías sin ninguna
+// coincidencia se omiten por completo).
 func (c *Catalog) VisibleRows() []Row {
 	t := c.ActiveTab()
+	if c.Query != "" {
+		return c.filteredRows(t)
+	}
 	var rows []Row
 	for ci := range t.Categories {
 		cat := &t.Categories[ci]
@@ -160,6 +179,27 @@ func (c *Catalog) VisibleRows() []Row {
 				rows = append(rows, Row{Kind: RowLeaf, Cat: ci, Leaf: li, Depth: 1, HasCats: t.HasCategories})
 			}
 		}
+	}
+	return rows
+}
+
+// filteredRows aplana la tab activa mostrando solo hojas que coinciden con el
+// query (y la cabecera de las categorías con ≥1 coincidencia).
+func (c *Catalog) filteredRows(t *Tab) []Row {
+	var rows []Row
+	for ci := range t.Categories {
+		cat := &t.Categories[ci]
+		var leaves []Row
+		for li := range cat.Leaves {
+			if leafMatches(&cat.Leaves[li], c.Query) {
+				leaves = append(leaves, Row{Kind: RowLeaf, Cat: ci, Leaf: li, Depth: 1, HasCats: t.HasCategories})
+			}
+		}
+		if len(leaves) == 0 {
+			continue
+		}
+		rows = append(rows, Row{Kind: RowCategory, Cat: ci, Depth: 0, HasCats: t.HasCategories})
+		rows = append(rows, leaves...)
 	}
 	return rows
 }
@@ -203,6 +243,79 @@ func (c *Catalog) CurrentRow() (Row, bool) {
 		return Row{}, false
 	}
 	return rows[c.Cursor], true
+}
+
+// CurrentLeaf devuelve la hoja bajo el cursor (ok=false si el cursor está sobre
+// una categoría o no hay filas). Alimenta el panel de detalle (R-6).
+func (c *Catalog) CurrentLeaf() (*Leaf, bool) {
+	r, ok := c.CurrentRow()
+	if !ok || r.Kind != RowLeaf {
+		return nil, false
+	}
+	return &c.ActiveTab().Categories[r.Cat].Leaves[r.Leaf], true
+}
+
+// --- Filtro difuso `/` (R-6) -------------------------------------------------
+
+// StartFilter activa el input del filtro conservando el Query previo (para que
+// `/` pueda reanudar la edición de un filtro ya aplicado).
+func (c *Catalog) StartFilter() { c.Filtering = true }
+
+// CommitFilter sale del input manteniendo el filtro aplicado; el foco vuelve al
+// árbol para navegar/marcar los resultados.
+func (c *Catalog) CommitFilter() {
+	c.Filtering = false
+	c.clampCursor()
+}
+
+// ClearFilter borra el filtro por completo y vuelve al árbol sin filtrar.
+func (c *Catalog) ClearFilter() {
+	c.Filtering = false
+	c.Query = ""
+	c.clampCursor()
+}
+
+// FilterInput añade una runa al query y reposiciona el cursor sobre la primera
+// coincidencia.
+func (c *Catalog) FilterInput(r rune) {
+	c.Query += string(r)
+	c.cursorToFirstLeaf()
+}
+
+// FilterBackspace borra la última runa del query (vaciarlo mantiene el input
+// abierto, listo para una nueva búsqueda).
+func (c *Catalog) FilterBackspace() {
+	if c.Query == "" {
+		return
+	}
+	rs := []rune(c.Query)
+	c.Query = string(rs[:len(rs)-1])
+	c.cursorToFirstLeaf()
+}
+
+// cursorToFirstLeaf coloca el cursor sobre la primera fila-hoja visible (o 0).
+func (c *Catalog) cursorToFirstLeaf() {
+	for i, r := range c.VisibleRows() {
+		if r.Kind == RowLeaf {
+			c.Cursor = i
+			return
+		}
+	}
+	c.Cursor = 0
+}
+
+// clampCursor asegura que el cursor caiga dentro del rango de filas visibles
+// (necesario tras cambiar el filtro, que reduce/expande el conjunto visible).
+func (c *Catalog) clampCursor() {
+	n := len(c.VisibleRows())
+	switch {
+	case n == 0:
+		c.Cursor = 0
+	case c.Cursor >= n:
+		c.Cursor = n - 1
+	case c.Cursor < 0:
+		c.Cursor = 0
+	}
 }
 
 // Expand expande la categoría bajo el cursor (no-op si es hoja, ya expandida o
@@ -253,11 +366,38 @@ func (c *Catalog) ToggleCurrent() {
 
 // ToggleAllInActiveTab implementa la tecla `a`: si hay ≥1 marcado en la tab
 // activa, desmarca todo; si no, marca todo. No afecta otras tabs (spec §`a`).
+//
+// Con un filtro activo opera SOLO sobre las hojas visibles (las que coinciden):
+// filtrar a un subconjunto y pulsar `a` marca/desmarca ese subconjunto, no la
+// tab entera — evita marcar paquetes ocultos por error.
 func (c *Catalog) ToggleAllInActiveTab() {
+	if c.Query != "" {
+		c.toggleAllVisible()
+		return
+	}
 	t := c.ActiveTab()
 	target := t.CheckedCount() == 0 // si nada marcado => marcar todo
 	for ci := range t.Categories {
 		t.Categories[ci].SetAll(target)
+	}
+}
+
+// toggleAllVisible marca todas las hojas visibles (filtradas); si ya estaban
+// todas marcadas, las desmarca.
+func (c *Catalog) toggleAllVisible() {
+	t := c.ActiveTab()
+	rows := c.VisibleRows()
+	target := false // si alguna visible está sin marcar => marcar todas
+	for _, r := range rows {
+		if r.Kind == RowLeaf && !t.Categories[r.Cat].Leaves[r.Leaf].Checked {
+			target = true
+			break
+		}
+	}
+	for _, r := range rows {
+		if r.Kind == RowLeaf {
+			t.Categories[r.Cat].Leaves[r.Leaf].Checked = target
+		}
 	}
 }
 

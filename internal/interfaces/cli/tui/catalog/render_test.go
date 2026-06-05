@@ -70,6 +70,45 @@ func TestView_FlatTabHidesCategoryHeader(t *testing.T) {
 	}
 }
 
+func TestView_DetailPanelShowsCursorPackage(t *testing.T) {
+	c := withDescriptions()
+	c.Active = 0
+	c.Tabs[0].Categories[0].Expanded = true
+	// Enrich the cursor leaf with detail-panel metadata.
+	c.Tabs[0].Categories[0].Leaves[0].Version = "1.2.0"
+	c.Tabs[0].Categories[0].Leaves[0].Source = "embedded"
+	c.Tabs[0].Categories[0].Leaves[0].Tags = "ddd,domain"
+	c.Cursor = 1 // first leaf (ddd-entity) under architecture
+	out := NewModel(c).View()
+
+	for _, want := range []string{
+		"Detalle",    // panel title
+		"ddd-entity", // package id in panel
+		"1.2.0",      // version
+		"embedded",   // source
+		"ddd,domain", // tags
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("detail panel missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+func TestView_FilterBarAndFilteredTree(t *testing.T) {
+	c := withDescriptions()
+	c.Active = 0
+	c.Filtering = true
+	c.Query = "bdd"
+	out := NewModel(c).View()
+	if !strings.Contains(out, "/bdd") {
+		t.Errorf("filter bar should echo the query:\n%s", out)
+	}
+	// Only matching leaves are present; a non-match is gone.
+	if !strings.Contains(out, "test-bdd") || strings.Contains(out, "ddd-entity") {
+		t.Errorf("filtered tree should show matches only:\n%s", out)
+	}
+}
+
 // TestRenderFrames logs real frames (run with NO_COLOR=1 -v to read them as
 // plain text). Not an assertion test — a living preview of the UX.
 func TestRenderFrames(t *testing.T) {
@@ -95,4 +134,24 @@ func TestRenderFrames(t *testing.T) {
 	cc.markByID("spec-driven-change")
 	cc.Cursor = 0
 	t.Logf("\n--- Frame C · tab Plugins, acumulado cross-tab (Skills sigue en (2)) ---\n%s\n", NewModel(cc).View())
+
+	// Frame D: live fuzzy filter "bdd" narrows the tree to matches.
+	d := withDescriptions()
+	d.Active = 0
+	d.Filtering = true
+	d.Query = "bdd"
+	d.cursorToFirstLeaf()
+	t.Logf("\n--- Frame D · filtro difuso activo (/bdd) ---\n%s\n", NewModel(d).View())
+
+	// Frame E: wide terminal -> detail panel sits to the RIGHT of the tree.
+	e := withDescriptions()
+	e.Active = 0
+	e.Tabs[0].Categories[0].Expanded = true
+	e.Tabs[0].Categories[0].Leaves[0].Version = "1.2.0"
+	e.Tabs[0].Categories[0].Leaves[0].Source = "embedded"
+	e.Tabs[0].Categories[0].Leaves[0].Tags = "ddd,domain"
+	e.Cursor = 1
+	em := NewModel(e)
+	em.width = 110
+	t.Logf("\n--- Frame E · terminal ancha, panel lateral ---\n%s\n", em.View())
 }

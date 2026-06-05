@@ -15,6 +15,9 @@ type glyphSet struct {
 	installed string // already-installed marker
 	bullet    string // compact "has marks" indicator on overflowed tabs
 	ellipsis  string // truncation marker
+	check     string // marca de una hoja seleccionada (panel de detalle)
+	vline     string // regla vertical (separador del panel lateral)
+	hline     string // regla horizontal (separador del panel apilado)
 	// footer key tokens
 	updown string
 	left   string
@@ -25,11 +28,13 @@ type glyphSet struct {
 
 var unicodeGlyphs = glyphSet{
 	cursor: "❯", collapsed: "▸", expanded: "▾", installed: "✓", bullet: "•", ellipsis: "…",
+	check: "●", vline: "│", hline: "─",
 	updown: "↑↓", left: "←", right: "→", tab: "⇥", enter: "⏎",
 }
 
 var asciiGlyphs = glyphSet{
 	cursor: ">", collapsed: "+", expanded: "-", installed: "*", bullet: "*", ellipsis: "...",
+	check: "*", vline: "|", hline: "-",
 	updown: "up/dn", left: "left", right: "right", tab: "tab", enter: "enter",
 }
 
