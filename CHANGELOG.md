@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-06-10 - §7 deferred closeout: MCP parity, agentless plugin fallback, ecosystem scaffolding, huh-drop
+
+> Closes the entire remaining §7 deferred inventory from the v3.1.0 plan (R-4r, R-7, R-8 scaffolding, huh-drop). No breaking changes.
+
+### Added
+
+- **MCP `generate_specs` `output` parameter (R-4r)** — the MCP spec tool now accepts an optional `output` directory (defaulting to `from_context`), matching the CLI's `--output`. This closes the last CLI↔MCP SDD parity gap; a schema parity test guards every CLI knob (`name`, `from_context`, `output`, `locale`, `model`, `sdd_standard`) against regressing.
+- **Agentless plugin install fallback (R-7)** — when the `claude` CLI is not on PATH, `codify catalog --type plugin` no longer fails with manual instructions: it falls back to the B2 mechanic (ADR-0012 §3), declaring the marketplace and plugin in the scope's `settings.json` (`extraKnownMarketplaces` + `enabledPlugins`, preserving every other key, idempotent) so Claude Code materializes them on its next run. The native-CLI delegation remains the primary path; a stderr notice makes the deferred nature explicit.
+- **Per-ecosystem marketplace source (R-8 scaffolding)** — `PluginMarketplaceSource` is no longer hardcoded to Claude: the source `Kind`, the emitted `Target` and the manifest directory (`.claude-plugin` vs `.agents/plugins`) are parameterized per ecosystem, and a new `TargetAntigravityPlugin` models Antigravity plugins in the domain. **Functional Antigravity plugin install stays blocked** — `agy` v1.0.0 has no arbitrary-marketplace registration (ADR-0012 §5) — so the registered `AntigravityPluginInstaller` fails loudly with the blocker and the unblock criterion instead of pretending. The CLI keeps Antigravity gated to skills.
+
+### Changed
+
+- **`huh` dropped — prompts consolidated on bubbletea (huh-drop)** — the three remaining `huh` prompts (select/input/confirm) were the only consumers of a second TUI stack. They are reimplemented as minimal, TTY-free-testable bubbletea models in `internal/interfaces/cli/tui/prompts/`; the `promptSelect`/`promptInput`/`promptConfirm` wrappers keep their exact signatures and semantics, so every call site is untouched. `HuhPrompter` is renamed `TUIPrompter`. `charmbracelet/huh` and its unique transitive subtree (bubbles, catppuccin/go, clipboard, go-humanize, hashstructure) leave `go.mod`; the direct charm dependencies are now exactly bubbletea + lipgloss.
+
+### Tests
+
+- `go build ./...`, `go test ./...` (572 tests / 51 packages), `go vet ./...` all green. New coverage: MCP spec output-path defaulting + schema parity; B2 fallback (writes both keys, no CLI calls, preserves unrelated settings, idempotent); ecosystem parameterization (same marketplace.json emits each ecosystem's Kind/Target; unknown ecosystem errors; blocked stub messaging); prompt models (navigation, defaults, cancel, rendering).
+
 ## [3.2.0] - 2026-06-04 - Catalog selector: fuzzy filter + always-visible detail panel
 
 > Polishes the rich catalog selector shipped in v3.1.0 by closing ADR-0010's two MVP open-questions (search/filter and detail view), tracked as R-6. No breaking changes.
