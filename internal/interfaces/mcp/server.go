@@ -95,6 +95,7 @@ func generateSpecsTool() server.ServerTool {
 		mcp.WithDescription("Generate SDD specification files from existing context files"),
 		mcp.WithString("name", mcp.Required(), mcp.Description("Project name")),
 		mcp.WithString("from_context", mcp.Required(), mcp.Description("Path to existing output directory with context files")),
+		mcp.WithString("output", mcp.Description("Output directory for the spec files (default: from_context)")),
 		mcp.WithString("locale", mcp.Description("Output language: en or es"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
 		mcp.WithString("sdd_standard", mcp.Description("SDD standard: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
@@ -211,7 +212,7 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 	}
 
 	if withSpecs {
-		specResult, err := executeSpecs(ctx, name, result.OutputPath, locale, model, sddStandard)
+		specResult, err := executeSpecs(ctx, name, result.OutputPath, result.OutputPath, locale, model, sddStandard)
 		if err != nil {
 			sb.WriteString(fmt.Sprintf("\nSpec generation failed: %v\n", err))
 		} else {
@@ -230,11 +231,12 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 func handleGenerateSpecs(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := stringArg(request, "name")
 	fromContext := stringArg(request, "from_context")
+	output := stringArgDefault(request, "output", "")
 	locale := stringArgDefault(request, "locale", "en")
 	model := stringArgDefault(request, "model", "")
 	sddStandard := stringArgDefault(request, "sdd_standard", "")
 
-	result, err := executeSpecs(ctx, name, fromContext, locale, model, sddStandard)
+	result, err := executeSpecs(ctx, name, fromContext, output, locale, model, sddStandard)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Spec generation failed: %v", err)), nil
 	}
@@ -307,7 +309,7 @@ func handleAnalyzeProject(ctx context.Context, request mcp.CallToolRequest) (*mc
 	}
 
 	if withSpecs {
-		specResult, err := executeSpecs(ctx, name, result.OutputPath, locale, model, sddStandard)
+		specResult, err := executeSpecs(ctx, name, result.OutputPath, result.OutputPath, locale, model, sddStandard)
 		if err != nil {
 			sb.WriteString(fmt.Sprintf("\nSpec generation failed: %v\n", err))
 		} else {
@@ -675,7 +677,18 @@ func slugifySpecFeatureID(name string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-func executeSpecs(ctx context.Context, name, fromContextPath, locale, model, sddStandard string) (*dto.GenerationResult, error) {
+// resolveSpecOutputPath defaults the spec output directory to the context
+// directory when no explicit output is given — mirroring the CLI, where
+// --output defaults to --from-context (R-4r: CLI↔MCP SDD parity).
+func resolveSpecOutputPath(fromContext, output string) string {
+	if output == "" {
+		return fromContext
+	}
+	return output
+}
+
+func executeSpecs(ctx context.Context, name, fromContextPath, outputPath, locale, model, sddStandard string) (*dto.GenerationResult, error) {
+	outputPath = resolveSpecOutputPath(fromContextPath, outputPath)
 	apiKey, err := llm.ResolveAPIKey(model)
 	if err != nil {
 		return nil, err
@@ -710,7 +723,7 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model, sdd
 	config := &dto.SpecConfig{
 		ProjectName:     name,
 		FromContextPath: fromContextPath,
-		OutputPath:      fromContextPath,
+		OutputPath:      outputPath,
 		Model:           model,
 		Locale:          locale,
 		Layout:          standard.OutputLayout(),
@@ -728,7 +741,7 @@ func executeSpecs(ctx context.Context, name, fromContextPath, locale, model, sdd
 
 	// Update AGENTS.md with a specs reference, reusing the resolved standard so
 	// the listed file names match the layout that was actually generated.
-	agentsPath := filepath.Join(fromContextPath, "AGENTS.md")
+	agentsPath := filepath.Join(outputPath, "AGENTS.md")
 	content, readErr := os.ReadFile(agentsPath)
 	if readErr == nil && !strings.Contains(string(content), "specs/") {
 		specsRef := specsReferenceSection(locale, standard)

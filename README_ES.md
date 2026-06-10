@@ -1228,7 +1228,7 @@ codex mcp add codify -- codify serve
 | `generate_workflows` | Genera workflows para Claude Code (native skills) o Antigravity (.md nativo) — soporta modos `static` y `personalized`                                                     |
 | `generate_hooks`     | Genera bundles de hooks para Claude Code (guardrails deterministicos). Static-only, Claude-only. Produce `hooks.json` + scripts `.sh` para merge manual al `settings.json` |
 
-Todas las herramientas generativas soportan `locale` (`en`/`es`) y `model`. `generate_context` y `analyze_project` tambien aceptan `with_specs`. `generate_skills` acepta `mode`, `category`, `preset`, `target` y `project_context`. `generate_workflows` acepta `mode`, `preset`, `target` (`claude`/`antigravity`) y `project_context`. `generate_hooks` acepta `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) y `output` — sin model, context ni locale (los hooks son inglés-only, static-only).
+Todas las herramientas generativas soportan `locale` (`en`/`es`) y `model`. `generate_context` y `analyze_project` tambien aceptan `with_specs` (y `sdd_standard`). `generate_specs` acepta `from_context`, `output` (por defecto `from_context`) y `sdd_standard` (`openspec`/`spec-kit`) — paridad completa con el CLI `codify spec`. `generate_skills` acepta `mode`, `category`, `preset`, `target` y `project_context`. `generate_workflows` acepta `mode`, `preset`, `target` (`claude`/`antigravity`) y `project_context`. `generate_hooks` acepta `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) y `output` — sin model, context ni locale (los hooks son inglés-only, static-only).
 
 #### Herramientas read-only (sin API key)
 
