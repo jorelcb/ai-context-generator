@@ -14,8 +14,8 @@ import (
 
 	"github.com/jorelcb/codify/internal/application/command"
 	"github.com/jorelcb/codify/internal/domain/service"
-	infraresolver "github.com/jorelcb/codify/internal/infrastructure/resolver"
 	"github.com/jorelcb/codify/internal/infrastructure/llm"
+	infraresolver "github.com/jorelcb/codify/internal/infrastructure/resolver"
 )
 
 // NewResolveCmd builds `codify resolve` — interactive marker resolution
@@ -23,14 +23,14 @@ import (
 // the same ResolveMarkersCommand that the post-generate hook uses.
 func NewResolveCmd() *cobra.Command {
 	var (
-		allFiles   bool
-		since      string
-		noEnrich   bool
-		noPreview  bool
-		skipModeS  string
-		dryRun     bool
-		locale     string
-		modelFlag  string
+		allFiles  bool
+		since     string
+		noEnrich  bool
+		noPreview bool
+		skipModeS string
+		dryRun    bool
+		locale    string
+		modelFlag string
 	)
 
 	cmd := &cobra.Command{
@@ -73,7 +73,7 @@ Examples:
 
 			provider, _ := buildResolveProvider(modelFlag)
 
-			rcmd := command.NewResolveMarkersCommand(NewHuhPrompter(), provider)
+			rcmd := command.NewResolveMarkersCommand(NewTUIPrompter(), provider)
 			if !noEnrich && provider != nil {
 				rcmd = rcmd.WithEnricher(infraresolver.NewLLMEnricher(provider))
 			}

@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/charmbracelet/huh"
 	"github.com/mattn/go-isatty"
+
+	"github.com/jorelcb/codify/internal/interfaces/cli/tui/prompts"
 )
 
 // selectOption represents an option in an interactive menu.
@@ -19,19 +20,14 @@ func isInteractive() bool {
 	return isatty.IsTerminal(os.Stdin.Fd()) && isatty.IsTerminal(os.Stdout.Fd())
 }
 
-// promptSelect displays an interactive selection menu.
+// promptSelect displays an interactive selection menu (bubbletea-based; huh
+// was dropped to consolidate on the single TUI stack of ADR-0013).
 func promptSelect(title string, options []selectOption, defaultVal string) (string, error) {
-	huhOpts := make([]huh.Option[string], len(options))
+	opts := make([]prompts.Option, len(options))
 	for i, o := range options {
-		huhOpts[i] = huh.NewOption(o.Label, o.Value)
+		opts[i] = prompts.Option{Label: o.Label, Value: o.Value}
 	}
-
-	selected := defaultVal
-	err := huh.NewSelect[string]().
-		Title(title).
-		Options(huhOpts...).
-		Value(&selected).
-		Run()
+	selected, err := prompts.RunSelect(title, opts, defaultVal)
 	if err != nil {
 		return "", fmt.Errorf("selection cancelled")
 	}
@@ -40,11 +36,7 @@ func promptSelect(title string, options []selectOption, defaultVal string) (stri
 
 // promptInput muestra un campo de entrada de texto interactivo.
 func promptInput(title, defaultVal string) (string, error) {
-	value := defaultVal
-	err := huh.NewInput().
-		Title(title).
-		Value(&value).
-		Run()
+	value, err := prompts.RunInput(title, defaultVal)
 	if err != nil {
 		return "", fmt.Errorf("input cancelled")
 	}
@@ -56,11 +48,7 @@ func promptInput(title, defaultVal string) (string, error) {
 
 // promptConfirm displays an interactive boolean confirmation.
 func promptConfirm(title string, defaultVal bool) (bool, error) {
-	value := defaultVal
-	err := huh.NewConfirm().
-		Title(title).
-		Value(&value).
-		Run()
+	value, err := prompts.RunConfirm(title, defaultVal)
 	if err != nil {
 		return defaultVal, fmt.Errorf("confirmation cancelled")
 	}

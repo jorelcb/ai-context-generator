@@ -81,7 +81,7 @@ type MarkerEnricher interface {
 
 // InteractivePrompter abstracts the user-facing question loop so the
 // orchestrator can be exercised with a scripted prompter in tests. The CLI
-// implementation wraps charmbracelet/huh; the test implementation replays a
+// implementation wraps the bubbletea prompts (tui/prompts); the test implementation replays a
 // canned sequence.
 type InteractivePrompter interface {
 	// ConfirmTopLevel asks the global "Resolve N markers across M files?"
@@ -242,33 +242,33 @@ const (
 // %s placeholders: ISO date and the marker hint. Lowercase keys; lookup is
 // case-insensitive.
 var skipCommentTemplateByExt = map[string]string{
-	".md":   "<!-- TODO %s: %s -->",
-	".html": "<!-- TODO %s: %s -->",
-	".htm":  "<!-- TODO %s: %s -->",
-	".xml":  "<!-- TODO %s: %s -->",
-	".go":   "// TODO %s: %s",
-	".js":   "// TODO %s: %s",
-	".jsx":  "// TODO %s: %s",
-	".ts":   "// TODO %s: %s",
-	".tsx":  "// TODO %s: %s",
-	".java": "// TODO %s: %s",
-	".kt":   "// TODO %s: %s",
-	".rs":   "// TODO %s: %s",
-	".c":    "// TODO %s: %s",
-	".cpp":  "// TODO %s: %s",
-	".cc":   "// TODO %s: %s",
-	".h":    "// TODO %s: %s",
-	".hpp":  "// TODO %s: %s",
+	".md":    "<!-- TODO %s: %s -->",
+	".html":  "<!-- TODO %s: %s -->",
+	".htm":   "<!-- TODO %s: %s -->",
+	".xml":   "<!-- TODO %s: %s -->",
+	".go":    "// TODO %s: %s",
+	".js":    "// TODO %s: %s",
+	".jsx":   "// TODO %s: %s",
+	".ts":    "// TODO %s: %s",
+	".tsx":   "// TODO %s: %s",
+	".java":  "// TODO %s: %s",
+	".kt":    "// TODO %s: %s",
+	".rs":    "// TODO %s: %s",
+	".c":     "// TODO %s: %s",
+	".cpp":   "// TODO %s: %s",
+	".cc":    "// TODO %s: %s",
+	".h":     "// TODO %s: %s",
+	".hpp":   "// TODO %s: %s",
 	".swift": "// TODO %s: %s",
-	".cs":   "// TODO %s: %s",
-	".py":   "# TODO %s: %s",
-	".rb":   "# TODO %s: %s",
-	".sh":   "# TODO %s: %s",
-	".bash": "# TODO %s: %s",
-	".yml":  "# TODO %s: %s",
-	".yaml": "# TODO %s: %s",
-	".toml": "# TODO %s: %s",
-	".ini":  "# TODO %s: %s",
+	".cs":    "// TODO %s: %s",
+	".py":    "# TODO %s: %s",
+	".rb":    "# TODO %s: %s",
+	".sh":    "# TODO %s: %s",
+	".bash":  "# TODO %s: %s",
+	".yml":   "# TODO %s: %s",
+	".yaml":  "# TODO %s: %s",
+	".toml":  "# TODO %s: %s",
+	".ini":   "# TODO %s: %s",
 }
 
 // hintFromMarker extracts the human-readable hint inside a [DEFINE: ...]

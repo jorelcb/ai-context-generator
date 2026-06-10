@@ -9,7 +9,7 @@ import (
 )
 
 // resolveDefineMarkers is the CLI adapter for the post-generation resolve
-// hook. It assembles the dependencies (huh-based prompter, the active LLM
+// hook. It assembles the dependencies (TUI prompter, the active LLM
 // provider, the LLM-driven enricher) and delegates to
 // command.ResolveMarkersCommand for the actual orchestration.
 //
@@ -21,7 +21,7 @@ func resolveDefineMarkers(ctx context.Context, files []string, locale string, pr
 	if !isInteractive() {
 		return nil
 	}
-	cmd := command.NewResolveMarkersCommand(NewHuhPrompter(), provider).
+	cmd := command.NewResolveMarkersCommand(NewTUIPrompter(), provider).
 		WithEnricher(infraresolver.NewLLMEnricher(provider)).
 		WithPreviewer(NewHuhDiffPreviewer())
 	_, err := cmd.Execute(ctx, command.ResolveRequest{
