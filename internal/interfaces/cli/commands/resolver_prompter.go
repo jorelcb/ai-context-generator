@@ -8,24 +8,24 @@ import (
 	"github.com/jorelcb/codify/internal/domain/service"
 )
 
-// HuhPrompter implements service.InteractivePrompter using charmbracelet/huh
-// for the terminal UI. It is the default prompter wired by the CLI when
+// TUIPrompter implements service.InteractivePrompter using the bubbletea
+// prompts (tui/prompts) for the terminal UI. It is the default prompter wired by the CLI when
 // invoking ResolveMarkersCommand.
 //
 // Phase 0 keeps the same UX as the legacy resolver: top-level confirm,
 // per-file header, surrounding context display, plain-text input prompt.
 // Phase 3 will replace AskMarker with the enriched UI (numbered suggestions,
 // default, context-aware help).
-type HuhPrompter struct{}
+type TUIPrompter struct{}
 
-// NewHuhPrompter returns a prompter ready to be passed to
+// NewTUIPrompter returns a prompter ready to be passed to
 // command.NewResolveMarkersCommand.
-func NewHuhPrompter() *HuhPrompter {
-	return &HuhPrompter{}
+func NewTUIPrompter() *TUIPrompter {
+	return &TUIPrompter{}
 }
 
 // ConfirmTopLevel asks the global "resolve N markers across M files?" prompt.
-func (p *HuhPrompter) ConfirmTopLevel(totalMarkers, totalFiles int) (bool, error) {
+func (p *TUIPrompter) ConfirmTopLevel(totalMarkers, totalFiles int) (bool, error) {
 	fmt.Println()
 	fmt.Printf("Found %d [DEFINE] marker(s) across %d file(s).\n", totalMarkers, totalFiles)
 	proceed, err := promptConfirm("Resolve them interactively now?", true)
@@ -37,7 +37,7 @@ func (p *HuhPrompter) ConfirmTopLevel(totalMarkers, totalFiles int) (bool, error
 }
 
 // AnnounceFile prints the per-file header before its markers are walked.
-func (p *HuhPrompter) AnnounceFile(path string, markerCount int) {
+func (p *TUIPrompter) AnnounceFile(path string, markerCount int) {
 	fmt.Println()
 	fmt.Printf("── %s (%d marker%s) ──\n", path, markerCount, pluralS(markerCount))
 }
@@ -51,7 +51,7 @@ func (p *HuhPrompter) AnnounceFile(path string, markerCount int) {
 //   - Legacy: when no enrichment is available (nil enricher, LLM failure,
 //     sanitizer rejected everything), render the marker text and ask for
 //     free-text input, same as pre-Phase-3.
-func (p *HuhPrompter) AskMarker(fileContent string, marker service.EnrichedMarker) (service.PromptedAnswer, error) {
+func (p *TUIPrompter) AskMarker(fileContent string, marker service.EnrichedMarker) (service.PromptedAnswer, error) {
 	showMarkerLineContext(fileContent, marker.Line)
 
 	if marker.Question != "" {
@@ -60,7 +60,7 @@ func (p *HuhPrompter) AskMarker(fileContent string, marker service.EnrichedMarke
 	return p.askLegacy(marker)
 }
 
-func (p *HuhPrompter) askLegacy(marker service.EnrichedMarker) (service.PromptedAnswer, error) {
+func (p *TUIPrompter) askLegacy(marker service.EnrichedMarker) (service.PromptedAnswer, error) {
 	ans, err := promptInput(fmt.Sprintf("Your input for L%d (Enter to skip)", marker.Line), "")
 	if err != nil {
 		return service.PromptedAnswer{}, err
@@ -69,7 +69,7 @@ func (p *HuhPrompter) askLegacy(marker service.EnrichedMarker) (service.Prompted
 	return service.PromptedAnswer{Answer: trimmed, Skip: trimmed == ""}, nil
 }
 
-func (p *HuhPrompter) askEnriched(marker service.EnrichedMarker) (service.PromptedAnswer, error) {
+func (p *TUIPrompter) askEnriched(marker service.EnrichedMarker) (service.PromptedAnswer, error) {
 	fmt.Println()
 	fmt.Printf("    %s\n", marker.Question)
 	if marker.Rationale != "" {
@@ -126,7 +126,7 @@ func ParseEnrichedInput(raw string, suggestions []string, def string) service.Pr
 }
 
 // ReportFileResult prints the per-file outcome line.
-func (p *HuhPrompter) ReportFileResult(path string, resolved int, mode string) {
+func (p *TUIPrompter) ReportFileResult(path string, resolved int, mode string) {
 	switch mode {
 	case "unchanged":
 		fmt.Printf("  (no answers — file unchanged)\n")

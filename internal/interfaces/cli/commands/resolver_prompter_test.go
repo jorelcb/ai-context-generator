@@ -64,9 +64,9 @@ func TestParseEnrichedInput_NoSuggestionsNumericIsFreeText(t *testing.T) {
 	}
 }
 
-// Smoke test of the type wiring: HuhPrompter satisfies the port and the
+// Smoke test of the type wiring: TUIPrompter satisfies the port and the
 // constructor returns a non-nil value. AskMarker / ConfirmTopLevel cannot be
 // exercised here because they require a TTY.
-func TestHuhPrompter_SatisfiesPort(t *testing.T) {
-	var _ service.InteractivePrompter = NewHuhPrompter()
+func TestTUIPrompter_SatisfiesPort(t *testing.T) {
+	var _ service.InteractivePrompter = NewTUIPrompter()
 }
