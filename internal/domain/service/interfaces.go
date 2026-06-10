@@ -108,6 +108,14 @@ type EvaluationRequest struct {
 	// ignores the flag (its caching API has a 4k-token minimum that most
 	// of our system prompts do not meet).
 	CacheableSystem bool
+
+	// Prefill seeds the assistant turn so the response can only continue from
+	// it — e.g. "[" for callers that parse a JSON array, eliminating prose
+	// preambles and markdown fences at the source. Providers that support it
+	// (Anthropic) prepend the prefill back to the returned Text; providers
+	// that do not (Gemini) ignore the field, so callers must keep their
+	// defensive parsing. Must not end in whitespace (the API rejects it).
+	Prefill string
 }
 
 // EvaluationResponse contains the raw text output of a one-shot prompt

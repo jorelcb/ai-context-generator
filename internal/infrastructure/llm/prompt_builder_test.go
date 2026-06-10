@@ -10,36 +10,51 @@ import (
 func TestPromptBuilder_BuildSystemPromptForFile(t *testing.T) {
 	builder := NewPromptBuilder()
 
-	tests := []struct {
-		guideName    string
-		wantFileName string
-	}{
-		{"agents", "AGENTS.md"},
-		{"context", "CONTEXT.md"},
-		{"interactions", "INTERACTIONS_LOG.md"},
+	prompt := builder.BuildSystemPromptForFile("en")
+
+	if prompt == "" {
+		t.Error("BuildSystemPromptForFile() returned empty string")
 	}
+	// Verify XML tag structure
+	if !strings.Contains(prompt, "<role>") {
+		t.Error("BuildSystemPromptForFile() should contain <role> XML tag")
+	}
+	if !strings.Contains(prompt, "<workflow>") {
+		t.Error("BuildSystemPromptForFile() should contain <workflow> XML tag")
+	}
+	if !strings.Contains(prompt, "<output_quality>") {
+		t.Error("BuildSystemPromptForFile() should contain <output_quality> XML tag")
+	}
+	// The target file travels in the user message — the system prompt must
+	// reference the <template_guide> file attribute instead of naming a file.
+	if !strings.Contains(prompt, "<template_guide>") {
+		t.Error("BuildSystemPromptForFile() should point the model at the <template_guide> file attribute")
+	}
+	for _, fileName := range []string{"AGENTS.md", "CONTEXT.md", "INTERACTIONS_LOG.md"} {
+		if strings.Contains(prompt, fileName) {
+			t.Errorf("BuildSystemPromptForFile() must not name %s — an interpolated file name breaks prompt-cache prefix reuse", fileName)
+		}
+	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.guideName, func(t *testing.T) {
-			prompt := builder.BuildSystemPromptForFile(tt.guideName, "en")
+// TestPromptBuilder_SystemPromptsStableAcrossRun pins the caching contract:
+// the system prompt of every per-file mode must be byte-identical across the
+// guides of one run, because Anthropic prompt caching is prefix-exact.
+func TestPromptBuilder_SystemPromptsStableAcrossRun(t *testing.T) {
+	builder := NewPromptBuilder()
 
-			if prompt == "" {
-				t.Error("BuildSystemPromptForFile() returned empty string")
-			}
-			if !strings.Contains(prompt, tt.wantFileName) {
-				t.Errorf("BuildSystemPromptForFile() should mention %s", tt.wantFileName)
-			}
-			// Verify XML tag structure
-			if !strings.Contains(prompt, "<role>") {
-				t.Error("BuildSystemPromptForFile() should contain <role> XML tag")
-			}
-			if !strings.Contains(prompt, "<workflow>") {
-				t.Error("BuildSystemPromptForFile() should contain <workflow> XML tag")
-			}
-			if !strings.Contains(prompt, "<output_quality>") {
-				t.Error("BuildSystemPromptForFile() should contain <output_quality> XML tag")
-			}
-		})
+	if a, b := builder.BuildSystemPromptForFile("en"), builder.BuildSystemPromptForFile("en"); a != b {
+		t.Error("generate system prompt must be identical across calls of one run")
+	}
+	if a, b := builder.BuildAnalyzeSystemPromptForFile("en"), builder.BuildAnalyzeSystemPromptForFile("en"); a != b {
+		t.Error("analyze system prompt must be identical across calls of one run")
+	}
+	ctx := "Go project with DDD architecture"
+	if a, b := builder.BuildPersonalizedSkillsSystemPrompt("claude", "en", ctx), builder.BuildPersonalizedSkillsSystemPrompt("claude", "en", ctx); a != b {
+		t.Error("skills system prompt must be identical across the skills of one run")
+	}
+	if a, b := builder.BuildWorkflowSkillSystemPrompt("en", ctx), builder.BuildWorkflowSkillSystemPrompt("en", ctx); a != b {
+		t.Error("workflow-skills system prompt must be identical across the workflows of one run")
 	}
 }
 
@@ -149,24 +164,25 @@ func TestPromptBuilder_BuildPersonalizedSkillsSystemPrompt(t *testing.T) {
 	builder := NewPromptBuilder()
 
 	tests := []struct {
-		skillName string
-		target    string
-		wantTag   string
+		target  string
+		wantTag string
 	}{
-		{"ddd_entity", "claude", "Claude Code"},
-		{"code_review", "codex", "Codex CLI"},
-		{"bdd_scenario", "antigravity", "Antigravity IDE"},
+		{"claude", "Claude Code"},
+		{"codex", "Codex CLI"},
+		{"antigravity", "Antigravity IDE"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.skillName+"_"+tt.target, func(t *testing.T) {
-			prompt := builder.BuildPersonalizedSkillsSystemPrompt(tt.skillName, tt.target, "en", "Go project with DDD architecture")
+		t.Run(tt.target, func(t *testing.T) {
+			prompt := builder.BuildPersonalizedSkillsSystemPrompt(tt.target, "en", "Go project with DDD architecture")
 
 			if prompt == "" {
 				t.Error("BuildPersonalizedSkillsSystemPrompt() returned empty string")
 			}
-			if !strings.Contains(prompt, tt.skillName) {
-				t.Errorf("BuildPersonalizedSkillsSystemPrompt() should mention skill name %s", tt.skillName)
+			// The skill name travels in the user message; the system prompt
+			// references it via the <skill_name> tag (caching contract).
+			if !strings.Contains(prompt, "<skill_name>") {
+				t.Error("BuildPersonalizedSkillsSystemPrompt() should reference the <skill_name> tag of the user message")
 			}
 			if !strings.Contains(prompt, tt.wantTag) {
 				t.Errorf("BuildPersonalizedSkillsSystemPrompt() should mention target %s", tt.wantTag)
@@ -220,61 +236,52 @@ func TestPromptBuilder_BuildSkillsUserMessage(t *testing.T) {
 func TestPromptBuilder_BuildAnalyzeSystemPromptForFile(t *testing.T) {
 	builder := NewPromptBuilder()
 
-	tests := []struct {
-		guideName    string
-		wantFileName string
-	}{
-		{"agents", "AGENTS.md"},
-		{"context", "CONTEXT.md"},
-		{"interactions", "INTERACTIONS_LOG.md"},
+	prompt := builder.BuildAnalyzeSystemPromptForFile("en")
+
+	if prompt == "" {
+		t.Error("BuildAnalyzeSystemPromptForFile() returned empty string")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.guideName, func(t *testing.T) {
-			prompt := builder.BuildAnalyzeSystemPromptForFile(tt.guideName, "en")
+	// Verify analyze-specific XML tags
+	if !strings.Contains(prompt, "<scan_trust>") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should contain <scan_trust> XML tag")
+	}
+	if !strings.Contains(prompt, "AUTO-SCANNED") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should mention AUTO-SCANNED")
+	}
+	if !strings.Contains(prompt, "FACTUAL") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should mention FACTUAL")
+	}
 
-			if prompt == "" {
-				t.Error("BuildAnalyzeSystemPromptForFile() returned empty string")
-			}
-			if !strings.Contains(prompt, tt.wantFileName) {
-				t.Errorf("BuildAnalyzeSystemPromptForFile() should mention %s", tt.wantFileName)
-			}
+	// Verify shared structure tags
+	if !strings.Contains(prompt, "<role>") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should contain <role> XML tag")
+	}
+	if !strings.Contains(prompt, "<workflow>") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should contain <workflow> XML tag")
+	}
+	if !strings.Contains(prompt, "<output_quality>") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should contain <output_quality> XML tag")
+	}
 
-			// Verify analyze-specific XML tags
-			if !strings.Contains(prompt, "<scan_trust>") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should contain <scan_trust> XML tag")
-			}
-			if !strings.Contains(prompt, "AUTO-SCANNED") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should mention AUTO-SCANNED")
-			}
-			if !strings.Contains(prompt, "FACTUAL") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should mention FACTUAL")
-			}
+	// The target file travels in the user message (caching contract).
+	for _, fileName := range []string{"AGENTS.md", "CONTEXT.md", "INTERACTIONS_LOG.md"} {
+		if strings.Contains(prompt, fileName) {
+			t.Errorf("BuildAnalyzeSystemPromptForFile() must not name %s — an interpolated file name breaks prompt-cache prefix reuse", fileName)
+		}
+	}
 
-			// Verify shared structure tags
-			if !strings.Contains(prompt, "<role>") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should contain <role> XML tag")
-			}
-			if !strings.Contains(prompt, "<workflow>") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should contain <workflow> XML tag")
-			}
-			if !strings.Contains(prompt, "<output_quality>") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should contain <output_quality> XML tag")
-			}
-
-			// Verify it does NOT contain the aspirational grounding rules
-			if strings.Contains(prompt, "only what the user stated") {
-				t.Error("BuildAnalyzeSystemPromptForFile() should NOT contain aspirational grounding language")
-			}
-		})
+	// Verify it does NOT contain the aspirational grounding rules
+	if strings.Contains(prompt, "only what the user stated") {
+		t.Error("BuildAnalyzeSystemPromptForFile() should NOT contain aspirational grounding language")
 	}
 }
 
 func TestPromptBuilder_BuildAnalyzeSystemPromptForFile_Locale(t *testing.T) {
 	builder := NewPromptBuilder()
 
-	promptEN := builder.BuildAnalyzeSystemPromptForFile("agents", "en")
-	promptES := builder.BuildAnalyzeSystemPromptForFile("agents", "es")
+	promptEN := builder.BuildAnalyzeSystemPromptForFile("en")
+	promptES := builder.BuildAnalyzeSystemPromptForFile("es")
 
 	if !strings.Contains(promptEN, "English") {
 		t.Error("English locale prompt should contain 'English'")
@@ -304,5 +311,44 @@ func TestPromptBuilder_BuildSpecSystemPrompt(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "SDD") {
 		t.Error("BuildSpecSystemPrompt() should mention SDD")
+	}
+}
+
+func TestPromptBuilder_BuildSpecSystemPrompt_HintsSeparator(t *testing.T) {
+	builder := NewPromptBuilder()
+
+	prompt := builder.BuildSpecSystemPrompt("ctx", "en", "<sdd_standard_hints>\nlowercase filenames\n</sdd_standard_hints>")
+
+	if strings.Contains(prompt, "</grounding_rules><sdd_standard_hints>") {
+		t.Error("hints block must be separated from grounding rules by a blank line, not glued on the same line")
+	}
+	if !strings.Contains(prompt, "</grounding_rules>\n\n<sdd_standard_hints>") {
+		t.Error("hints block should follow grounding rules after a blank line")
+	}
+}
+
+// TestPromptBuilder_BuildSpecUserMessage pins the single-copy contract: the
+// project context travels ONLY in the system prompt's <existing_context>;
+// the spec user message carries just the template guide. Duplicating the
+// context doubled the input tokens of every spec call (audit PR-1).
+func TestPromptBuilder_BuildSpecUserMessage(t *testing.T) {
+	builder := NewPromptBuilder()
+
+	guide := service.TemplateGuide{Name: "spec", Content: "# Spec template body"}
+	msg := builder.BuildSpecUserMessage(guide)
+
+	if !strings.Contains(msg, `<template_guide file="SPEC.md">`) {
+		t.Error("BuildSpecUserMessage() should carry the template guide with its file attribute")
+	}
+	if !strings.Contains(msg, "# Spec template body") {
+		t.Error("BuildSpecUserMessage() should include the guide content")
+	}
+	if strings.Contains(msg, "<project_description>") || strings.Contains(msg, "<existing_context>") {
+		t.Error("BuildSpecUserMessage() must NOT duplicate the project context — it already travels in the system prompt")
+	}
+
+	override := service.TemplateGuide{Name: "spec", Content: "body", OutputFileName: "spec.md"}
+	if msg := builder.BuildSpecUserMessage(override); !strings.Contains(msg, `<template_guide file="spec.md">`) {
+		t.Error("BuildSpecUserMessage() should honor the per-standard OutputFileName override")
 	}
 }

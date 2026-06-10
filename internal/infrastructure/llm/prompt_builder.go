@@ -29,17 +29,17 @@ var fileOutputNames = map[string]string{
 	"plan":         "PLAN.md",
 	"tasks":        "TASKS.md",
 	// Skills command output files (all produce SKILL.md in separate directories)
-	"ddd_entity":       "SKILL.md",
-	"clean_arch_layer": "SKILL.md",
-	"bdd_scenario":     "SKILL.md",
-	"cqrs_command":     "SKILL.md",
-	"hexagonal_port":   "SKILL.md",
-	"code_review":      "SKILL.md",
-	"test_strategy":    "SKILL.md",
-	"refactor_safely":      "SKILL.md",
-	"api_design":           "SKILL.md",
-	"conventional_commit":  "SKILL.md",
-	"semantic_versioning":  "SKILL.md",
+	"ddd_entity":          "SKILL.md",
+	"clean_arch_layer":    "SKILL.md",
+	"bdd_scenario":        "SKILL.md",
+	"cqrs_command":        "SKILL.md",
+	"hexagonal_port":      "SKILL.md",
+	"code_review":         "SKILL.md",
+	"test_strategy":       "SKILL.md",
+	"refactor_safely":     "SKILL.md",
+	"api_design":          "SKILL.md",
+	"conventional_commit": "SKILL.md",
+	"semantic_versioning": "SKILL.md",
 	// Testing skills
 	"test_foundational": "SKILL.md",
 	"test_tdd":          "SKILL.md",
@@ -109,7 +109,7 @@ func outputLanguageName(locale string) string {
 // technical framework choices (LLM may opine) from domain logic (LLM must
 // only echo what was stated).
 func groundingRulesForGeneratedContent() string {
-	return `<grounding_rules>
+	return fmt.Sprintf(`<grounding_rules>
 CRITICAL — Distinguish between two types of content:
 
 1. TECHNICAL FRAMEWORK (you may opine freely): architectural patterns, project
@@ -120,13 +120,22 @@ CRITICAL — Distinguish between two types of content:
    validations, default values, edge cases, data formats, concrete behaviors,
    error messages.
 
-For domain logic:
+%s
+</grounding_rules>`, domainLogicGroundingRules())
+}
+
+// domainLogicGroundingRules returns the "For domain logic:" bullet block shared
+// by the generate and analyze grounding rules. Both prompts diverge in how much
+// they trust the technical signals (analyze treats scan data as ground truth)
+// but the domain-logic discipline is identical — keeping it here prevents the
+// two copies from drifting apart.
+func domainLogicGroundingRules() string {
+	return `For domain logic:
 - Only include what is EXPLICITLY in the project description or scanned context
 - DO NOT invent validation rules, default values, formats, or behaviors
 - DO NOT generate speculative edge cases or error scenarios
 - If a template section asks for domain details the input does not cover,
-  mark "[DEFINE: short hint of what is needed]" instead of inventing an answer
-</grounding_rules>`
+  mark "[DEFINE: short hint of what is needed]" instead of inventing an answer`
 }
 
 // personalizationGroundingRules returns the anti-hallucination block used by
@@ -158,7 +167,13 @@ func commonOutputRules(locale string) string {
 }
 
 // BuildSystemPromptForFile returns a system prompt for generating a single context file.
-func (b *PromptBuilder) BuildSystemPromptForFile(guideName string, locale string) string {
+//
+// The target file name deliberately does NOT appear here — it travels in the
+// user message (the file attribute of <template_guide>). Keeping the system
+// prompt byte-identical across the per-guide calls of one run is what makes
+// the Anthropic prompt cache hit from the second file onward (caching is
+// prefix-exact; one interpolated name at the top used to defeat it entirely).
+func (b *PromptBuilder) BuildSystemPromptForFile(locale string) string {
 	return fmt.Sprintf(`<role>
 You are a senior software architect and expert technical writer.
 Your task is to generate context files optimized for AI-assisted software development.
@@ -166,8 +181,8 @@ The files you generate will be consumed by AI agents as working context.
 </role>
 
 <task>
-Generate the content for the file %s.
-You will receive a project description and a structural template guide.
+Generate the content for exactly ONE context file per request.
+The user message provides the project description and a structural template guide; the target file name is the file attribute of the <template_guide> tag.
 </task>
 
 %s
@@ -177,9 +192,8 @@ You will receive a project description and a structural template guide.
 2. Read the template guide provided in the user message
 3. Mentally separate: what is technical framework (opine freely) vs domain logic (only what was stated)
 4. For each template section, generate SPECIFIC and ACTIONABLE content for the described project
-5. Where the template uses variables like {{VARIABLE}}, generate real content ONLY if the description supports it; otherwise emit a labelled placeholder of the form [DEFINE: <what is missing>] (always include the colon and a concrete hint — never a bare "[DEFINE]")
+5. Where the template uses variables like {{VARIABLE}}, generate real content ONLY if the description supports it; otherwise emit a labelled placeholder of the form [DEFINE: <what is missing>] (always include the colon and a concrete hint — never a bare "[DEFINE]"). Example in context: "Currency handling: [DEFINE: ISO 4217 currency code — USD, EUR, other?]"
 6. Verify that no business rule or specific behavior was invented
-7. Place the most critical information at the BEGINNING and END of the file
 </workflow>
 
 <output_quality>
@@ -192,12 +206,15 @@ You will receive a project description and a structural template guide.
 - Use the template guide as structural reference, NOT as a variable replacement template
 </output_quality>
 
-%s`, FileOutputName(guideName), groundingRulesForGeneratedContent(), commonOutputRules(locale))
+%s`, groundingRulesForGeneratedContent(), commonOutputRules(locale))
 }
 
 // BuildAnalyzeSystemPromptForFile returns a system prompt optimized for analyze mode.
 // Unlike the generate prompt, this treats scan data as factual ground truth from real code.
-func (b *PromptBuilder) BuildAnalyzeSystemPromptForFile(guideName string, locale string) string {
+//
+// Same caching contract as BuildSystemPromptForFile: the target file name
+// lives in the user message so this prompt is identical across the run.
+func (b *PromptBuilder) BuildAnalyzeSystemPromptForFile(locale string) string {
 	return fmt.Sprintf(`<role>
 You are a senior software architect and expert technical writer.
 Your task is to generate context files optimized for AI-assisted software development.
@@ -205,8 +222,8 @@ The files you generate will be consumed by AI agents as working context.
 </role>
 
 <task>
-Generate the content for the file %s.
-You will receive a project analysis AUTO-SCANNED from an existing codebase and a structural template guide.
+Generate the content for exactly ONE context file per request.
+You will receive a project analysis AUTO-SCANNED from an existing codebase and a structural template guide; the target file name is the file attribute of the <template_guide> tag.
 </task>
 
 <scan_trust>
@@ -241,10 +258,7 @@ For scanned signals:
 - Incorporate existing context files to maintain continuity with prior decisions
 - Describe the real CI/CD pipeline, not a hypothetical one
 
-For domain logic:
-- Only include what is EXPLICITLY present in the README or existing context files
-- DO NOT invent business rules, validations, or behaviors not documented in the scan
-- Mark business-domain concepts not inferable from the codebase as "[DEFINE: <what is missing>]" — always include the colon and a concrete hint, never a bare "[DEFINE]"
+%s
 </grounding_rules>
 
 <workflow>
@@ -253,8 +267,7 @@ For domain logic:
 3. Read the template guide provided in the user message
 4. For each template section, generate SPECIFIC content grounded in the scan data
 5. For commands sections, use EXACT build targets detected (not generic placeholders)
-6. Where the template asks for domain details not in the scan, emit a labelled placeholder "[DEFINE: <what is missing>]" — always include the colon and a concrete hint, never a bare "[DEFINE]"
-7. Place the most critical information at the BEGINNING and END of the file
+6. Where the template asks for domain details not in the scan, emit a labelled placeholder "[DEFINE: <what is missing>]" — always include the colon and a concrete hint, never a bare "[DEFINE]". Example in context: "Currency handling: [DEFINE: ISO 4217 currency code — USD, EUR, other?]"
 </workflow>
 
 <output_quality>
@@ -267,7 +280,7 @@ For domain logic:
 - Use the template guide as structural reference, NOT as a variable replacement template
 </output_quality>
 
-%s`, FileOutputName(guideName), commonOutputRules(locale))
+%s`, domainLogicGroundingRules(), commonOutputRules(locale))
 }
 
 // BuildUserMessageForFile constructs the user message for generating a single file.
@@ -323,7 +336,11 @@ Skills can bundle scripts in scripts/ subdirectory.`,
 
 // BuildPersonalizedSkillsSystemPrompt returns a system prompt for generating personalized Agent Skills.
 // Unlike the generic version, this prompt instructs the LLM to adapt the skill to the user's project.
-func (b *PromptBuilder) BuildPersonalizedSkillsSystemPrompt(skillName, target, locale, projectContext string) string {
+//
+// The skill name lives in the user message (<skill_name>), not here: with the
+// name out, this prompt is identical across every skill of one run (same
+// project context), so the prompt cache hits from the second skill onward.
+func (b *PromptBuilder) BuildPersonalizedSkillsSystemPrompt(target, locale, projectContext string) string {
 	ecosystemDesc := targetEcosystemDescriptions[target]
 	if ecosystemDesc == "" {
 		ecosystemDesc = targetEcosystemDescriptions["claude"]
@@ -336,7 +353,7 @@ how to approach specific architectural and engineering tasks.
 </role>
 
 <task>
-Generate a complete, production-ready SKILL.md file for the skill: %s.
+Generate a complete, production-ready SKILL.md file for the skill named in the user message (<skill_name>).
 This skill must be PERSONALIZED to the user's project context provided below.
 The output must include proper YAML frontmatter for the target ecosystem.
 </task>
@@ -390,19 +407,19 @@ description: Design rich domain entities for the order module using Go and gorm
 # DDD Entity — Order aggregate
 
 ## When to use
-- Adding a new aggregate root inside ` + "`internal/domain/order/`" + `
+- Adding a new aggregate root inside `+"`internal/domain/order/`"+`
 - Splitting an existing entity that has grown too many responsibilities
 - Encapsulating invariants currently scattered across services
 
 ## Process
-1. Identify the invariants the aggregate must protect (e.g. ` + "`Total >= 0`" + `, status transitions)
-2. Model identity as a value object (` + "`OrderID`" + `) — never expose primitives
-3. Place behavior on the entity, not on a service: ` + "`o.Confirm()`" + `, ` + "`o.Cancel(reason)`" + `
+1. Identify the invariants the aggregate must protect (e.g. `+"`Total >= 0`"+`, status transitions)
+2. Model identity as a value object (`+"`OrderID`"+`) — never expose primitives
+3. Place behavior on the entity, not on a service: `+"`o.Confirm()`"+`, `+"`o.Cancel(reason)`"+`
 4. Validate every state transition before mutating fields
-5. Emit a domain event per state change (` + "`OrderConfirmed`" + `, ` + "`OrderCancelled`" + `)
+5. Emit a domain event per state change (`+"`OrderConfirmed`"+`, `+"`OrderCancelled`"+`)
 
 ## Example
-` + "```go" + `
+`+"```go"+`
 type Order struct {
     id        OrderID
     status    OrderStatus
@@ -418,7 +435,7 @@ func (o *Order) Confirm() error {
     o.events = append(o.events, OrderConfirmed{ID: o.id})
     return nil
 }
-` + "```" + `
+`+"```"+`
 
 ## Anti-patterns
 - Anemic models: data-only structs with all logic in services
@@ -445,7 +462,7 @@ func (o *Order) Confirm() error {
 - DO NOT add explanations before or after the content
 - Content must be in %s
 - Start with the --- YAML frontmatter delimiter
-</rules>`, skillName, projectContext, ecosystemDesc, personalizationGroundingRules("skill"), outputLanguageName(locale))
+</rules>`, projectContext, ecosystemDesc, personalizationGroundingRules("skill"), outputLanguageName(locale))
 }
 
 // BuildSkillsUserMessage constructs the user message for generating a single skill.
@@ -467,7 +484,16 @@ func (b *PromptBuilder) BuildSkillsUserMessage(guide service.TemplateGuide, targ
 // convenciones específicas del estándar (layout, naming, etc.). Vacío para
 // OpenSpec — la base ya describe ese formato. No-vacío para Spec-Kit
 // (lowercase filenames, per-feature dir, etc.).
+//
+// El contexto del proyecto viaja ÚNICAMENTE acá (<existing_context>); el user
+// message de spec lleva solo el template guide (BuildSpecUserMessage). Antes
+// se enviaba duplicado en ambos lados — miles de tokens repetidos por cada
+// artefacto generado (auditoría PR-1).
 func (b *PromptBuilder) BuildSpecSystemPrompt(existingContext string, locale string, standardHints string) string {
+	hints := strings.TrimSpace(standardHints)
+	if hints != "" {
+		hints = "\n\n" + hints
+	}
 	return fmt.Sprintf(`<role>
 You are a senior software architect specialized in technical specifications.
 Your task is to generate SDD (Spec-Driven Development) specification documents from an existing project context.
@@ -476,7 +502,7 @@ The context you receive was previously generated and contains the project's arch
 
 <task>
 Generate actionable specification documents based on the existing project context.
-You will receive the complete project context and a template guide for the specific file to generate.
+The complete project context is in <existing_context> below; the user message provides the template guide for the specific file to generate (its file attribute names the target file).
 </task>
 
 <existing_context>
@@ -505,11 +531,27 @@ You will receive the complete project context and a template guide for the speci
 - Base ALL content on the existing context provided
 </output_quality>
 
-%s`, existingContext, groundingRulesForGeneratedContent(), standardHints, commonOutputRules(locale))
+%s`, existingContext, groundingRulesForGeneratedContent(), hints, commonOutputRules(locale))
+}
+
+// BuildSpecUserMessage constructs the user message for generating a single
+// spec artifact. Deliberadamente lleva SOLO el template guide: el contexto del
+// proyecto ya viaja en el <existing_context> del system prompt y repetirlo acá
+// duplicaba los tokens de entrada de cada llamada de spec (auditoría PR-1) —
+// además de no ser cacheable, al variar el user message por artefacto.
+func (b *PromptBuilder) BuildSpecUserMessage(guide service.TemplateGuide) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("<template_guide file=%q>\n", GuideOutputName(guide)))
+	sb.WriteString(guide.Content)
+	sb.WriteString("\n</template_guide>\n")
+	return sb.String()
 }
 
 // BuildPersonalizedWorkflowsSystemPrompt returns a system prompt for generating personalized Antigravity workflows.
-func (b *PromptBuilder) BuildPersonalizedWorkflowsSystemPrompt(workflowName, locale, projectContext string) string {
+//
+// The workflow name lives in the user message (<workflow_name>) — same caching
+// contract as BuildPersonalizedSkillsSystemPrompt.
+func (b *PromptBuilder) BuildPersonalizedWorkflowsSystemPrompt(locale, projectContext string) string {
 	return fmt.Sprintf(`<role>
 You are a senior DevOps engineer and workflow automation specialist.
 Your task is to generate Antigravity workflow files — multi-step recipes that AI agents execute on demand.
@@ -517,7 +559,7 @@ Workflows are markdown files with numbered steps that teach agents how to perfor
 </role>
 
 <task>
-Generate a complete, production-ready Antigravity workflow file for: %s.
+Generate a complete, production-ready Antigravity workflow file for the workflow named in the user message (<workflow_name>).
 This workflow must be PERSONALIZED to the user's project context provided below.
 The output must include proper YAML frontmatter with a description field (max 250 characters).
 </task>
@@ -573,28 +615,28 @@ description: Run unit + integration tests with coverage for the Go monorepo and 
 # Run full test suite
 
 1. **Format and vet first**
-   ` + "```bash" + `
+   `+"```bash"+`
    gofmt -l . && go vet ./...
-   ` + "```" + `
+   `+"```"+`
    // turbo
 
 2. **Unit tests with coverage**
-   ` + "```bash" + `
+   `+"```bash"+`
    go test -count=1 -race -coverprofile=coverage.out ./...
-   ` + "```" + `
+   `+"```"+`
    // turbo
    // capture: COVERAGE_OUT
 
 3. **Integration tests (requires docker compose up)**
    // if docker compose ps --status=running | grep -q postgres
-   ` + "```bash" + `
+   `+"```bash"+`
    go test -tags=integration ./tests/integration/...
-   ` + "```" + `
+   `+"```"+`
 
 4. **Coverage threshold gate**
-   ` + "```bash" + `
+   `+"```bash"+`
    go tool cover -func={{COVERAGE_OUT}} | tail -1
-   ` + "```" + `
+   `+"```"+`
    // turbo
 
 5. **Report**
@@ -616,7 +658,7 @@ description: Run unit + integration tests with coverage for the Go monorepo and 
 - DO NOT add explanations before or after the content
 - Content must be in %s
 - Start with the --- YAML frontmatter delimiter
-</rules>`, workflowName, projectContext, personalizationGroundingRules("workflow"), outputLanguageName(locale))
+</rules>`, projectContext, personalizationGroundingRules("workflow"), outputLanguageName(locale))
 }
 
 // BuildWorkflowsUserMessage constructs the user message for generating a single workflow.
@@ -634,7 +676,10 @@ func (b *PromptBuilder) BuildWorkflowsUserMessage(guide service.TemplateGuide, t
 
 // BuildWorkflowSkillSystemPrompt returns a system prompt for generating a Claude Code native SKILL.md.
 // The LLM generates a complete skill file with frontmatter and personalized workflow instructions.
-func (b *PromptBuilder) BuildWorkflowSkillSystemPrompt(workflowName, locale, projectContext string) string {
+//
+// The workflow name lives in the user message (<workflow_name>) — same caching
+// contract as BuildPersonalizedSkillsSystemPrompt.
+func (b *PromptBuilder) BuildWorkflowSkillSystemPrompt(locale, projectContext string) string {
 	return fmt.Sprintf(`<role>
 You are a senior DevOps engineer and workflow automation specialist for Claude Code.
 Your task is to generate a native Claude Code skill (SKILL.md) that guides an AI agent
@@ -642,7 +687,7 @@ through a multi-step workflow using natural instructions.
 </role>
 
 <task>
-Generate a complete, production-ready SKILL.md for the workflow: %s.
+Generate a complete, production-ready SKILL.md for the workflow named in the user message (<workflow_name>).
 This skill must be PERSONALIZED to the user's project context provided below.
 The output must include proper YAML frontmatter.
 </task>
@@ -712,33 +757,33 @@ context: [VERSION, RELEASE_NOTES]
 # Release cycle
 
 1. **Verify clean working tree**
-   Run ` + "`git status --short`" + `. If any files are listed, stop and ask the user how to proceed.
+   Run `+"`git status --short`"+`. If any files are listed, stop and ask the user how to proceed.
 
 2. **Run the full test suite**
-   Execute ` + "`go test -count=1 -race ./...`" + `. If any test fails, stop and report the first failing package.
+   Execute `+"`go test -count=1 -race ./...`"+`. If any test fails, stop and report the first failing package.
 
 3. **Bump version**
-   Edit ` + "`internal/version/version.go`" + ` and replace the constant with ` + "`{{VERSION}}`" + `.
+   Edit `+"`internal/version/version.go`"+` and replace the constant with `+"`{{VERSION}}`"+`.
 
 4. **Update CHANGELOG.md**
-   Prepend a new section dated today with ` + "`{{RELEASE_NOTES}}`" + `, grouped by Added / Changed / Fixed.
+   Prepend a new section dated today with `+"`{{RELEASE_NOTES}}`"+`, grouped by Added / Changed / Fixed.
 
 5. **Commit and tag**
-   ` + "```bash" + `
+   `+"```bash"+`
    git add internal/version/version.go CHANGELOG.md
    git commit -m "chore(release): v{{VERSION}}"
    git tag -a v{{VERSION}} -m "v{{VERSION}}"
-   ` + "```" + `
+   `+"```"+`
 
 6. **Push branch and tag**
-   ` + "```bash" + `
+   `+"```bash"+`
    git push origin HEAD && git push origin v{{VERSION}}
-   ` + "```" + `
+   `+"```"+`
 
 7. **Open GitHub release**
-   ` + "```bash" + `
+   `+"```bash"+`
    gh release create v{{VERSION}} --notes-file CHANGELOG.md --title "v{{VERSION}}"
-   ` + "```" + `
+   `+"```"+`
 </output_example>
 
 <output_quality>
@@ -755,7 +800,7 @@ context: [VERSION, RELEASE_NOTES]
 - DO NOT add explanations before or after the content
 - Content must be in %s
 - Start with the --- YAML frontmatter delimiter
-</rules>`, workflowName, projectContext, personalizationGroundingRules("Claude Code skill"), outputLanguageName(locale))
+</rules>`, projectContext, personalizationGroundingRules("Claude Code skill"), outputLanguageName(locale))
 }
 
 // BuildWorkflowSkillUserMessage constructs the user message for generating a native Claude Code SKILL.md.

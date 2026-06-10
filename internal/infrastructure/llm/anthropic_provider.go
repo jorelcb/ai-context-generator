@@ -77,8 +77,28 @@ func (p *AnthropicProvider) GenerateContext(ctx context.Context, req service.Gen
 
 		validation := ValidateOutput(content, req.Mode, outputName)
 		if validation.Fatal {
-			recordUsage("anthropic", p.model, commandFromMode(req.Mode), totalIn, totalOut, time.Since(start), false)
-			return nil, fmt.Errorf("output for %s was rejected by validator: %v", outputName, validation.Warnings)
+			// One retry per file: fatal shape failures (empty output, stubs)
+			// are usually transient, and aborting here used to throw away every
+			// file already generated in this run.
+			if p.progressOut != nil {
+				fmt.Fprintf(p.progressOut, "  [%d/%d] %s rejected (%v) — retrying...", i+1, len(req.TemplateGuides), outputName, validation.Warnings)
+			}
+			retryContent, retryIn, retryOut, retryErr := p.generateSingleFile(ctx, req, guide)
+			totalIn += retryIn
+			totalOut += retryOut
+			if retryErr != nil {
+				recordUsage("anthropic", p.model, commandFromMode(req.Mode), totalIn, totalOut, time.Since(start), false)
+				return nil, fmt.Errorf("failed to regenerate %s after validator rejection: %w", outputName, retryErr)
+			}
+			validation = ValidateOutput(retryContent, req.Mode, outputName)
+			if validation.Fatal {
+				recordUsage("anthropic", p.model, commandFromMode(req.Mode), totalIn, totalOut, time.Since(start), false)
+				return nil, fmt.Errorf("output for %s was rejected by validator twice: %v", outputName, validation.Warnings)
+			}
+			content = retryContent
+			if p.progressOut != nil {
+				fmt.Fprintf(p.progressOut, " done (%d tokens)\n", retryOut)
+			}
 		}
 		emitValidationFeedback(p.progressOut, outputName, validation)
 
@@ -116,30 +136,47 @@ func (p *AnthropicProvider) generateSingleFile(
 	switch req.Mode {
 	case "spec":
 		systemPrompt = p.promptBuilder.BuildSpecSystemPrompt(req.ExistingContext, req.Locale, req.SDDStandardHints)
-		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
+		userMessage = p.promptBuilder.BuildSpecUserMessage(guide)
 	case "skills":
-		systemPrompt = p.promptBuilder.BuildPersonalizedSkillsSystemPrompt(guide.Name, req.Target, req.Locale, req.ProjectContext)
+		systemPrompt = p.promptBuilder.BuildPersonalizedSkillsSystemPrompt(req.Target, req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildSkillsUserMessage(guide, req.Target)
 	case "workflow-skills":
-		systemPrompt = p.promptBuilder.BuildWorkflowSkillSystemPrompt(guide.Name, req.Locale, req.ProjectContext)
+		systemPrompt = p.promptBuilder.BuildWorkflowSkillSystemPrompt(req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildWorkflowSkillUserMessage(guide)
 	case "workflows":
-		systemPrompt = p.promptBuilder.BuildPersonalizedWorkflowsSystemPrompt(guide.Name, req.Locale, req.ProjectContext)
+		systemPrompt = p.promptBuilder.BuildPersonalizedWorkflowsSystemPrompt(req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildWorkflowsUserMessage(guide, req.Target)
 	case "analyze":
-		systemPrompt = p.promptBuilder.BuildAnalyzeSystemPromptForFile(guide.Name, req.Locale)
+		systemPrompt = p.promptBuilder.BuildAnalyzeSystemPromptForFile(req.Locale)
 		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
 	default:
 		if req.Mode != "" && req.Mode != "generate" {
 			return "", 0, 0, fmt.Errorf("unknown generation mode: %q", req.Mode)
 		}
-		systemPrompt = p.promptBuilder.BuildSystemPromptForFile(guide.Name, req.Locale)
+		systemPrompt = p.promptBuilder.BuildSystemPromptForFile(req.Locale)
 		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
 	}
 
-	// Mark the system prompt as cacheable so subsequent calls within the
-	// same generation (one call per template guide) reuse the prompt cache
-	// instead of re-billing the full system prompt every time.
+	messages := []anthropic.MessageParam{
+		anthropic.NewUserMessage(anthropic.NewTextBlock(userMessage)),
+	}
+
+	// Frontmatter modes prefill the assistant turn with the --- delimiter:
+	// the response can then only continue the frontmatter, which removes the
+	// whole class of preamble/fence-wrapping deviations. The prefill is
+	// prepended back to the streamed text below (the API returns only the
+	// continuation). No trailing whitespace — the API rejects it in prefills.
+	const frontmatterPrefill = "---"
+	prefill := ""
+	if req.Mode == "skills" || req.Mode == "workflows" || req.Mode == "workflow-skills" {
+		prefill = frontmatterPrefill
+		messages = append(messages, anthropic.NewAssistantMessage(anthropic.NewTextBlock(prefill)))
+	}
+
+	// The system prompt is byte-identical across the per-guide calls of one
+	// run — the variable parts (target file, skill/workflow name) travel in
+	// the user message — so marking it cacheable yields real prefix hits from
+	// the second file onward.
 	stream := p.client.Messages.NewStreaming(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(p.model),
 		MaxTokens: 16000,
@@ -149,13 +186,12 @@ func (p *AnthropicProvider) generateSingleFile(
 				CacheControl: anthropic.NewCacheControlEphemeralParam(),
 			},
 		},
-		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(userMessage)),
-		},
+		Messages: messages,
 	})
 
 	var textBuilder strings.Builder
 	var inTokens, outTokens int64
+	var stopReason anthropic.StopReason
 
 	for stream.Next() {
 		event := stream.Current()
@@ -170,16 +206,27 @@ func (p *AnthropicProvider) generateSingleFile(
 			}
 		case anthropic.MessageDeltaEvent:
 			outTokens = evt.Usage.OutputTokens
+			if evt.Delta.StopReason != "" {
+				stopReason = anthropic.StopReason(evt.Delta.StopReason)
+			}
 		}
 	}
 
 	if err := stream.Err(); err != nil {
-		return "", 0, 0, fmt.Errorf("streaming failed: %w", err)
+		return "", int(inTokens), int(outTokens), fmt.Errorf("streaming failed: %w", err)
 	}
 
 	text := textBuilder.String()
 	if text == "" {
-		return "", 0, 0, fmt.Errorf("empty response from LLM")
+		return "", int(inTokens), int(outTokens), fmt.Errorf("empty response from LLM")
+	}
+	// Truncated output must never reach disk: a max_tokens stop means the
+	// file is incomplete even though the stream ended without error.
+	if stopReason == anthropic.StopReasonMaxTokens {
+		return "", int(inTokens), int(outTokens), fmt.Errorf("response truncated: max_tokens hit after %d output tokens — the file is incomplete and was discarded", outTokens)
+	}
+	if prefill != "" {
+		text = prefill + text
 	}
 
 	return text, int(inTokens), int(outTokens), nil
@@ -206,13 +253,21 @@ func (p *AnthropicProvider) EvaluatePrompt(ctx context.Context, req service.Eval
 		// case where the system prompt is identical across calls.
 		systemBlock.CacheControl = anthropic.NewCacheControlEphemeralParam()
 	}
+	messages := []anthropic.MessageParam{
+		anthropic.NewUserMessage(anthropic.NewTextBlock(req.UserPrompt)),
+	}
+	if req.Prefill != "" {
+		// Prefill the assistant turn: the model can only continue from it,
+		// which kills prose preambles and fence wrapping at the source. The
+		// API returns just the continuation, so the prefill is prepended back
+		// to the text below.
+		messages = append(messages, anthropic.NewAssistantMessage(anthropic.NewTextBlock(req.Prefill)))
+	}
 	stream := p.client.Messages.NewStreaming(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.Model(p.model),
 		MaxTokens: maxTokens,
 		System:    []anthropic.TextBlockParam{systemBlock},
-		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(req.UserPrompt)),
-		},
+		Messages:  messages,
 	})
 
 	var textBuilder strings.Builder
@@ -249,6 +304,9 @@ func (p *AnthropicProvider) EvaluatePrompt(ctx context.Context, req service.Eval
 	recordUsage("anthropic", p.model, cmd, int(inTokens), int(outTokens), time.Since(start), text != "")
 	if text == "" {
 		return nil, fmt.Errorf("empty response from LLM")
+	}
+	if req.Prefill != "" {
+		text = req.Prefill + text
 	}
 	// Surface max_tokens truncation explicitly; otherwise downstream JSON
 	// parsing fails with the opaque "unexpected end of JSON input".

@@ -81,8 +81,28 @@ func (p *GeminiProvider) GenerateContext(ctx context.Context, req service.Genera
 
 		validation := ValidateOutput(content, req.Mode, outputName)
 		if validation.Fatal {
-			recordUsage("gemini", p.model, commandFromMode(req.Mode), totalIn, totalOut, time.Since(start), false)
-			return nil, fmt.Errorf("output for %s was rejected by validator: %v", outputName, validation.Warnings)
+			// One retry per file: fatal shape failures (empty output, stubs)
+			// are usually transient, and aborting here used to throw away every
+			// file already generated in this run.
+			if p.progressOut != nil {
+				fmt.Fprintf(p.progressOut, "  [%d/%d] %s rejected (%v) — retrying...", i+1, len(req.TemplateGuides), outputName, validation.Warnings)
+			}
+			retryContent, retryIn, retryOut, retryErr := p.generateSingleFile(ctx, req, guide)
+			totalIn += retryIn
+			totalOut += retryOut
+			if retryErr != nil {
+				recordUsage("gemini", p.model, commandFromMode(req.Mode), totalIn, totalOut, time.Since(start), false)
+				return nil, fmt.Errorf("failed to regenerate %s after validator rejection: %w", outputName, retryErr)
+			}
+			validation = ValidateOutput(retryContent, req.Mode, outputName)
+			if validation.Fatal {
+				recordUsage("gemini", p.model, commandFromMode(req.Mode), totalIn, totalOut, time.Since(start), false)
+				return nil, fmt.Errorf("output for %s was rejected by validator twice: %v", outputName, validation.Warnings)
+			}
+			content = retryContent
+			if p.progressOut != nil {
+				fmt.Fprintf(p.progressOut, " done (%d tokens)\n", retryOut)
+			}
 		}
 		emitValidationFeedback(p.progressOut, outputName, validation)
 
@@ -119,24 +139,24 @@ func (p *GeminiProvider) generateSingleFile(
 	switch req.Mode {
 	case "spec":
 		systemPrompt = p.promptBuilder.BuildSpecSystemPrompt(req.ExistingContext, req.Locale, req.SDDStandardHints)
-		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
+		userMessage = p.promptBuilder.BuildSpecUserMessage(guide)
 	case "skills":
-		systemPrompt = p.promptBuilder.BuildPersonalizedSkillsSystemPrompt(guide.Name, req.Target, req.Locale, req.ProjectContext)
+		systemPrompt = p.promptBuilder.BuildPersonalizedSkillsSystemPrompt(req.Target, req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildSkillsUserMessage(guide, req.Target)
 	case "workflow-skills":
-		systemPrompt = p.promptBuilder.BuildWorkflowSkillSystemPrompt(guide.Name, req.Locale, req.ProjectContext)
+		systemPrompt = p.promptBuilder.BuildWorkflowSkillSystemPrompt(req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildWorkflowSkillUserMessage(guide)
 	case "workflows":
-		systemPrompt = p.promptBuilder.BuildPersonalizedWorkflowsSystemPrompt(guide.Name, req.Locale, req.ProjectContext)
+		systemPrompt = p.promptBuilder.BuildPersonalizedWorkflowsSystemPrompt(req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildWorkflowsUserMessage(guide, req.Target)
 	case "analyze":
-		systemPrompt = p.promptBuilder.BuildAnalyzeSystemPromptForFile(guide.Name, req.Locale)
+		systemPrompt = p.promptBuilder.BuildAnalyzeSystemPromptForFile(req.Locale)
 		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
 	default:
 		if req.Mode != "" && req.Mode != "generate" {
 			return "", 0, 0, fmt.Errorf("unknown generation mode: %q", req.Mode)
 		}
-		systemPrompt = p.promptBuilder.BuildSystemPromptForFile(guide.Name, req.Locale)
+		systemPrompt = p.promptBuilder.BuildSystemPromptForFile(req.Locale)
 		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
 	}
 
@@ -147,6 +167,7 @@ func (p *GeminiProvider) generateSingleFile(
 
 	var textBuilder strings.Builder
 	var inTokens, outTokens int32
+	var finishReason genai.FinishReason
 
 	for resp, err := range p.client.Models.GenerateContentStream(
 		ctx,
@@ -155,7 +176,7 @@ func (p *GeminiProvider) generateSingleFile(
 		config,
 	) {
 		if err != nil {
-			return "", 0, 0, fmt.Errorf("streaming failed: %w", err)
+			return "", int(inTokens), int(outTokens), fmt.Errorf("streaming failed: %w", err)
 		}
 
 		if resp.UsageMetadata != nil {
@@ -164,6 +185,9 @@ func (p *GeminiProvider) generateSingleFile(
 		}
 
 		for _, candidate := range resp.Candidates {
+			if candidate.FinishReason != "" {
+				finishReason = candidate.FinishReason
+			}
 			if candidate.Content != nil {
 				for _, part := range candidate.Content.Parts {
 					if part.Text != "" {
@@ -176,7 +200,12 @@ func (p *GeminiProvider) generateSingleFile(
 
 	text := textBuilder.String()
 	if text == "" {
-		return "", 0, 0, fmt.Errorf("empty response from LLM")
+		return "", int(inTokens), int(outTokens), fmt.Errorf("empty response from LLM")
+	}
+	// Truncated output must never reach disk: a MAX_TOKENS finish means the
+	// file is incomplete even though the stream ended without error.
+	if finishReason == genai.FinishReasonMaxTokens {
+		return "", int(inTokens), int(outTokens), fmt.Errorf("response truncated: max output tokens hit after %d tokens — the file is incomplete and was discarded", outTokens)
 	}
 
 	return text, int(inTokens), int(outTokens), nil

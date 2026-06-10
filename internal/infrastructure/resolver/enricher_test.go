@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jorelcb/codify/internal/domain/service"
@@ -105,6 +106,62 @@ func TestEnrich_InvalidJSON_FallsBackToZeroValueEnrichment(t *testing.T) {
 	}
 	if out[0].Question != "" || len(out[0].Suggestions) != 0 {
 		t.Errorf("fallback enrichment must be zero-valued: %+v", out[0])
+	}
+}
+
+// sequenceProvider returns one canned response per call, capturing every
+// request — used to exercise the retry-on-invalid-JSON path.
+type sequenceProvider struct {
+	responses []string
+	requests  []service.EvaluationRequest
+}
+
+func (s *sequenceProvider) GenerateContext(_ context.Context, _ service.GenerationRequest) (*service.GenerationResponse, error) {
+	return nil, errors.New("not used")
+}
+
+func (s *sequenceProvider) EvaluatePrompt(_ context.Context, req service.EvaluationRequest) (*service.EvaluationResponse, error) {
+	s.requests = append(s.requests, req)
+	idx := len(s.requests) - 1
+	if idx >= len(s.responses) {
+		return nil, errors.New("no more canned responses")
+	}
+	return &service.EvaluationResponse{Text: s.responses[idx]}, nil
+}
+
+func TestEnrich_InvalidJSON_RetriesOnceWithErrorFeedback(t *testing.T) {
+	provider := &sequenceProvider{responses: []string{
+		"sure! here is the JSON you asked for",
+		`[{"marker_text":"[DEFINE: x]","question":"q","suggestions":[],"default":"","rationale":""}]`,
+	}}
+	enricher := NewLLMEnricher(provider)
+	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}
+
+	out, err := enricher.Enrich(context.Background(), "f.md", "c", "en", hits)
+	if err != nil {
+		t.Fatalf("Enrich should succeed via the retry: %v", err)
+	}
+	if len(provider.requests) != 2 {
+		t.Fatalf("expected exactly 2 provider calls (original + retry), got %d", len(provider.requests))
+	}
+	if !strings.Contains(provider.requests[1].UserPrompt, "<previous_error>") {
+		t.Error("retry prompt should feed the parse error back to the model")
+	}
+	if out[0].Question != "q" {
+		t.Errorf("retry result should be merged into hits: %+v", out[0])
+	}
+}
+
+func TestEnrich_RequestUsesJSONPrefill(t *testing.T) {
+	provider := &fakeProvider{respText: "[]"}
+	enricher := NewLLMEnricher(provider)
+	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}
+
+	if _, err := enricher.Enrich(context.Background(), "f.md", "c", "en", hits); err != nil {
+		t.Fatalf("Enrich: %v", err)
+	}
+	if provider.captured.Prefill != "[" {
+		t.Errorf("enrichment should prefill the assistant turn with [ to force a bare JSON array, got %q", provider.captured.Prefill)
 	}
 }
 
