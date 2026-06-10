@@ -341,37 +341,7 @@ func updateAgentsWithSpecsRef(fromContextPath string, locale string, standard do
 		return nil
 	}
 
-	specsRef := buildSpecsReferenceSection(locale, standard, featureID)
+	specsRef := sdd.SpecsReferenceSection(locale, standard, featureID)
 	updated := string(content) + specsRef
 	return os.WriteFile(agentsPath, []byte(updated), 0o644)
-}
-
-// buildSpecsReferenceSection renders the markdown block that
-// updateAgentsWithSpecsRef appends to AGENTS.md. Kept separate so it can
-// be reused by MCP responses or other consumers that want to surface the
-// same per-standard file list.
-//
-// El path al archivo respeta el layout del estándar:
-//   - LayoutFlat: "specs/<file>"
-//   - LayoutFeatureGrouped: "specs/<featureID>/<file>"
-func buildSpecsReferenceSection(locale string, standard domainservice.SpecStandard, featureID string) string {
-	header := "\n## Specifications\n\n"
-	if locale == "es" {
-		header = "\n## Especificaciones\n\n"
-	}
-
-	prefix := "specs/"
-	if standard.OutputLayout() == domainservice.LayoutFeatureGrouped && featureID != "" {
-		prefix = "specs/" + featureID + "/"
-	}
-
-	var sb strings.Builder
-	sb.WriteString(header)
-	for _, a := range standard.BootstrapArtifacts() {
-		sb.WriteString("- `")
-		sb.WriteString(prefix)
-		sb.WriteString(a.FileName)
-		sb.WriteString("`\n")
-	}
-	return sb.String()
 }
