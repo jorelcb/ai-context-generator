@@ -2,6 +2,7 @@ package targetinstaller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -82,18 +83,71 @@ func TestClaudePluginInstaller_Install_ProjectScope(t *testing.T) {
 	}
 }
 
-func TestClaudePluginInstaller_Install_ClaudeMissing(t *testing.T) {
+// TestClaudePluginInstaller_Install_ClaudeMissing_B2Fallback verifies that with
+// `claude` absent, Install does NOT error but falls back to B2: it declares the
+// marketplace + plugin in the scope's settings.json (no CLI calls), so Claude
+// Code materializes it later (ADR-0012 §3).
+func TestClaudePluginInstaller_Install_ClaudeMissing_B2Fallback(t *testing.T) {
+	dir := t.TempDir()
 	fr := &fakeRunner{available: false}
-	c := NewClaudePluginInstallerWith(fr, t.TempDir())
-	err := c.Install(context.Background(), pluginManifest(), catalog.PackageContent{}, catalog.ScopeWorkstation)
-	if err == nil {
-		t.Fatal("expected error when claude is not on PATH")
-	}
-	if !strings.Contains(err.Error(), "not found on PATH") {
-		t.Errorf("error should explain claude missing + manual steps, got: %v", err)
+	c := NewClaudePluginInstallerWith(fr, dir)
+
+	if err := c.Install(context.Background(), pluginManifest(), catalog.PackageContent{}, catalog.ScopeWorkstation); err != nil {
+		t.Fatalf("B2 fallback should not error: %v", err)
 	}
 	if len(fr.calls) != 0 {
 		t.Errorf("no CLI calls should happen when claude is missing, got %v", fr.calls)
+	}
+
+	// settings.json now declares the marketplace + enabled plugin.
+	data, err := os.ReadFile(filepath.Join(dir, "settings.json"))
+	if err != nil {
+		t.Fatalf("settings.json not written: %v", err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("settings.json not valid JSON: %v", err)
+	}
+	mkts, _ := raw["extraKnownMarketplaces"].(map[string]any)
+	if _, ok := mkts["acme-tools"]; !ok {
+		t.Errorf("extraKnownMarketplaces missing acme-tools: %v", raw["extraKnownMarketplaces"])
+	}
+	plugins, _ := raw["enabledPlugins"].(map[string]any)
+	if enabled, _ := plugins["code-formatter@acme-tools"].(bool); !enabled {
+		t.Errorf("enabledPlugins missing code-formatter@acme-tools=true: %v", raw["enabledPlugins"])
+	}
+}
+
+// TestClaudePluginInstaller_B2Fallback_PreservesAndIsIdempotent checks the
+// fallback preserves unrelated settings keys and adds nothing on a second pass.
+func TestClaudePluginInstaller_B2Fallback_PreservesAndIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	// Pre-existing settings with an unrelated key.
+	seed := `{"model":"opus","extraKnownMarketplaces":{"other":{"source":"x/y"}}}`
+	if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := NewClaudePluginInstallerWith(&fakeRunner{available: false}, dir)
+
+	for i := 0; i < 2; i++ {
+		if err := c.Install(context.Background(), pluginManifest(), catalog.PackageContent{}, catalog.ScopeWorkstation); err != nil {
+			t.Fatalf("pass %d: %v", i, err)
+		}
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "settings.json"))
+	var raw map[string]any
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("settings.json not valid JSON: %v", err)
+	}
+	if raw["model"] != "opus" {
+		t.Errorf("unrelated key 'model' not preserved: %v", raw["model"])
+	}
+	mkts, _ := raw["extraKnownMarketplaces"].(map[string]any)
+	if _, ok := mkts["other"]; !ok {
+		t.Errorf("pre-existing marketplace 'other' clobbered: %v", mkts)
+	}
+	if _, ok := mkts["acme-tools"]; !ok {
+		t.Errorf("declared marketplace 'acme-tools' missing: %v", mkts)
 	}
 }
 

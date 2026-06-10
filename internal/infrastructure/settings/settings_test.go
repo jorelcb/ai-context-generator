@@ -338,6 +338,52 @@ func TestRemoveHooksMatching_NoMatchIsNoOp(t *testing.T) {
 	}
 }
 
+// TestMergePluginDeclaration_B2 verifies the B2 plugin-declaration fallback
+// (ADR-0012 §3): it writes extraKnownMarketplaces + enabledPlugins, preserves
+// other keys, and is idempotent.
+func TestMergePluginDeclaration_B2(t *testing.T) {
+	s := &Settings{Path: "/tmp/x", Raw: map[string]any{"model": "opus"}}
+
+	added, err := s.MergePluginDeclaration("fmt", "acme", "https://github.com/acme/p")
+	if err != nil {
+		t.Fatalf("MergePluginDeclaration: %v", err)
+	}
+	if !added {
+		t.Error("first declaration should report added=true")
+	}
+	if s.Raw["model"] != "opus" {
+		t.Errorf("unrelated key clobbered: %v", s.Raw["model"])
+	}
+	mkts := s.Raw["extraKnownMarketplaces"].(map[string]any)
+	src := mkts["acme"].(map[string]any)["source"]
+	if src != "https://github.com/acme/p" {
+		t.Errorf("marketplace source wrong: %v", src)
+	}
+	plugins := s.Raw["enabledPlugins"].(map[string]any)
+	if plugins["fmt@acme"] != true {
+		t.Errorf("plugin not enabled: %v", plugins)
+	}
+
+	// Idempotent second pass.
+	added2, err := s.MergePluginDeclaration("fmt", "acme", "https://github.com/acme/p")
+	if err != nil {
+		t.Fatalf("second MergePluginDeclaration: %v", err)
+	}
+	if added2 {
+		t.Error("re-declaring the same plugin should report added=false")
+	}
+}
+
+func TestMergePluginDeclaration_RequiresArgs(t *testing.T) {
+	s := &Settings{Raw: map[string]any{}}
+	if _, err := s.MergePluginDeclaration("", "mkt", "src"); err == nil {
+		t.Error("empty plugin should error")
+	}
+	if _, err := s.MergePluginDeclaration("p", "", "src"); err == nil {
+		t.Error("empty marketplace should error")
+	}
+}
+
 func mustParse(t *testing.T, doc string) map[string]any {
 	t.Helper()
 	var m map[string]any

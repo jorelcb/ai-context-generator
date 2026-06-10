@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify/internal/infrastructure/settings"
 )
 
 // Compile-time guard: ClaudePluginInstaller satisfies catalog.TargetInstaller.
@@ -70,7 +71,11 @@ func (c *ClaudePluginInstaller) Install(ctx context.Context, m catalog.PackageMa
 		return fmt.Errorf("claude plugin installer: manifest %q has no marketplace metadata", m.ID)
 	}
 	if _, err := c.runner.LookPath("claude"); err != nil {
-		return fmt.Errorf("claude plugin installer: `claude` not found on PATH — install Claude Code, or add the marketplace and plugin manually (`claude plugin marketplace add %s` then `claude plugin install %s@%s`)", marketplaceAddArg(m.Source.URI), m.ID, mkt)
+		// B2 fallback (ADR-0012 §3): `claude` is absent (agentless env), so we
+		// cannot install immediately. Declare the marketplace + plugin in
+		// settings.json instead; Claude Code materializes them on its next run.
+		// Best-effort and deferred — not an immediate, verified install.
+		return c.declareInSettings(m, scope, mkt)
 	}
 	scopeFlag, err := pluginScopeFlag(scope)
 	if err != nil {
@@ -88,6 +93,48 @@ func (c *ClaudePluginInstaller) Install(ctx context.Context, m catalog.PackageMa
 		return fmt.Errorf("claude plugin installer: install %s@%s: %w\n%s", m.ID, mkt, err, out)
 	}
 	return nil
+}
+
+// declareInSettings is the B2 fallback: it writes the plugin's marketplace and
+// an enabled-plugin entry into the scope's settings.json (preserving every
+// other key), so Claude Code installs it on its next run even though codify
+// could not call the CLI. It prints a notice making the deferred nature explicit
+// and returns nil on success (the declaration is codify's deliverable here).
+func (c *ClaudePluginInstaller) declareInSettings(m catalog.PackageManifest, scope catalog.Scope, mkt string) error {
+	path, err := c.settingsPathForScope(scope)
+	if err != nil {
+		return err
+	}
+	st, err := settings.Load(path)
+	if err != nil {
+		return fmt.Errorf("claude plugin installer: `claude` not on PATH and settings fallback failed: %w", err)
+	}
+	source := marketplaceAddArg(m.Source.URI)
+	if _, err := st.MergePluginDeclaration(m.ID, mkt, source); err != nil {
+		return fmt.Errorf("claude plugin installer: `claude` not on PATH and settings fallback failed: %w", err)
+	}
+	if _, err := st.Save(""); err != nil {
+		return fmt.Errorf("claude plugin installer: `claude` not on PATH and settings fallback failed: %w", err)
+	}
+	fmt.Fprintf(os.Stderr,
+		"→ `claude` not on PATH: declared %s@%s in %s (B2 fallback). "+
+			"Run Claude Code to finish installing, or `claude plugin install %s@%s`.\n",
+		m.ID, mkt, path, m.ID, mkt)
+	return nil
+}
+
+// settingsPathForScope resolves the settings.json the B2 fallback writes:
+// the agent config root (~/.claude or CLAUDE_CONFIG_DIR) for workstation scope,
+// and the project's .claude/settings.json for project scope.
+func (c *ClaudePluginInstaller) settingsPathForScope(scope catalog.Scope) (string, error) {
+	switch scope {
+	case catalog.ScopeWorkstation:
+		return filepath.Join(c.configDir, "settings.json"), nil
+	case catalog.ScopeProject:
+		return settings.ProjectSettingsPath()
+	default:
+		return "", fmt.Errorf("claude plugin installer: unsupported scope %q", scope)
+	}
 }
 
 // Uninstall removes the plugin via the native CLI. Idempotent.
