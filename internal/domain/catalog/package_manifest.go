@@ -66,6 +66,13 @@ const (
 	// not model gemini-extension packages. (The Gemini *model* API, used for
 	// generation, is unaffected and lives in infrastructure/llm.)
 	TargetAntigravityWF Target = "antigravity-workflow"
+	// TargetAntigravityPlugin: an Antigravity plugin sourced from a
+	// marketplace.json catalog. RESERVED (R-8 scaffolding): the manifest side
+	// is fully modeled, but functional install is BLOCKED until `agy` exposes
+	// arbitrary-marketplace registration (no `marketplace add` in agy v1.0.0 —
+	// known marketplaces are backend-served; see ADR-0012 §5). The
+	// AntigravityPluginInstaller returns an explicit blocked error.
+	TargetAntigravityPlugin Target = "antigravity-plugin"
 
 	// Behavior packages — declarative metadata that a generic adapter
 	// consumes at runtime to register new behaviors. The first instance

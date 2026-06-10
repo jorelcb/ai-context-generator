@@ -117,14 +117,15 @@ func TestMarketplaceSource_List_PluginWithoutName(t *testing.T) {
 }
 
 func TestMarketplaceURL(t *testing.T) {
-	cases := []struct{ ref, wantURL, wantAccept string }{
-		{"owner/repo", "https://api.github.com/repos/owner/repo/contents/.claude-plugin/marketplace.json", "application/vnd.github.raw+json"},
-		{"https://example.com/marketplace.json", "https://example.com/marketplace.json", ""},
+	cases := []struct{ ref, dir, wantURL, wantAccept string }{
+		{"owner/repo", ".claude-plugin", "https://api.github.com/repos/owner/repo/contents/.claude-plugin/marketplace.json", "application/vnd.github.raw+json"},
+		{"owner/repo", ".agents/plugins", "https://api.github.com/repos/owner/repo/contents/.agents/plugins/marketplace.json", "application/vnd.github.raw+json"},
+		{"https://example.com/marketplace.json", ".claude-plugin", "https://example.com/marketplace.json", ""},
 	}
 	for _, c := range cases {
-		gotURL, gotAccept := marketplaceURL(c.ref)
+		gotURL, gotAccept := marketplaceURL(c.ref, c.dir)
 		if gotURL != c.wantURL || gotAccept != c.wantAccept {
-			t.Errorf("marketplaceURL(%q) = (%q,%q), want (%q,%q)", c.ref, gotURL, gotAccept, c.wantURL, c.wantAccept)
+			t.Errorf("marketplaceURL(%q,%q) = (%q,%q), want (%q,%q)", c.ref, c.dir, gotURL, gotAccept, c.wantURL, c.wantAccept)
 		}
 	}
 }
@@ -132,5 +133,48 @@ func TestMarketplaceURL(t *testing.T) {
 func TestMarketplaceSource_Kind(t *testing.T) {
 	if NewPluginMarketplaceSource("x").Kind() != "claude-marketplace" {
 		t.Error("Kind() should be claude-marketplace")
+	}
+}
+
+// TestMarketplaceSource_EcosystemParameterization guards R-8: the SAME
+// marketplace.json read through each ecosystem's source emits that ecosystem's
+// Kind and Target.
+func TestMarketplaceSource_EcosystemParameterization(t *testing.T) {
+	doc := `{"name":"mkt","plugins":[{"name":"p1","description":"d"}]}`
+
+	cases := []struct {
+		ecosystem  string
+		wantKind   string
+		wantTarget catalog.Target
+	}{
+		{"claude", "claude-marketplace", catalog.TargetClaudePlugin},
+		{"antigravity", "antigravity-marketplace", catalog.TargetAntigravityPlugin},
+	}
+	for _, c := range cases {
+		src, err := NewPluginMarketplaceSourceFor(c.ecosystem, "owner/repo")
+		if err != nil {
+			t.Fatalf("NewPluginMarketplaceSourceFor(%s): %v", c.ecosystem, err)
+		}
+		src.withFetcher(func(context.Context, string) ([]byte, error) { return []byte(doc), nil })
+
+		if src.Kind() != c.wantKind {
+			t.Errorf("%s: Kind()=%q, want %q", c.ecosystem, src.Kind(), c.wantKind)
+		}
+		got, err := src.List(context.Background())
+		if err != nil {
+			t.Fatalf("%s: List: %v", c.ecosystem, err)
+		}
+		if len(got) != 1 || got[0].Target != c.wantTarget {
+			t.Errorf("%s: manifest target=%q, want %q", c.ecosystem, got[0].Target, c.wantTarget)
+		}
+		if got[0].Source.Kind != c.wantKind {
+			t.Errorf("%s: Source.Kind=%q, want %q", c.ecosystem, got[0].Source.Kind, c.wantKind)
+		}
+	}
+}
+
+func TestNewPluginMarketplaceSourceFor_UnknownEcosystem(t *testing.T) {
+	if _, err := NewPluginMarketplaceSourceFor("gemini", "x"); err == nil {
+		t.Error("unknown ecosystem should error (gemini CLI is deprecated, not modeled)")
 	}
 }

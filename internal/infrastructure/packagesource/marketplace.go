@@ -17,32 +17,74 @@ import (
 // catalog.PackageSource contract.
 var _ catalog.PackageSource = (*PluginMarketplaceSource)(nil)
 
-// PluginMarketplaceSource is a catalog.PackageSource over a Claude-style
-// plugin marketplace — the `.claude-plugin/marketplace.json` catalog format
-// (ADR-0012). It reads the marketplace.json and emits one TargetClaudePlugin
-// manifest per plugin entry.
+// marketplaceEcosystem captura lo que varía entre ecosystems en el formato
+// marketplace.json compartido (ADR-0012 §4): el Kind del source, el Target que
+// emiten los manifests, y el directorio del manifest dentro del repo.
+type marketplaceEcosystem struct {
+	kind        string         // Source.Kind (badges UI + routing de Fetch)
+	target      catalog.Target // Target emitido por cada manifest
+	manifestDir string         // directorio del marketplace.json en el repo
+}
+
+var marketplaceEcosystems = map[string]marketplaceEcosystem{
+	"claude": {
+		kind:        "claude-marketplace",
+		target:      catalog.TargetClaudePlugin,
+		manifestDir: ".claude-plugin",
+	},
+	// Antigravity (R-8 scaffolding): el formato converge con Claude (ADR-0012
+	// §4 — mismo marketplace.json, distinto namespace dir). El directorio
+	// `.agents/plugins` está confirmado para Codex y es la mejor hipótesis
+	// para Antigravity (verificación pendiente, item D.2.b). La instalación
+	// funcional sigue BLOQUEADA en `agy` (ver AntigravityPluginInstaller).
+	"antigravity": {
+		kind:        "antigravity-marketplace",
+		target:      catalog.TargetAntigravityPlugin,
+		manifestDir: ".agents/plugins",
+	},
+}
+
+// PluginMarketplaceSource is a catalog.PackageSource over the shared
+// marketplace.json plugin-catalog format (ADR-0012). It reads the
+// marketplace.json and emits one plugin manifest per entry, with the Target
+// and Source.Kind of the ecosystem it was built for.
 //
 // The format is shared/parallel across ecosystems (Claude/Codex/Antigravity),
-// so this reader is intentionally about the *format*, not a specific
-// ecosystem; the git/URL transport is an injectable fetcher. Materialization
-// is NOT this source's job — Fetch returns empty content, and the
-// per-ecosystem TargetInstaller delegates the actual install to the native
-// plugin CLI (e.g. `claude plugin install <id>@<marketplace>`; see ADR-0012
-// §3, validated by the 2026-05-30 spike).
+// so this reader is parameterized by ecosystem rather than hardcoded to one
+// (R-8); the git/URL transport is an injectable fetcher. Materialization is
+// NOT this source's job — Fetch returns empty content, and the per-ecosystem
+// TargetInstaller delegates the actual install to the native plugin CLI
+// (e.g. `claude plugin install <id>@<marketplace>`; see ADR-0012 §3).
 type PluginMarketplaceSource struct {
 	// ref locates the marketplace: a `owner/repo` GitHub shorthand or a full
 	// URL to the marketplace.json. Passed verbatim to the installer as the
 	// `claude plugin marketplace add <ref>` argument.
 	ref string
+	// eco fixes the ecosystem-specific knobs (Kind, Target, manifest dir).
+	eco marketplaceEcosystem
 	// fetch reads the raw marketplace.json bytes for ref. Injectable so tests
 	// run without network; defaults to httpFetchMarketplace.
 	fetch func(ctx context.Context, ref string) ([]byte, error)
 }
 
-// NewPluginMarketplaceSource builds a source for the marketplace at ref
-// (`owner/repo` or a marketplace.json URL).
+// NewPluginMarketplaceSource builds a Claude-ecosystem source for the
+// marketplace at ref (`owner/repo` or a marketplace.json URL).
 func NewPluginMarketplaceSource(ref string) *PluginMarketplaceSource {
-	return &PluginMarketplaceSource{ref: ref, fetch: httpFetchMarketplace}
+	s, _ := NewPluginMarketplaceSourceFor("claude", ref)
+	return s
+}
+
+// NewPluginMarketplaceSourceFor builds a source for the given ecosystem
+// ("claude" or "antigravity"). Unknown ecosystems error so callers fail loudly
+// instead of silently reading the wrong manifest path.
+func NewPluginMarketplaceSourceFor(ecosystem, ref string) (*PluginMarketplaceSource, error) {
+	eco, ok := marketplaceEcosystems[ecosystem]
+	if !ok {
+		return nil, fmt.Errorf("marketplace source: unknown ecosystem %q (claude or antigravity)", ecosystem)
+	}
+	s := &PluginMarketplaceSource{ref: ref, eco: eco}
+	s.fetch = s.httpFetchMarketplace
+	return s, nil
 }
 
 // withFetcher overrides the fetcher (tests).
@@ -52,7 +94,7 @@ func (s *PluginMarketplaceSource) withFetcher(f func(ctx context.Context, ref st
 }
 
 // Kind identifies this source for UI badges and Fetch routing.
-func (s *PluginMarketplaceSource) Kind() string { return "claude-marketplace" }
+func (s *PluginMarketplaceSource) Kind() string { return s.eco.kind }
 
 // marketplaceDoc is the subset of marketplace.json we read.
 type marketplaceDoc struct {
@@ -99,7 +141,7 @@ func (s *PluginMarketplaceSource) List(ctx context.Context) ([]catalog.PackageMa
 			ID:          p.Name,
 			Version:     version,
 			Description: p.Description,
-			Target:      catalog.TargetClaudePlugin,
+			Target:      s.eco.target,
 			Source:      catalog.SourceRef{Kind: s.Kind(), URI: s.ref},
 			Metadata:    map[string]string{catalog.MetaKeyMarketplace: doc.Name},
 		}
@@ -122,8 +164,8 @@ func (s *PluginMarketplaceSource) List(ctx context.Context) ([]catalog.PackageMa
 // written by codify. The manifest alone (id + marketplace + ref) is enough to
 // install.
 func (s *PluginMarketplaceSource) Fetch(ctx context.Context, m catalog.PackageManifest) (catalog.PackageContent, error) {
-	if m.Target != catalog.TargetClaudePlugin {
-		return catalog.PackageContent{}, fmt.Errorf("marketplace source: target %q not supported (claude-plugin only)", m.Target)
+	if m.Target != s.eco.target {
+		return catalog.PackageContent{}, fmt.Errorf("marketplace source: target %q not supported (%s only)", m.Target, s.eco.target)
 	}
 	return catalog.PackageContent{}, nil
 }
@@ -139,10 +181,11 @@ func MarketplaceName(m catalog.PackageManifest) string {
 
 // httpFetchMarketplace is the default fetcher. It accepts either a full
 // http(s) URL to a marketplace.json, or a GitHub `owner/repo` shorthand
-// (resolved to the default branch's `.claude-plugin/marketplace.json` via the
-// GitHub contents API, which avoids guessing the branch name).
-func httpFetchMarketplace(ctx context.Context, ref string) ([]byte, error) {
-	url, accept := marketplaceURL(ref)
+// (resolved to the default branch's `<manifestDir>/marketplace.json` via the
+// GitHub contents API, which avoids guessing the branch name). Bound as a
+// method so the ecosystem's manifest dir parameterizes the shorthand path.
+func (s *PluginMarketplaceSource) httpFetchMarketplace(ctx context.Context, ref string) ([]byte, error) {
+	url, accept := marketplaceURL(ref, s.eco.manifestDir)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -165,11 +208,13 @@ func httpFetchMarketplace(ctx context.Context, ref string) ([]byte, error) {
 
 // marketplaceURL maps a ref to a fetch URL. A full URL is used as-is; an
 // `owner/repo` shorthand resolves via the GitHub contents API with the raw
-// media type so the default branch is followed without hardcoding it.
-func marketplaceURL(ref string) (url, accept string) {
+// media type so the default branch is followed without hardcoding it. The
+// manifestDir is the ecosystem's marketplace.json directory in the repo
+// (`.claude-plugin` for Claude, `.agents/plugins` for Antigravity/Codex).
+func marketplaceURL(ref, manifestDir string) (url, accept string) {
 	if strings.HasPrefix(ref, "http://") || strings.HasPrefix(ref, "https://") {
 		return ref, ""
 	}
-	return fmt.Sprintf("https://api.github.com/repos/%s/contents/.claude-plugin/marketplace.json", ref),
+	return fmt.Sprintf("https://api.github.com/repos/%s/contents/%s/marketplace.json", ref, manifestDir),
 		"application/vnd.github.raw+json"
 }

@@ -291,13 +291,15 @@ func catalogApply(ctx context.Context, p catalogParams) error {
 }
 
 // catalogRegistry wires every installer the catalog can route to: Claude
-// skills/hooks (filesystem), Claude plugins (native CLI), and Antigravity
-// skills (filesystem). The registry routes by Target.
+// skills/hooks (filesystem), Claude plugins (native CLI), Antigravity skills
+// (filesystem), and the Antigravity plugin stub (R-8 — honest blocked error
+// until agy exposes marketplace registration). The registry routes by Target.
 func catalogRegistry() *targetinstaller.Registry {
 	return targetinstaller.NewRegistry(
 		mustClaudeInstaller(),
 		mustClaudePluginInstaller(),
 		mustAntigravityInstaller(),
+		targetinstaller.NewAntigravityPluginInstaller(),
 	)
 }
 
