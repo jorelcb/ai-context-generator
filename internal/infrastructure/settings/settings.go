@@ -205,6 +205,48 @@ func (s *Settings) PreviewMergedHooks(block map[string]any) ([]byte, error) {
 	return append(out, '\n'), nil
 }
 
+// MergePluginDeclaration declares a plugin and its marketplace in the settings
+// document — the "B2" fallback codify uses when the `claude` CLI is absent
+// (ADR-0012 §3). With the CLI present, codify installs immediately by shelling
+// out; without it (a truly agentless environment) it records the intent here so
+// Claude Code materializes the plugin on its next run. Best-effort and
+// deferred: this declares, it does not fetch.
+//
+// It writes two keys, preserving everything else in the document:
+//   - extraKnownMarketplaces[<marketplace>] = {"source": <source>}
+//   - enabledPlugins["<plugin>@<marketplace>"] = true
+//
+// Idempotent: re-declaring the same plugin/marketplace adds nothing and reports
+// added=false.
+func (s *Settings) MergePluginDeclaration(plugin, marketplace, source string) (added bool, err error) {
+	if plugin == "" || marketplace == "" {
+		return false, errors.New("settings: plugin and marketplace are required")
+	}
+
+	mkts, _ := s.Raw["extraKnownMarketplaces"].(map[string]any)
+	if mkts == nil {
+		mkts = map[string]any{}
+	}
+	if _, ok := mkts[marketplace]; !ok {
+		mkts[marketplace] = map[string]any{"source": source}
+		added = true
+	}
+	s.Raw["extraKnownMarketplaces"] = mkts
+
+	key := plugin + "@" + marketplace
+	plugins, _ := s.Raw["enabledPlugins"].(map[string]any)
+	if plugins == nil {
+		plugins = map[string]any{}
+	}
+	if enabled, ok := plugins[key].(bool); !ok || !enabled {
+		plugins[key] = true
+		added = true
+	}
+	s.Raw["enabledPlugins"] = plugins
+
+	return added, nil
+}
+
 // RemoveHooksMatching removes from s.Raw every hook handler whose "command"
 // string satisfies match. It is the uninstall counterpart to MergeHooks:
 // because the uninstall path has only the manifest (not the original
