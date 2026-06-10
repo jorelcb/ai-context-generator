@@ -79,6 +79,8 @@ func generateContextTool() server.ServerTool {
 		mcp.WithString("name", mcp.Required(), mcp.Description("Project name")),
 		mcp.WithString("description", mcp.Required(), mcp.Description("Project description")),
 		mcp.WithString("language", mcp.Description("Programming language (go, python, javascript, etc.)")),
+		mcp.WithString("project_type", mcp.Description("Project type hint (api, cli, library, service, webapp, etc.) — grounds the generated content")),
+		mcp.WithString("architecture", mcp.Description("Architecture hint (clean, hexagonal, mvc, microservices, etc.) — grounds the generated content")),
 		mcp.WithString("preset", mcp.Description("Template preset for context. Options: neutral (default — no architectural opinion), clean-ddd (DDD + Clean Architecture), hexagonal (Ports & Adapters), event-driven (CQRS + Event Sourcing + Sagas), workflow."), mcp.Enum("neutral", "clean-ddd", "hexagonal", "event-driven", "workflow"), mcp.DefaultString("neutral")),
 		mcp.WithString("locale", mcp.Description("Output language: en (English) or es (Spanish)"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
@@ -190,13 +192,15 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 	name := stringArg(request, "name")
 	description := stringArg(request, "description")
 	language := stringArg(request, "language")
+	projectType := stringArg(request, "project_type")
+	architecture := stringArg(request, "architecture")
 	preset := stringArgDefault(request, "preset", "neutral")
 	locale := stringArgDefault(request, "locale", "en")
 	model := stringArgDefault(request, "model", "")
 	withSpecs := boolArg(request, "with_specs")
 	sddStandard := stringArgDefault(request, "sdd_standard", "")
 
-	result, err := executeGenerate(ctx, name, description, language, preset, locale, model)
+	result, err := executeGenerate(ctx, name, description, language, projectType, architecture, preset, locale, model)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Generation failed: %v", err)), nil
 	}
@@ -210,6 +214,7 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 	for _, f := range result.GeneratedFiles {
 		sb.WriteString(fmt.Sprintf("  - %s\n", f))
 	}
+	sb.WriteString(validationSummary(result.GeneratedFiles, "generate"))
 
 	if withSpecs {
 		specResult, err := executeSpecs(ctx, name, result.OutputPath, result.OutputPath, locale, model, sddStandard)
@@ -222,6 +227,7 @@ func handleGenerateContext(ctx context.Context, request mcp.CallToolRequest) (*m
 			for _, f := range specResult.GeneratedFiles {
 				sb.WriteString(fmt.Sprintf("  - %s\n", f))
 			}
+			sb.WriteString(validationSummary(specResult.GeneratedFiles, "spec"))
 		}
 	}
 
@@ -250,6 +256,7 @@ func handleGenerateSpecs(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	for _, f := range result.GeneratedFiles {
 		sb.WriteString(fmt.Sprintf("  - %s\n", f))
 	}
+	sb.WriteString(validationSummary(result.GeneratedFiles, "spec"))
 
 	return mcp.NewToolResultText(sb.String()), nil
 }
@@ -288,7 +295,7 @@ func handleAnalyzeProject(ctx context.Context, request mcp.CallToolRequest) (*mc
 
 	// Format scan as description and generate with analyze mode
 	description := scanResult.FormatAsDescription()
-	result, err := executeGenerateWithMode(ctx, name, description, language, preset, locale, model, "analyze")
+	result, err := executeGenerateWithMode(ctx, name, description, language, "", "", preset, locale, model, "analyze")
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Generation failed: %v", err)), nil
 	}
@@ -307,6 +314,7 @@ func handleAnalyzeProject(ctx context.Context, request mcp.CallToolRequest) (*mc
 	for _, f := range result.GeneratedFiles {
 		sb.WriteString(fmt.Sprintf("  - %s\n", f))
 	}
+	sb.WriteString(validationSummary(result.GeneratedFiles, "analyze"))
 
 	if withSpecs {
 		specResult, err := executeSpecs(ctx, name, result.OutputPath, result.OutputPath, locale, model, sddStandard)
@@ -317,6 +325,7 @@ func handleAnalyzeProject(ctx context.Context, request mcp.CallToolRequest) (*mc
 			for _, f := range specResult.GeneratedFiles {
 				sb.WriteString(fmt.Sprintf("  - %s\n", f))
 			}
+			sb.WriteString(validationSummary(specResult.GeneratedFiles, "spec"))
 		}
 	}
 
@@ -574,6 +583,37 @@ func handleVersionGuidance(ctx context.Context, request mcp.CallToolRequest) (*m
 	return mcp.NewToolResultText(content), nil
 }
 
+// validationSummary re-validates the written files and renders a block for
+// the MCP tool result. The CLI surfaces this same information interactively
+// (validation feedback on stderr + the resolve flow); MCP used to discard it
+// (provider wired with progressOut=nil), so files with unresolved
+// [DEFINE: ...] markers were reported as plain success. The calling agent is
+// exactly the consumer that can act on these findings, so they belong in the
+// tool result. Returns "" when every file is clean.
+func validationSummary(files []string, mode string) string {
+	var sb strings.Builder
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		r := llm.ValidateOutput(string(data), mode, filepath.Base(f))
+		if len(r.DefineMarkers) == 0 && len(r.Warnings) == 0 {
+			continue
+		}
+		if sb.Len() == 0 {
+			sb.WriteString("\nValidation findings (review before relying on these files):\n")
+		}
+		for _, m := range r.DefineMarkers {
+			sb.WriteString(fmt.Sprintf("  - %s L%d: unresolved %s\n", f, m.Line, m.Text))
+		}
+		for _, w := range r.Warnings {
+			sb.WriteString(fmt.Sprintf("  - %s: %s\n", f, w))
+		}
+	}
+	return sb.String()
+}
+
 // loadKnowledgeTemplate reads an embedded skill template and returns its
 // content as behavioral context. Skill templates are English-only by
 // design, so the path is locale-free (templates/skills/...).
@@ -588,11 +628,11 @@ func loadKnowledgeTemplate(preset, filename string) (string, error) {
 
 // --- Execution helpers (shared by all handlers) ---
 
-func executeGenerate(ctx context.Context, name, description, language, preset, locale, model string) (*dto.GenerationResult, error) {
-	return executeGenerateWithMode(ctx, name, description, language, preset, locale, model, "")
+func executeGenerate(ctx context.Context, name, description, language, projectType, architecture, preset, locale, model string) (*dto.GenerationResult, error) {
+	return executeGenerateWithMode(ctx, name, description, language, projectType, architecture, preset, locale, model, "")
 }
 
-func executeGenerateWithMode(ctx context.Context, name, description, language, preset, locale, model, mode string) (*dto.GenerationResult, error) {
+func executeGenerateWithMode(ctx context.Context, name, description, language, projectType, architecture, preset, locale, model, mode string) (*dto.GenerationResult, error) {
 	apiKey, err := llm.ResolveAPIKey(model)
 	if err != nil {
 		return nil, err
@@ -628,13 +668,15 @@ func executeGenerateWithMode(ctx context.Context, name, description, language, p
 	generateCmd := command.NewGenerateContextCommand(provider, fileWriter, dirManager)
 
 	config := &dto.ProjectConfig{
-		Name:        name,
-		Description: description,
-		Language:    language,
-		Model:       model,
-		OutputPath:  ".",
-		Locale:      locale,
-		Mode:        mode,
+		Name:         name,
+		Description:  description,
+		Language:     language,
+		Type:         projectType,
+		Architecture: architecture,
+		Model:        model,
+		OutputPath:   ".",
+		Locale:       locale,
+		Mode:         mode,
 	}
 
 	return generateCmd.Execute(ctx, config, guides)
@@ -740,34 +782,18 @@ func executeSpecs(ctx context.Context, name, fromContextPath, outputPath, locale
 	}
 
 	// Update AGENTS.md with a specs reference, reusing the resolved standard so
-	// the listed file names match the layout that was actually generated.
+	// the listed file names match the layout that was actually generated. The
+	// section body comes from the shared sdd helper — the local copy this file
+	// used to carry had already drifted from the CLI's (it omitted the
+	// featureID prefix in the FeatureGrouped layout).
 	agentsPath := filepath.Join(outputPath, "AGENTS.md")
 	content, readErr := os.ReadFile(agentsPath)
 	if readErr == nil && !strings.Contains(string(content), "specs/") {
-		specsRef := specsReferenceSection(locale, standard)
+		specsRef := sdd.SpecsReferenceSection(locale, standard, config.FeatureID)
 		_ = os.WriteFile(agentsPath, []byte(string(content)+specsRef), 0o644)
 	}
 
 	return result, nil
-}
-
-// specsReferenceSection builds the "## Specifications" block appended to
-// AGENTS.md, listing each of the standard's bootstrap artifacts under specs/.
-// The MCP spec path uses a flat layout, mirroring buildSpecsReferenceSection in
-// the CLI so both interfaces describe specs identically.
-func specsReferenceSection(locale string, standard service.SpecStandard) string {
-	header := "\n## Specifications\n\n"
-	if locale == "es" {
-		header = "\n## Especificaciones\n\n"
-	}
-	var sb strings.Builder
-	sb.WriteString(header)
-	for _, a := range standard.BootstrapArtifacts() {
-		sb.WriteString("- `specs/")
-		sb.WriteString(a.FileName)
-		sb.WriteString("`\n")
-	}
-	return sb.String()
 }
 
 func executeStaticSkillsMCP(config *dto.SkillsConfig, guides []service.TemplateGuide) (*dto.GenerationResult, error) {

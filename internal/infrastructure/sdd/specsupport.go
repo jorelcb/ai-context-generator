@@ -2,6 +2,7 @@ package sdd
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/jorelcb/codify/internal/domain/service"
 )
@@ -27,6 +28,37 @@ func SpecTemplateMapping(std service.SpecStandard) map[string]string {
 		m[a.GuideName+".template"] = a.GuideName
 	}
 	return m
+}
+
+// SpecsReferenceSection construye el bloque "## Specifications" que se anexa
+// a AGENTS.md tras generar specs, listando cada bootstrap artifact con su path
+// según el layout del estándar:
+//   - LayoutFlat:            "specs/<file>"
+//   - LayoutFeatureGrouped:  "specs/<featureID>/<file>"
+//
+// Compartido por CLI y MCP por la misma razón que SpecTemplatePath: las dos
+// copias que existían ya habían divergido (la del MCP omitía el prefijo de
+// featureID en el layout agrupado).
+func SpecsReferenceSection(locale string, std service.SpecStandard, featureID string) string {
+	header := "\n## Specifications\n\n"
+	if locale == "es" {
+		header = "\n## Especificaciones\n\n"
+	}
+
+	prefix := "specs/"
+	if std.OutputLayout() == service.LayoutFeatureGrouped && featureID != "" {
+		prefix = "specs/" + featureID + "/"
+	}
+
+	var sb strings.Builder
+	sb.WriteString(header)
+	for _, a := range std.BootstrapArtifacts() {
+		sb.WriteString("- `")
+		sb.WriteString(prefix)
+		sb.WriteString(a.FileName)
+		sb.WriteString("`\n")
+	}
+	return sb.String()
 }
 
 // ApplySpecOutputNames anota cada TemplateGuide con el nombre de archivo de
