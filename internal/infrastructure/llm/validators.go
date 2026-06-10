@@ -35,6 +35,7 @@ type ValidationResult struct {
 var (
 	defineMarkerRE = regexp.MustCompile(`\[DEFINE(?::[^\]\n]+)?\]`)
 	frontmatterRE  = regexp.MustCompile(`(?s)^---\s*\n.*?\n---\s*\n`)
+	fenceLineRE    = regexp.MustCompile("(?m)^```")
 )
 
 // ValidateOutput inspects the LLM-produced content for structural issues.
@@ -62,9 +63,11 @@ func ValidateOutput(content, mode, fileName string) ValidationResult {
 		result.DefineMarkers = append(result.DefineMarkers, DefineMarker{Text: text, Line: line})
 	}
 
-	// 2. Code fence balance — count triple-backtick line starts. An odd
-	//    count indicates an unclosed code block.
-	openings := strings.Count(content, "\n```") + boolToInt(strings.HasPrefix(content, "```"))
+	// 2. Code fence balance — count lines that start with a triple backtick
+	//    (anchored per line: "\n```" alone missed a fence at offset 0 after
+	//    leading whitespace edits and any fence following \r\n). An odd count
+	//    indicates an unclosed code block.
+	openings := len(fenceLineRE.FindAllStringIndex(content, -1))
 	if openings%2 != 0 {
 		result.Warnings = append(result.Warnings, "unbalanced code fences (odd number of ``` markers)")
 	}
@@ -91,20 +94,15 @@ func ValidateOutput(content, mode, fileName string) ValidationResult {
 	}
 
 	// 5. Truncation heuristic: a generated body shorter than 200 chars almost
-	//    certainly indicates the model returned an apology or a stub.
+	//    certainly indicates the model returned an apology or a stub. Applies
+	//    to frontmatter files too — a SKILL.md stub with valid frontmatter is
+	//    just as unusable as a bare one.
 	body := strings.TrimSpace(content)
-	if len(body) < 200 && !expectsFrontmatter {
+	if len(body) < 200 {
 		result.Warnings = append(result.Warnings, "output suspiciously short (< 200 chars) — possible truncation or stub")
 	}
 
 	return result
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // emitValidationFeedback writes a short summary of validation findings to

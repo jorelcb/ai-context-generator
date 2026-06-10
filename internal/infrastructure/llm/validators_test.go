@@ -122,6 +122,39 @@ func TestValidateOutput_EmptyIsFatal(t *testing.T) {
 	}
 }
 
+func TestValidateOutput_ShortSkillStubIsFlagged(t *testing.T) {
+	// A stub with valid frontmatter used to slip past the truncation
+	// heuristic because frontmatter files were exempted from the length check.
+	body := "---\nname: x\ndescription: y\n---\n\nStub.\n"
+	r := ValidateOutput(body, "skills", "SKILL.md")
+	found := false
+	for _, w := range r.Warnings {
+		if contains(w, "suspiciously short") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("a 40-char SKILL.md stub must trigger the short-output warning, got %v", r.Warnings)
+	}
+}
+
+func TestValidateOutput_FenceAtStartOfContentIsCounted(t *testing.T) {
+	// A fence on the very first line is an opening too — the old "\n```"
+	// counter only saw it via a special-case prefix check; the per-line
+	// anchor must keep covering it.
+	body := "```go\nfmt.Println(\"hi\")\nthe rest of this fixture only exists to push the body past the truncation threshold so the single warning surfaced is the unclosed fence that starts at offset zero of the content."
+	r := ValidateOutput(body, "generate", "DEVELOPMENT_GUIDE.md")
+	found := false
+	for _, w := range r.Warnings {
+		if contains(w, "unbalanced code fences") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected unbalanced fence warning for fence at offset 0, got %v", r.Warnings)
+	}
+}
+
 func contains(haystack, needle string) bool {
 	for i := 0; i+len(needle) <= len(haystack); i++ {
 		if haystack[i:i+len(needle)] == needle {

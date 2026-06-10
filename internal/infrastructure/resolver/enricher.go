@@ -39,9 +39,9 @@ func NewLLMEnricher(provider service.LLMProvider) *LLMEnricher {
 //   - schema requires explicit suggestions=[] / default="" when uncertain
 //   - sanitizer downstream filters out suggestions that look invented
 //     (URLs, paths, multi-line strings, markdown, > 200 chars)
-const enrichmentSystemPrompt = `You translate technical [DEFINE: ...] placeholders embedded in a generated context file into friendly questions for the end user. For each placeholder, return:
+const enrichmentSystemPrompt = `You translate technical [DEFINE: ...] placeholders embedded in a generated context file into friendly questions for the end user. The user message carries the file (<file>), its locale (<locale>) and the placeholders to enrich (<markers_to_enrich>). For each placeholder, return:
 
-- A natural question in the file's locale (the LOCALE field below).
+- A natural question in the file's locale (the <locale> tag).
 - 2-3 grounded suggestions inferred ONLY from the file's content or strongly implied context. Each suggestion is a short value (one or a few words) — not a sentence, not a URL, not a path.
 - An optional default that must be one of the suggestions, OR empty when no suggestion is defensible.
 - A brief rationale (one sentence) explaining why those suggestions, citing what in the file implies them.
@@ -93,21 +93,40 @@ func (e *LLMEnricher) Enrich(
 
 	userPrompt := buildEnrichmentUserPrompt(fileName, fileContent, locale, hits)
 
-	resp, err := e.provider.EvaluatePrompt(ctx, service.EvaluationRequest{
-		SystemPrompt:    enrichmentSystemPrompt,
-		UserPrompt:      userPrompt,
-		Command:         "resolve-enrich",
-		MaxTokens:       4096,
-		CacheableSystem: true,
-	})
-	if err != nil {
-		return enrichFallback(hits), fmt.Errorf("enrichment provider call failed: %w", err)
-	}
-
-	cleaned := strings.TrimSpace(fenceRE.ReplaceAllString(resp.Text, ""))
+	// Up to two attempts: a malformed first response (the dominant failure
+	// mode is shape, not content) is retried once with the parse error fed
+	// back. Only after the retry also fails does the caller degrade to the
+	// legacy UI — a second call costs cents, losing enrichment costs UX.
 	var findings []llmFinding
-	if err := json.Unmarshal([]byte(cleaned), &findings); err != nil {
-		return enrichFallback(hits), fmt.Errorf("enrichment response is not valid JSON: %w (response snippet: %q)", err, snippet(cleaned, 200))
+	prompt := userPrompt
+	var parseErr error
+	for range 2 {
+		resp, err := e.provider.EvaluatePrompt(ctx, service.EvaluationRequest{
+			SystemPrompt:    enrichmentSystemPrompt,
+			UserPrompt:      prompt,
+			Command:         "resolve-enrich",
+			MaxTokens:       4096,
+			CacheableSystem: true,
+			Prefill:         "[",
+		})
+		if err != nil {
+			return enrichFallback(hits), fmt.Errorf("enrichment provider call failed: %w", err)
+		}
+
+		cleaned := strings.TrimSpace(fenceRE.ReplaceAllString(resp.Text, ""))
+		if err := json.Unmarshal([]byte(cleaned), &findings); err != nil {
+			parseErr = fmt.Errorf("enrichment response is not valid JSON: %w (response snippet: %q)", err, snippet(cleaned, 200))
+			prompt = userPrompt + fmt.Sprintf(
+				"\n\n<previous_error>\nYour previous response was not valid JSON: %v\nReturn ONLY the JSON array described in the system prompt — no prose, no fences.\n</previous_error>\n",
+				err,
+			)
+			continue
+		}
+		parseErr = nil
+		break
+	}
+	if parseErr != nil {
+		return enrichFallback(hits), parseErr
 	}
 
 	return mergeFindingsIntoHits(hits, findings), nil
@@ -116,14 +135,20 @@ func (e *LLMEnricher) Enrich(
 // buildEnrichmentUserPrompt assembles the per-call user message with the
 // file content and the list of markers to enrich. Locale flows into the
 // prompt so the LLM produces questions in the user's language.
+//
+// XML tags instead of "--- BEGIN FILE ---" sentinels: the old delimiters
+// collided with content the file itself can contain (context_reader emits
+// "--- AGENTS.md ---" section headers) and diverged from the XML convention
+// every other prompt in the system uses. File first, instructions-adjacent
+// data after — the long-context ordering the rest of the prompts follow.
 func buildEnrichmentUserPrompt(fileName, fileContent, locale string, hits []service.MarkerHit) string {
 	var markers strings.Builder
 	for _, h := range hits {
 		fmt.Fprintf(&markers, "  - %s (line %d)\n", h.Text, h.Line)
 	}
 	return fmt.Sprintf(
-		"FILE: %s\nLOCALE: %s\n\nMARKERS TO ENRICH:\n%s\n--- BEGIN FILE ---\n%s\n--- END FILE ---\n",
-		fileName, locale, markers.String(), fileContent,
+		"<file name=%q>\n%s\n</file>\n\n<locale>%s</locale>\n\n<markers_to_enrich>\n%s</markers_to_enrich>\n",
+		fileName, fileContent, locale, markers.String(),
 	)
 }
 

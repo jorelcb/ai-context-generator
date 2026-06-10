@@ -146,6 +146,7 @@ func runLLMAudit(projectPath, since string, limit int, model string, ruleFinding
 		UserPrompt:   userPrompt,
 		Command:      "audit",
 		MaxTokens:    4000,
+		Prefill:      "[", // the response is a JSON array — seed it so no prose/fence can precede it
 	})
 	if err != nil {
 		return nil, fmt.Errorf("LLM evaluation: %w", err)

@@ -31,9 +31,9 @@ import (
 // thin adapter that wires the prompter, provider, and file IO.
 type ResolveMarkersCommand struct {
 	prompter  service.InteractivePrompter
-	provider  service.LLMProvider     // optional — nil means literal-only mode
-	enricher  service.MarkerEnricher  // optional — nil = legacy UI without LLM-driven prompts
-	previewer service.DiffPreviewer   // optional — nil = write directly without preview
+	provider  service.LLMProvider    // optional — nil means literal-only mode
+	enricher  service.MarkerEnricher // optional — nil = legacy UI without LLM-driven prompts
+	previewer service.DiffPreviewer  // optional — nil = write directly without preview
 	readFile  func(string) ([]byte, error)
 	writeFile func(string, []byte, os.FileMode) error
 	stderr    func(format string, args ...any)
@@ -329,15 +329,18 @@ Rules:
 - Replace each [DEFINE: ...] occurrence so the resulting prose reads as if
   the answer were always there. Adjust grammar minimally to keep the flow.
 - Do NOT invent additional content beyond what the user provided.
-- If a marker is NOT in the answers map, leave it verbatim — the user chose
-  to skip it.
+- If a marker is NOT in the <answers> block, leave it verbatim — the user
+  chose to skip it.
 - Output ONLY the full rewritten file content, no preamble, no commentary,
   no markdown fence wrapping.
 `)
 
+	// XML tags instead of "--- BEGIN FILE ---" sentinels — same rationale as
+	// the enricher: the old delimiters collided with content the file itself
+	// can contain and diverged from the system-wide XML convention.
 	userPrompt := fmt.Sprintf(
-		"FILE: %s\nLOCALE: %s\n\nANSWERS (placeholder → user input):\n%s\n--- BEGIN FILE ---\n%s\n--- END FILE ---\n",
-		fileName, locale, answers.String(), content,
+		"<file name=%q>\n%s\n</file>\n\n<locale>%s</locale>\n\n<answers placeholder=\"user input\">\n%s</answers>\n",
+		fileName, content, locale, answers.String(),
 	)
 
 	resp, err := provider.EvaluatePrompt(ctx, service.EvaluationRequest{

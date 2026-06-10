@@ -44,13 +44,15 @@ func (c *GenerateSpecCommand) Execute(
 	// 1. Build generation request in spec mode. SDDStandardHints carries
 	//    the active standard's prompt addendum so the LLM respects per-standard
 	//    conventions (file naming, layout, etc.).
+	//    ExistingContext viaja una sola vez (al <existing_context> del system
+	//    prompt); NO se duplica en ProjectDescription — el user message de spec
+	//    lleva solo el template guide (auditoría PR-1).
 	req := service.GenerationRequest{
-		ProjectDescription: existingContext,
-		TemplateGuides:     templateGuides,
-		ExistingContext:    existingContext,
-		Mode:               "spec",
-		Locale:             config.Locale,
-		SDDStandardHints:   config.StandardHints,
+		TemplateGuides:   templateGuides,
+		ExistingContext:  existingContext,
+		Mode:             "spec",
+		Locale:           config.Locale,
+		SDDStandardHints: config.StandardHints,
 	}
 
 	// 2. Call LLM provider
@@ -66,7 +68,7 @@ func (c *GenerateSpecCommand) Execute(
 	if config.Layout == service.LayoutFeatureGrouped && config.FeatureID != "" {
 		specsDir = filepath.Join(specsDir, config.FeatureID)
 	}
-	if err := c.directoryManager.CreateDir(specsDir, 0755); err != nil {
+	if err := c.directoryManager.CreateDir(specsDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create specs directory: %w", err)
 	}
 
@@ -74,7 +76,7 @@ func (c *GenerateSpecCommand) Execute(
 	var generatedFiles []string
 	for _, file := range response.Files {
 		filePath := filepath.Join(specsDir, file.Name)
-		if err := c.fileWriter.WriteFile(filePath, []byte(file.Content), os.FileMode(0644)); err != nil {
+		if err := c.fileWriter.WriteFile(filePath, []byte(file.Content), os.FileMode(0o644)); err != nil {
 			return nil, fmt.Errorf("failed to write %s: %w", file.Name, err)
 		}
 		generatedFiles = append(generatedFiles, filePath)
