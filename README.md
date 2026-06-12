@@ -381,7 +381,6 @@ codify catalog
 # → Rich selector opens:
 #     ⇥ switch tab · ↑↓ move · → expand · space mark · a mark-all · ⏎ install
 #     marks persist across tabs; ⏎ installs everything selected, in one pass
-# → Skills only: static vs personalized is asked once, if any skill is picked
 ```
 
 The **same selector** is reused by `codify init` (project scope) and `codify
@@ -674,7 +673,6 @@ The output structure (`openspec/specs/`, `openspec/changes/`, delta format with 
 
 **Codify's value-add over installing OpenSpec directly:**
 
-- **LLM personalization**: `--mode personalized --context "..."` adapts the skills to your stack, tools, and conventions
 - **Multi-target**: same SDD methodology delivered for Claude Code or Antigravity
 - **Locale support**: English and Spanish skills out of the box
 - **Integrated pipeline**: combined with `codify generate` + `codify spec`, you get end-to-end SDD bootstrap
@@ -1294,7 +1292,7 @@ codex mcp add codify -- codify serve
 | `generate_context`   | Generate context files from a project description                                                                                                                  |
 | `generate_specs`     | Generate SDD specs from existing context files                                                                                                                     |
 | `analyze_project`    | Scan an existing project and generate context from its structure                                                                                                   |
-| `generate_skills`    | Generate Agent Skills — supports `static` (instant) and `personalized` (LLM-adapted) modes                                                                         |
+| `generate_skills`    | Deliver curated Agent Skills (multi-file: SKILL.md + reference/examples). Instant, offline — no API key                                                            |
 | `generate_workflows` | Generate workflow files for Claude Code (native skills) or Antigravity (native .md) — supports `static` and `personalized` modes                                   |
 | `generate_hooks`     | Generate Claude Code hook bundles (deterministic guardrails). Static-only, Claude-only. Outputs `hooks.json` + `.sh` scripts for manual merge into `settings.json` |
 
@@ -1320,10 +1318,7 @@ Knowledge tools inject behavioral context into the calling agent — the agent r
 → Agent calls analyze_project with with_specs=true
 
 "Generate convention skills for my project"
-→ Agent calls generate_skills with mode=static, category=conventions, preset=all
-
-"Create DDD skills adapted to my Go project with Clean Architecture"
-→ Agent calls generate_skills with mode=personalized, project_context="Go with DDD..."
+→ Agent calls generate_skills with category=conventions, preset=all
 
 "Generate spec-driven-change workflow for Claude Code"
 → Agent calls generate_workflows with target=claude, preset=spec-driven-change, mode=static
@@ -1564,8 +1559,8 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 
 **Behavior layer**
 
-- ✅ `catalog` — unified install surface for **skills + hooks** (ADR-0010). Interactive wizard, `--list` browsing with source badges + installed markers, non-interactive `--type/--package/--scope`; skills support `--mode personalized` (LLM-adapted). Claude ecosystem (others return later)
-- ✅ `skills` (via catalog) — architecture (neutral/clean-ddd/hexagonal/event-driven) + testing + conventions; static + personalized modes
+- ✅ `catalog` — unified install surface for **skills + hooks** (ADR-0010). Interactive wizard, `--list` browsing with source badges + installed markers, non-interactive `--type/--package/--scope`. Claude ecosystem (others return later)
+- ✅ `skills` (via catalog) — architecture (neutral/clean-ddd/hexagonal/event-driven) + testing + conventions; curated multi-file skills (SKILL.md + reference.md + examples.md), static-only since v4.0.0
 - ✅ `hooks` (via catalog) — linting, security-guardrails, convention-enforcement; auto-install with settings.json backup + idempotent merge
 - ✅ `workflows` — spec-driven-change, bug-fix, release-cycle; static + personalized; claude (native skills) + antigravity (native annotations)
 
@@ -1612,13 +1607,10 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 Anthropic Claude (default) and Google Gemini. Set `ANTHROPIC_API_KEY` for Claude or `GEMINI_API_KEY` for Gemini. The provider is auto-detected from the `--model` flag: `claude-*` models use Anthropic, `gemini-*` models use Google.
 
 **How much does each generation cost?**
-4-5 API calls for `generate` (depending on `--language`), 4 for `spec`. Skills in static mode are free (no API calls). Personalized skills use 1 API call per skill. Each generation costs pennies with either provider.
+4-5 API calls for `generate` (depending on `--language`), 4 for `spec`. Skills are free (no API calls — curated content delivered from the embedded catalog). Each generation costs pennies with either provider.
 
 **Do I need an API key for skills?**
-Only for personalized mode. Static mode delivers pre-built skills instantly from the embedded catalog — no LLM, no API key, no cost.
-
-**What's the difference between static and personalized skills?**
-Static skills are production-ready, generic best practices delivered instantly. Personalized skills use an LLM to adapt examples, naming, and patterns to your specific project context (language, domain, stack).
+No. Skills are curated, production-ready content delivered instantly from the embedded catalog — no LLM, no API key, no cost. (The LLM personalization mode was removed in v4.0.0: well-authored static skills with embedded examples proved strictly better.)
 
 **Are the templates fixed?**
 They're structural guides, not renderable output. The LLM generates intelligent, project-specific content following the template structure.
