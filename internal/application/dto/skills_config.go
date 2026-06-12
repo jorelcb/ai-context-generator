@@ -9,7 +9,9 @@ var ValidTargets = map[string]bool{
 	"antigravity": true,
 }
 
-// Skills generation modes
+// Generation modes. Skills are static-only since v4.0.0 (D4: LLM
+// personalization of skills was dropped); both constants remain because
+// workflows still support the personalized mode (WorkflowConfig.Mode).
 const (
 	SkillModeStatic       = "static"
 	SkillModePersonalized = "personalized"
@@ -21,17 +23,14 @@ const (
 	InstallScopeProject = "project"
 )
 
-// SkillsConfig holds configuration for generating reusable Agent Skills
+// SkillsConfig holds configuration for delivering static Agent Skills.
 type SkillsConfig struct {
-	Category       string // "architecture" or "workflow"
-	Preset         string // "clean", "neutral", "conventional-commit", "all", etc.
-	Mode           string // "static" or "personalized"
-	Locale         string // "en" or "es"
-	Target         string // target ecosystem: "claude", "codex", "antigravity"
-	Model          string
-	OutputPath     string
-	ProjectContext string // project context for personalized mode
-	Install        string // install scope: "global", "project", or "" (custom output)
+	Category   string // "architecture", "testing", "conventions"
+	Preset     string // "clean-ddd", "neutral", "conventional-commit", "all", etc.
+	Locale     string // "en" or "es"
+	Target     string // target ecosystem: "claude", "codex", "antigravity"
+	OutputPath string
+	Install    string // install scope: "global", "project", or "" (custom output)
 }
 
 // Validate validates the skills configuration

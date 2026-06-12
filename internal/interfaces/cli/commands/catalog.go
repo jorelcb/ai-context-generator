@@ -15,7 +15,6 @@ import (
 	"github.com/jorelcb/codify/internal/application/command"
 	"github.com/jorelcb/codify/internal/domain/catalog"
 	"github.com/jorelcb/codify/internal/infrastructure/desiredstate"
-	"github.com/jorelcb/codify/internal/infrastructure/llm"
 	"github.com/jorelcb/codify/internal/infrastructure/lockfile"
 	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
 	"github.com/jorelcb/codify/internal/infrastructure/targetinstaller"
@@ -28,9 +27,6 @@ type catalogParams struct {
 	pkgType     string
 	packages    string
 	scope       string
-	mode        string
-	model       string
-	context     string
 	marketplace string
 	list        bool
 	status      bool
@@ -105,9 +101,6 @@ Plugins are installed by delegating to Claude Code's own plugin CLI (requires
 	cmd.Flags().StringVar(&p.pkgType, "type", "", "Package type: skill, hook, or plugin")
 	cmd.Flags().StringVar(&p.packages, "package", "", "Comma-separated package IDs to install")
 	cmd.Flags().StringVar(&p.scope, "scope", "", "Install scope: project or workstation (alias: global)")
-	cmd.Flags().StringVar(&p.mode, "mode", "static", "Skill mode: static (embedded template) or personalized (LLM-adapted)")
-	cmd.Flags().StringVar(&p.model, "model", "", "LLM model for personalized mode (e.g. claude-sonnet-4-6)")
-	cmd.Flags().StringVar(&p.context, "context", "", "Project context for personalized mode")
 	cmd.Flags().StringVar(&p.marketplace, "marketplace", defaultMarketplace, "Plugin marketplace (owner/repo or marketplace.json URL); used with --type plugin")
 	cmd.Flags().BoolVar(&p.list, "list", false, "List available packages instead of installing")
 	cmd.Flags().BoolVar(&p.status, "status", false, "Show lockfile status: recorded installs vs live state (drift)")
@@ -269,7 +262,6 @@ func catalogApply(ctx context.Context, p catalogParams) error {
 				continue
 			}
 			ap := p
-			ap.mode = "static"
 			if tp == "plugin" && g.source != "" {
 				ap.marketplace = g.source
 			}
@@ -369,26 +361,6 @@ func embeddedService() *command.CatalogService {
 	local := packagesource.NewLocalDirectorySource(localSourceRoot())
 	source := packagesource.NewCompositeSource(embedded, local) // local overrides embedded
 	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder())
-}
-
-// personalizedService is the LLM path: built-in skills are adapted to
-// projectContext via the PersonalizingSource decorator, composed with local
-// packages (which install statically — local packages are pre-authored, not
-// LLM-adapted). Requires a usable model + API key.
-func personalizedService(ctx context.Context, model, projectContext string) (*command.CatalogService, error) {
-	apiKey, err := llm.ResolveAPIKey(model)
-	if err != nil {
-		return nil, err
-	}
-	provider, err := llm.NewProvider(ctx, model, apiKey, os.Stdout)
-	if err != nil {
-		return nil, fmt.Errorf("create LLM provider: %w", err)
-	}
-	embedded := packagesource.NewEmbeddedSource(root.TemplatesFS, codifyVersion)
-	personalizing := packagesource.NewPersonalizingSource(embedded, provider, projectContext, "en", "claude")
-	local := packagesource.NewLocalDirectorySource(localSourceRoot())
-	source := packagesource.NewCompositeSource(personalizing, local)
-	return command.NewCatalogService(source, catalogRegistry()).WithRecorder(lockfile.NewRecorder()), nil
 }
 
 // statusService builds the service used by `--status`: it needs the full
@@ -604,11 +576,8 @@ func catalogSync(ctx context.Context, p catalogParams) error {
 			continue
 		}
 
-		// Static restore path for skills/hooks (built-in/local catalog;
-		// personalized re-adaptation is not reproducible).
-		sp := p
-		sp.mode = "static"
-		svc, err := installService(ctx, ecosystem, tp, sp)
+		// Static restore path for skills/hooks (built-in/local catalog).
+		svc, err := installService(ctx, ecosystem, tp, p)
 		if err != nil {
 			return err
 		}
@@ -794,29 +763,16 @@ func catalogList(ctx context.Context, p catalogParams) error {
 }
 
 // installService returns the CatalogService for installing the given type.
-// Plugins use the marketplace source (+ plugin installer). Skills in
-// personalized mode use the LLM source; everything else the static
-// embedded+local catalog. Reads mode/model/context/marketplace from p (the
-// interactive flow stuffs its resolved values back into p first).
-func installService(ctx context.Context, ecosystem, tp string, p catalogParams) (*command.CatalogService, error) {
+// Plugins use the marketplace source (+ plugin installer); everything else the
+// static embedded+local catalog. Skills are static-only since v4.0.0 — the
+// LLM personalization mode was dropped (Track 2 D4: it added no value over
+// well-authored static skills).
+func installService(_ context.Context, ecosystem, tp string, p catalogParams) (*command.CatalogService, error) {
 	if ecosystem == "antigravity" {
-		return antigravityService(), nil // skills only, static
+		return antigravityService(), nil // skills only
 	}
 	if tp == "plugin" {
 		return pluginService(p.marketplace), nil
-	}
-	if p.mode == "personalized" {
-		if typeToTarget[tp] != catalog.TargetClaudeSkill {
-			fmt.Fprintf(os.Stderr, "→ personalized mode applies to skills only; installing %q statically\n", tp)
-			return embeddedService(), nil
-		}
-		if p.context == "" {
-			return nil, fmt.Errorf("personalized mode requires --context (a project description)")
-		}
-		if p.model == "" {
-			return nil, fmt.Errorf("personalized mode requires --model (or run interactively to pick one)")
-		}
-		return personalizedService(ctx, p.model, p.context)
 	}
 	return embeddedService(), nil
 }
@@ -920,14 +876,6 @@ func runCatalogSelector(ctx context.Context, p catalogParams, ecosystem string, 
 		byType[s.TabType] = append(byType[s.TabType], s.ID)
 	}
 
-	// Skill mode (Claude skills only) — ask once if any skill was selected.
-	p.mode = "static"
-	if ecosystem == "claude" && len(byType["skill"]) > 0 {
-		if err := resolveSkillMode(&p); err != nil {
-			return err
-		}
-	}
-
 	// Install per type, deterministic order.
 	for _, tp := range typesForEcosystem(ecosystem) {
 		ids := byType[tp]
@@ -993,38 +941,6 @@ func buildTabSpecs(ctx context.Context, p catalogParams, ecosystem string, scope
 		specs = append(specs, tuicatalog.TabSpec{Name: typeLabel(tp), Type: tp, Pkgs: pkgs})
 	}
 	return specs
-}
-
-// resolveSkillMode prompts for static vs personalized skill generation and, for
-// personalized, gathers the project context + model. Mutates p in place.
-func resolveSkillMode(p *catalogParams) error {
-	mode, err := promptSelect("Skill mode", []selectOption{
-		{"Static (instant, embedded template)", "static"},
-		{"Personalized (LLM-adapted to your project)", "personalized"},
-	}, "static")
-	if err != nil {
-		return err
-	}
-	p.mode = mode
-	if mode != "personalized" {
-		return nil
-	}
-	if p.context == "" {
-		p.context, err = promptInput("Describe your project (stack, architecture, domain)", "")
-		if err != nil {
-			return err
-		}
-	}
-	if p.context == "" {
-		return fmt.Errorf("personalized mode requires a project description")
-	}
-	if p.model == "" {
-		p.model, err = promptModel()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func printInstallOutcome(out command.InstallOutcome, scope catalog.Scope) {

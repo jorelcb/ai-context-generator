@@ -46,9 +46,9 @@ type GenerationRequest struct {
 	Architecture       string
 	Locale             string // Output language: "en", "es", etc.
 	ExistingContext    string // For spec mode: content of existing CONTEXT.md + AGENTS.md
-	Mode               string // "generate" (default), "spec", or "skills"
-	Target             string // For skills mode: target ecosystem ("claude", "codex", "antigravity")
-	ProjectContext     string // For personalized skills: project description/context
+	Mode               string // "generate" (default), "analyze", "spec", "workflows", or "workflow-skills"
+	Target             string // For workflows mode: target ecosystem ("claude", "antigravity")
+	ProjectContext     string // For personalized workflows: project description/context
 
 	// SDDStandardHints, when non-empty, is appended to the spec system
 	// prompt by the LLM provider. Sourced from the active SpecStandard

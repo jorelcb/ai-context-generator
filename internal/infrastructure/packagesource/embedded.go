@@ -199,48 +199,64 @@ func (s *EmbeddedSource) Fetch(ctx context.Context, m catalog.PackageManifest) (
 	}
 }
 
-// fetchSkill arma el SKILL.md final para una skill: frontmatter generado
-// por catalog.GenerateFrontmatter + template body leído del embedded FS.
+// fetchSkill arma el contenido instalable de una skill multi-archivo:
+// SKILL.md = frontmatter generado por catalog.GenerateFrontmatter + body del
+// embedded FS; los sidecars de progressive disclosure (reference.md,
+// examples.md, …) se incluyen verbatim.
 //
 // Reusa catalog.GenerateFrontmatter como única fuente de verdad del
 // frontmatter de skills, compartida con el resto del catálogo.
 func (s *EmbeddedSource) fetchSkill(m catalog.PackageManifest) (catalog.PackageContent, error) {
-	guideName, body, err := s.skillTemplate(m)
+	guideName, files, err := s.skillFiles(m)
 	if err != nil {
 		return catalog.PackageContent{}, err
 	}
 
-	// Frontmatter via catalog.GenerateFrontmatter — única fuente de verdad
-	// del frontmatter de skills, compartida con el resto del catálogo.
 	frontmatter := catalog.GenerateFrontmatter(guideName, "claude")
-	content := frontmatter + "\n" + string(body)
+	files["SKILL.md"] = []byte(frontmatter + "\n" + string(files["SKILL.md"]))
 
-	return catalog.PackageContent{
-		Files: map[string][]byte{
-			"SKILL.md": []byte(content),
-		},
-	}, nil
+	return catalog.PackageContent{Files: files}, nil
 }
 
-// skillTemplate resuelve el (guideName, rawBody) del template de un skill
-// desde su manifest. Reusado por fetchSkill (static, le agrega frontmatter)
-// y por PersonalizingSource (lo pasa al LLM como guide). El body es el
-// template crudo, sin frontmatter.
-func (s *EmbeddedSource) skillTemplate(m catalog.PackageManifest) (guideName string, body []byte, err error) {
-	// Localizar el archivo: re-iterar las categories y matchear por guide
-	// name. O(N) sobre el catálogo total, aceptable (~30 items).
+// skillFiles resuelve el (guideName, files) de una skill desde su manifest.
+// La convención de layout (multi-archivo desde v4.0.0) es un directorio por
+// skill: templates/skills/<TemplateDir>/<guide>/ con SKILL.md (cuerpo sin
+// frontmatter — el frontmatter es por-ecosistema y lo genera el caller) más
+// sidecars opcionales (reference.md, examples.md). Reusado por fetchSkill
+// (Claude) y por AntigravitySkillSource (mismo body, otro frontmatter).
+//
+// SKILL.md es obligatorio; su ausencia es un error de catálogo, no un caso
+// silencioso.
+func (s *EmbeddedSource) skillFiles(m catalog.PackageManifest) (guideName string, files map[string][]byte, err error) {
 	guideName, templateDir, err := s.locateSkillTemplate(m.ID)
 	if err != nil {
 		return "", nil, err
 	}
-	// Convención del repo: skills bajo templates/skills/<TemplateDir>/
+	// Convención del repo: skills bajo templates/skills/<TemplateDir>/<guide>/
 	// (locale-free — inglés-only por diseño).
-	templatePath := path.Join("templates", "skills", templateDir, guideName+".template")
-	body, err = fs.ReadFile(s.fsys, templatePath)
+	skillDir := path.Join("templates", "skills", templateDir, guideName)
+	entries, err := fs.ReadDir(s.fsys, skillDir)
 	if err != nil {
-		return "", nil, fmt.Errorf("read skill template %s: %w", templatePath, err)
+		return "", nil, fmt.Errorf("read skill dir %s: %w", skillDir, err)
 	}
-	return guideName, body, nil
+
+	files = make(map[string][]byte, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Sub-directorios (scripts/, assets/) quedan fuera de v4.0.0;
+			// agregar walk recursivo cuando una skill los necesite.
+			continue
+		}
+		data, err := fs.ReadFile(s.fsys, path.Join(skillDir, entry.Name()))
+		if err != nil {
+			return "", nil, fmt.Errorf("read skill file %s/%s: %w", skillDir, entry.Name(), err)
+		}
+		files[entry.Name()] = data
+	}
+	if _, ok := files["SKILL.md"]; !ok {
+		return "", nil, fmt.Errorf("skill %q: %s has no SKILL.md (catalog layout violation)", m.ID, skillDir)
+	}
+	return guideName, files, nil
 }
 
 // locateSkillTemplate encuentra el (guide_name, template_dir) de un

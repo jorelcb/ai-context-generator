@@ -50,9 +50,6 @@ func TestPromptBuilder_SystemPromptsStableAcrossRun(t *testing.T) {
 		t.Error("analyze system prompt must be identical across calls of one run")
 	}
 	ctx := "Go project with DDD architecture"
-	if a, b := builder.BuildPersonalizedSkillsSystemPrompt("claude", "en", ctx), builder.BuildPersonalizedSkillsSystemPrompt("claude", "en", ctx); a != b {
-		t.Error("skills system prompt must be identical across the skills of one run")
-	}
 	if a, b := builder.BuildWorkflowSkillSystemPrompt("en", ctx), builder.BuildWorkflowSkillSystemPrompt("en", ctx); a != b {
 		t.Error("workflow-skills system prompt must be identical across the workflows of one run")
 	}
@@ -157,79 +154,6 @@ func TestFileOutputName(t *testing.T) {
 				t.Errorf("FileOutputName(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
-	}
-}
-
-func TestPromptBuilder_BuildPersonalizedSkillsSystemPrompt(t *testing.T) {
-	builder := NewPromptBuilder()
-
-	tests := []struct {
-		target  string
-		wantTag string
-	}{
-		{"claude", "Claude Code"},
-		{"codex", "Codex CLI"},
-		{"antigravity", "Antigravity IDE"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.target, func(t *testing.T) {
-			prompt := builder.BuildPersonalizedSkillsSystemPrompt(tt.target, "en", "Go project with DDD architecture")
-
-			if prompt == "" {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() returned empty string")
-			}
-			// The skill name travels in the user message; the system prompt
-			// references it via the <skill_name> tag (caching contract).
-			if !strings.Contains(prompt, "<skill_name>") {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() should reference the <skill_name> tag of the user message")
-			}
-			if !strings.Contains(prompt, tt.wantTag) {
-				t.Errorf("BuildPersonalizedSkillsSystemPrompt() should mention target %s", tt.wantTag)
-			}
-			if !strings.Contains(prompt, "<role>") {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() should contain <role> XML tag")
-			}
-			if !strings.Contains(prompt, "<skill_format>") {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() should contain <skill_format> XML tag")
-			}
-			if !strings.Contains(prompt, "SKILL.md") {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() should mention SKILL.md")
-			}
-			if !strings.Contains(prompt, "<project_context>") {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() should contain project_context XML tag")
-			}
-			if !strings.Contains(prompt, "<personalization_rules>") {
-				t.Error("BuildPersonalizedSkillsSystemPrompt() should contain personalization_rules XML tag")
-			}
-		})
-	}
-}
-
-func TestPromptBuilder_BuildSkillsUserMessage(t *testing.T) {
-	builder := NewPromptBuilder()
-
-	guide := service.TemplateGuide{
-		Name:    "ddd_entity",
-		Content: "# DDD Entity Creation Skill\n\n## Purpose\nGuide an AI agent...",
-	}
-
-	msg := builder.BuildSkillsUserMessage(guide, "claude")
-
-	if msg == "" {
-		t.Error("BuildSkillsUserMessage() returned empty string")
-	}
-	if !strings.Contains(msg, "<skill_name>ddd_entity</skill_name>") {
-		t.Error("BuildSkillsUserMessage() should contain skill_name XML tag")
-	}
-	if !strings.Contains(msg, "<target_ecosystem>claude</target_ecosystem>") {
-		t.Error("BuildSkillsUserMessage() should contain target_ecosystem XML tag")
-	}
-	if !strings.Contains(msg, "<template_guide>") {
-		t.Error("BuildSkillsUserMessage() should contain template_guide XML tag")
-	}
-	if !strings.Contains(msg, "DDD Entity Creation Skill") {
-		t.Error("BuildSkillsUserMessage() should include guide content")
 	}
 }
 
