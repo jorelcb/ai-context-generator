@@ -139,8 +139,8 @@ func domainLogicGroundingRules() string {
 }
 
 // personalizationGroundingRules returns the anti-hallucination block used by
-// personalized modes (skills, workflows, workflow-skills). The domain string
-// is interpolated into the rule headline (e.g. "skill", "workflow",
+// personalized modes (workflows, workflow-skills). The domain string
+// is interpolated into the rule headline (e.g. "workflow",
 // "Claude Code skill") so the rule reads naturally for the target artifact.
 func personalizationGroundingRules(domain string) string {
 	return fmt.Sprintf(`<grounding_rules>
@@ -313,171 +313,6 @@ func (b *PromptBuilder) BuildUserMessageForFile(req service.GenerationRequest, g
 	return sb.String()
 }
 
-// targetEcosystemDescriptions provides context about each target ecosystem's SKILL.md format.
-var targetEcosystemDescriptions = map[string]string{
-	"claude": `Target ecosystem: Claude Code (Anthropic)
-Skills are installed in ~/.claude/skills/ (global) or .claude/skills/ (project).
-YAML frontmatter fields: name, description, allowed-tools, context, agent, user-invocable.
-The skill is invoked via /skill-name or auto-invoked when Claude detects relevance.
-Substitutions available: $ARGUMENTS, ${CLAUDE_SKILL_DIR}.`,
-
-	"codex": `Target ecosystem: Codex CLI (OpenAI)
-Skills are installed in ~/.codex/skills/ (global) or .agents/skills/ (project).
-YAML frontmatter fields: name, description.
-The skill is invoked via $skill-name or implicitly when Codex detects relevance.
-Optional: agents/openai.yaml for UI metadata.`,
-
-	"antigravity": `Target ecosystem: Antigravity IDE (Google)
-Skills are installed in ~/.gemini/antigravity/skills/ (global) or .agent/skills/ (project).
-YAML frontmatter fields: name, description, triggers.
-The skill is auto-invoked when the agent determines relevance to the current request.
-Skills can bundle scripts in scripts/ subdirectory.`,
-}
-
-// BuildPersonalizedSkillsSystemPrompt returns a system prompt for generating personalized Agent Skills.
-// Unlike the generic version, this prompt instructs the LLM to adapt the skill to the user's project.
-//
-// The skill name lives in the user message (<skill_name>), not here: with the
-// name out, this prompt is identical across every skill of one run (same
-// project context), so the prompt cache hits from the second skill onward.
-func (b *PromptBuilder) BuildPersonalizedSkillsSystemPrompt(target, locale, projectContext string) string {
-	ecosystemDesc := targetEcosystemDescriptions[target]
-	if ecosystemDesc == "" {
-		ecosystemDesc = targetEcosystemDescriptions["claude"]
-	}
-
-	return fmt.Sprintf(`<role>
-You are a senior software architect specialized in creating personalized Agent Skills.
-Agent Skills are markdown-based instruction packages (SKILL.md) that teach AI coding agents
-how to approach specific architectural and engineering tasks.
-</role>
-
-<task>
-Generate a complete, production-ready SKILL.md file for the skill named in the user message (<skill_name>).
-This skill must be PERSONALIZED to the user's project context provided below.
-The output must include proper YAML frontmatter for the target ecosystem.
-</task>
-
-<project_context>
-%s
-</project_context>
-
-<target_ecosystem>
-%s
-</target_ecosystem>
-
-<skill_format>
-The SKILL.md file MUST follow this structure:
-
-1. YAML frontmatter (between --- markers) with at minimum: name, description
-2. Clear description of WHEN to use this skill (triggers/scenarios)
-3. Step-by-step PROCESS the agent should follow
-4. Concrete CODE EXAMPLES adapted to the project's domain, language, and patterns
-5. ANTI-PATTERNS to avoid with explanations of why
-6. VERIFICATION checklist to confirm correct application
-</skill_format>
-
-<personalization_rules>
-CRITICAL — Adapt this skill to the project context:
-
-1. Use the project's programming language for ALL code examples
-2. Use the project's actual domain concepts (entities, services, modules) in examples
-3. Reference the project's architecture patterns and conventions
-4. Adapt naming conventions to match the project's style
-5. Include project-specific considerations (frameworks, libraries, tools in use)
-6. If the project uses specific testing frameworks, patterns, or CI/CD tools, reference them
-7. The skill should feel tailor-made for this specific project, not generic
-
-DO NOT:
-- Use generic examples (Order, User, Product) when the project context provides real domain concepts
-- Ignore the project's language or framework in favor of generic patterns
-- Add patterns or tools not relevant to the project's stack
-</personalization_rules>
-
-%s
-
-<output_example>
-Reference shape (do not copy verbatim — adapt every section to the user's actual stack and domain):
-
----
-name: ddd-entity
-description: Design rich domain entities for the order module using Go and gorm
----
-
-# DDD Entity — Order aggregate
-
-## When to use
-- Adding a new aggregate root inside `+"`internal/domain/order/`"+`
-- Splitting an existing entity that has grown too many responsibilities
-- Encapsulating invariants currently scattered across services
-
-## Process
-1. Identify the invariants the aggregate must protect (e.g. `+"`Total >= 0`"+`, status transitions)
-2. Model identity as a value object (`+"`OrderID`"+`) — never expose primitives
-3. Place behavior on the entity, not on a service: `+"`o.Confirm()`"+`, `+"`o.Cancel(reason)`"+`
-4. Validate every state transition before mutating fields
-5. Emit a domain event per state change (`+"`OrderConfirmed`"+`, `+"`OrderCancelled`"+`)
-
-## Example
-`+"```go"+`
-type Order struct {
-    id        OrderID
-    status    OrderStatus
-    total     Money
-    events    []DomainEvent
-}
-
-func (o *Order) Confirm() error {
-    if o.status != StatusDraft {
-        return ErrInvalidTransition
-    }
-    o.status = StatusConfirmed
-    o.events = append(o.events, OrderConfirmed{ID: o.id})
-    return nil
-}
-`+"```"+`
-
-## Anti-patterns
-- Anemic models: data-only structs with all logic in services
-- Public setters that bypass invariants
-- Direct mutation of related aggregates from this entity
-
-## Verification
-- [ ] Identity is a value object, not a primitive
-- [ ] Every state transition validates and emits an event
-- [ ] Tests cover both happy path and invalid transitions
-</output_example>
-
-<output_quality>
-- Complete YAML frontmatter appropriate for the target ecosystem
-- Maximum 200 lines of content (personalized skills may need more detail)
-- Code examples in fenced blocks with the project's language tag
-- Structured with clear markdown headers
-- Every instruction must be directly actionable within this project's codebase
-</output_quality>
-
-<rules>
-- Respond ONLY with the complete SKILL.md content (frontmatter + body)
-- DO NOT wrap the response in code blocks
-- DO NOT add explanations before or after the content
-- Content must be in %s
-- Start with the --- YAML frontmatter delimiter
-</rules>`, projectContext, ecosystemDesc, personalizationGroundingRules("skill"), outputLanguageName(locale))
-}
-
-// BuildSkillsUserMessage constructs the user message for generating a single skill.
-func (b *PromptBuilder) BuildSkillsUserMessage(guide service.TemplateGuide, target string) string {
-	var sb strings.Builder
-
-	sb.WriteString(fmt.Sprintf("<skill_name>%s</skill_name>\n\n", guide.Name))
-	sb.WriteString(fmt.Sprintf("<target_ecosystem>%s</target_ecosystem>\n\n", target))
-	sb.WriteString("<template_guide>\n")
-	sb.WriteString(guide.Content)
-	sb.WriteString("\n</template_guide>\n")
-
-	return sb.String()
-}
-
 // BuildSpecSystemPrompt returns a system prompt for generating spec files from existing context.
 //
 // standardHints es el bloque que el SpecStandard activo aporta para reforzar
@@ -550,7 +385,7 @@ func (b *PromptBuilder) BuildSpecUserMessage(guide service.TemplateGuide) string
 // BuildPersonalizedWorkflowsSystemPrompt returns a system prompt for generating personalized Antigravity workflows.
 //
 // The workflow name lives in the user message (<workflow_name>) — same caching
-// contract as BuildPersonalizedSkillsSystemPrompt.
+// contract as the other per-guide builders.
 func (b *PromptBuilder) BuildPersonalizedWorkflowsSystemPrompt(locale, projectContext string) string {
 	return fmt.Sprintf(`<role>
 You are a senior DevOps engineer and workflow automation specialist.
@@ -678,7 +513,7 @@ func (b *PromptBuilder) BuildWorkflowsUserMessage(guide service.TemplateGuide, t
 // The LLM generates a complete skill file with frontmatter and personalized workflow instructions.
 //
 // The workflow name lives in the user message (<workflow_name>) — same caching
-// contract as BuildPersonalizedSkillsSystemPrompt.
+// contract as the other per-guide builders.
 func (b *PromptBuilder) BuildWorkflowSkillSystemPrompt(locale, projectContext string) string {
 	return fmt.Sprintf(`<role>
 You are a senior DevOps engineer and workflow automation specialist for Claude Code.

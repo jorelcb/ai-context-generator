@@ -163,8 +163,7 @@ func (c *ClaudeInstaller) settingsPath(scope catalog.Scope) (string, error) {
 // --- skills ---
 
 func (c *ClaudeInstaller) installSkill(m catalog.PackageManifest, content catalog.PackageContent, scope catalog.Scope) error {
-	body, ok := content.Files["SKILL.md"]
-	if !ok {
+	if _, ok := content.Files["SKILL.md"]; !ok {
 		return fmt.Errorf("claude installer: skill %q content has no SKILL.md", m.ID)
 	}
 	base, err := c.skillsDir(scope)
@@ -175,9 +174,15 @@ func (c *ClaudeInstaller) installSkill(m catalog.PackageManifest, content catalo
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("claude installer: create skill dir %s: %w", dir, err)
 	}
-	dst := filepath.Join(dir, "SKILL.md")
-	if err := os.WriteFile(dst, body, 0o644); err != nil {
-		return fmt.Errorf("claude installer: write %s: %w", dst, err)
+	// Multi-file skills (v4.0.0): SKILL.md + progressive-disclosure sidecars
+	// (reference.md, examples.md) — every fetched file lands in the skill
+	// dir, mirroring how the hooks path installs full bundles. Dropping
+	// extra files silently was the SK-4 audit finding.
+	for name, data := range content.Files {
+		dst := filepath.Join(dir, name)
+		if err := os.WriteFile(dst, data, 0o644); err != nil {
+			return fmt.Errorf("claude installer: write %s: %w", dst, err)
+		}
 	}
 	return nil
 }

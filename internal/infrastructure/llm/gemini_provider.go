@@ -129,7 +129,7 @@ func (p *GeminiProvider) generateSingleFile(
 	guide service.TemplateGuide,
 ) (content string, tokensIn int, tokensOut int, err error) {
 	// Modes that personalize against a user-provided project context require it non-empty.
-	needsContext := req.Mode == "skills" || req.Mode == "workflows" || req.Mode == "workflow-skills"
+	needsContext := req.Mode == "workflows" || req.Mode == "workflow-skills"
 	if needsContext && req.ProjectContext == "" {
 		return "", 0, 0, fmt.Errorf("mode %q requires non-empty ProjectContext", req.Mode)
 	}
@@ -140,9 +140,6 @@ func (p *GeminiProvider) generateSingleFile(
 	case "spec":
 		systemPrompt = p.promptBuilder.BuildSpecSystemPrompt(req.ExistingContext, req.Locale, req.SDDStandardHints)
 		userMessage = p.promptBuilder.BuildSpecUserMessage(guide)
-	case "skills":
-		systemPrompt = p.promptBuilder.BuildPersonalizedSkillsSystemPrompt(req.Target, req.Locale, req.ProjectContext)
-		userMessage = p.promptBuilder.BuildSkillsUserMessage(guide, req.Target)
 	case "workflow-skills":
 		systemPrompt = p.promptBuilder.BuildWorkflowSkillSystemPrompt(req.Locale, req.ProjectContext)
 		userMessage = p.promptBuilder.BuildWorkflowSkillUserMessage(guide)
