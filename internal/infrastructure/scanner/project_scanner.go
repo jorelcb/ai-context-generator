@@ -16,7 +16,7 @@ type ScanResult struct {
 	Dependencies    []string            // Key dependencies from manifest
 	DirectoryTree   string              // Directory structure (limited depth)
 	README          string              // README content (truncated)
-	ExistingContext map[string]string    // Existing context files (AGENTS.md, CLAUDE.md, etc.)
+	ExistingContext map[string]string   // Existing context files (AGENTS.md, CLAUDE.md, etc.)
 	ConfigSignals   []string            // Detected config signals (CI, Docker, etc.)
 	BuildTargets    map[string][]string // Build targets by source ("Makefile", "Taskfile")
 	TestingSignals  []string            // Detected testing patterns and frameworks
@@ -165,11 +165,11 @@ var manifestFiles = map[string]string{
 // frameworkDetectors maps dependency patterns to framework names.
 var frameworkDetectors = map[string]string{
 	// Go
-	"github.com/gin-gonic/gin":     "Gin (HTTP)",
-	"github.com/labstack/echo":     "Echo (HTTP)",
-	"github.com/gofiber/fiber":     "Fiber (HTTP)",
-	"github.com/spf13/cobra":       "Cobra (CLI)",
-	"github.com/gorilla/mux":       "Gorilla Mux (HTTP)",
+	"github.com/gin-gonic/gin": "Gin (HTTP)",
+	"github.com/labstack/echo": "Echo (HTTP)",
+	"github.com/gofiber/fiber": "Fiber (HTTP)",
+	"github.com/spf13/cobra":   "Cobra (CLI)",
+	"github.com/gorilla/mux":   "Gorilla Mux (HTTP)",
 	// JavaScript/TypeScript
 	"next":    "Next.js",
 	"react":   "React",
@@ -220,6 +220,16 @@ func (s *ProjectScanner) detectLanguageAndDeps(projectPath string) (language, fr
 		language = lang
 		deps, framework = s.parseDependencies(lang, string(content))
 		break
+	}
+
+	// Refine JS/TS to TypeScript when a tsconfig is present, so the idiom guide
+	// and the --language flag resolve to the TypeScript-specific template
+	// instead of the generic JavaScript one. Deps are already parsed via the
+	// shared JS/TS path (TypeScript projects use package.json too).
+	if language == "JavaScript/TypeScript" {
+		if _, err := os.Stat(filepath.Join(projectPath, "tsconfig.json")); err == nil {
+			language = "TypeScript"
+		}
 	}
 
 	return language, framework, deps
@@ -676,18 +686,18 @@ func truncateContextFile(name, content string) string {
 
 // configSignalFiles maps filenames/dirs to their signal description.
 var configSignalFiles = map[string]string{
-	".github/workflows":  "GitHub Actions CI/CD",
-	".gitlab-ci.yml":     "GitLab CI/CD",
-	"Dockerfile":         "Docker containerization",
-	"docker-compose.yml": "Docker Compose (multi-service)",
+	".github/workflows":   "GitHub Actions CI/CD",
+	".gitlab-ci.yml":      "GitLab CI/CD",
+	"Dockerfile":          "Docker containerization",
+	"docker-compose.yml":  "Docker Compose (multi-service)",
 	"docker-compose.yaml": "Docker Compose (multi-service)",
-	"Makefile":           "Makefile build system",
-	"Taskfile.yml":       "Taskfile build system",
-	"Taskfile.yaml":      "Taskfile build system",
-	".env.example":       "Environment variable configuration",
-	"terraform":          "Terraform infrastructure",
-	"k8s":                "Kubernetes manifests",
-	"helm":               "Helm charts",
+	"Makefile":            "Makefile build system",
+	"Taskfile.yml":        "Taskfile build system",
+	"Taskfile.yaml":       "Taskfile build system",
+	".env.example":        "Environment variable configuration",
+	"terraform":           "Terraform infrastructure",
+	"k8s":                 "Kubernetes manifests",
+	"helm":                "Helm charts",
 }
 
 func (s *ProjectScanner) detectConfigSignals(projectPath string) []string {

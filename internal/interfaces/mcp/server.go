@@ -842,6 +842,7 @@ func normalizeLanguageFlag(detected string) string {
 	mapping := map[string]string{
 		"Go":                    "go",
 		"JavaScript/TypeScript": "javascript",
+		"TypeScript":            "typescript",
 		"Python":                "python",
 		"Rust":                  "rust",
 		"Java":                  "java",
