@@ -1,4 +1,6 @@
-# {{PROJECT_NAME}} - Architectural Context
+# {{PROJECT_NAME}} — Architectural Context
+
+This document is the **single source of truth** for the architecture of {{PROJECT_NAME}}: the DDD layers, their responsibilities, and the dependency rule. Operational conventions live in `context/AGENTS.md`; the feature-building process lives in `context/DEVELOPMENT_GUIDE.md`.
 
 ## Architecture
 
@@ -7,106 +9,74 @@ Main pattern: {{ARCHITECTURE_PATTERN}}
 ### DDD Layers and Responsibilities
 
 #### Domain Layer
-- **Responsibility:** Pure business logic, technology-agnostic
-- **Contains:** Entities with identity, immutable value objects, aggregates with consistency boundaries, domain interfaces/ports, domain errors, domain events
-- **Rule:** No external dependencies. Defines WHAT it needs, not HOW it's implemented
+- **Responsibility:** Pure business logic, technology-agnostic.
+- **Contains:** Entities with identity, immutable value objects, aggregates with consistency boundaries, domain interfaces/ports, domain errors, domain events.
+- **Rule:** No external dependencies. Defines WHAT it needs, not HOW it is implemented.
 
 #### Application Layer
-- **Responsibility:** Orchestrates use cases using the domain
-- **Contains:** Commands and queries (CQRS), DTOs for inter-layer communication, application services
-- **Rule:** Depends only on domain. Coordinates, does not implement business logic
+- **Responsibility:** Orchestrates use cases using the domain.
+- **Contains:** Commands and queries (CQRS), DTOs for inter-layer communication, application services.
+- **Rule:** Depends only on the domain. Coordinates; does not implement business logic.
 
 #### Infrastructure Layer
-- **Responsibility:** Concrete implementations and technology adapters
-- **Contains:** Repositories (persistence), gateways (external APIs), providers (services), configuration, observability
-- **Rule:** Implements interfaces defined in domain. This is where technology details live
+- **Responsibility:** Concrete implementations and technology adapters.
+- **Contains:** Repositories (persistence), gateways (external APIs), providers (services), configuration, observability.
+- **Rule:** Implements interfaces defined in the domain. This is where technology details live.
 
 #### Interfaces Layer
-- **Responsibility:** Application entry points
-- **Contains:** HTTP/gRPC handlers, CLI commands, middleware, external DTO mappers
-- **Rule:** Adapts input/output to the outside world format. Uses the application layer
+- **Responsibility:** Application entry points.
+- **Contains:** HTTP/gRPC handlers, CLI commands, middleware, external DTO mappers.
+- **Rule:** Adapts input/output to the outside-world format. Uses the application layer.
 
 ### Dependency Rule (Clean Architecture)
 
 {{DEPENDENCY_RULE}}
 
-Dependencies always point inward. Domain is the core: it does not import or know anything from outer layers. Outer layers implement interfaces defined by inner layers (Dependency Inversion).
+Dependencies always point inward: Interfaces → Infrastructure → Application → Domain. The domain is the core: it never imports or knows anything from outer layers. Outer layers implement interfaces defined by inner layers (Dependency Inversion).
 
 ## Main Components
 
+Describe each significant component of {{PROJECT_NAME}}. For each one state: its specific responsibility, the interfaces (ports) it exposes, the dependencies (adapters) it consumes, and the layer it belongs to.
+
 {{COMPONENTS}}
 
-For each component include:
-- Specific responsibility
-- Interfaces it exposes (ports)
-- Dependencies it consumes (adapters)
-- Layer it belongs to
+Example entry:
+- **OrderService** (Application) — orchestrates order placement. Exposes `PlaceOrder(cmd)`; consumes the `OrderRepository` and `PaymentGateway` ports defined in Domain.
 
 ## Data Flow
 
+Describe how requests and data flow through the DDD layers for the main use cases of {{PROJECT_NAME}}, from the entry point (Interfaces) through Application and Domain to persistence or response.
+
 {{DATA_FLOW}}
 
-Describe how requests/data flow through DDD layers, from entry point (interfaces) to persistence or response, through application and domain.
+Example: `HTTP handler (Interfaces) → OrderService.PlaceOrder (Application) → Order aggregate invariants (Domain) → OrderRepository adapter (Infrastructure) → DB`.
 
 ## Design Decisions
 
-| Decision | Justification | Discarded Alternatives |
-|----------|--------------|----------------------|
-| {{DESIGN_DECISIONS}} | | |
+Record the architectural decisions that shape {{PROJECT_NAME}}. For each, state the decision, its justification, and the alternatives that were discarded and why. Keep one decision per row.
+
+{{DESIGN_DECISIONS}}
 
 ## External Integrations
 
-{{EXTERNAL_INTEGRATIONS}}
+Include this section only if {{PROJECT_NAME}} integrates with external APIs, databases, or messaging services. For each integration state: purpose, protocol, and resilience pattern (retry, circuit breaker, timeout).
 
-Only include if the project has integrations with external APIs, databases, messaging services, etc. For each integration: purpose, protocol, resilience pattern (retry, circuit breaker).
+{{EXTERNAL_INTEGRATIONS}}
 
 ## Observability
 
-OpenTelemetry instrumentation strategy:
+Observability stack: {{OBSERVABILITY_STACK}}
 
-- **Tracing:** Spans for all significant operations, end-to-end context propagation, relevant semantic attributes
-- **Metrics:** Business counters and histograms, latencies per operation, errors by type
-- **Logging:** Structured logs correlated with TraceID, appropriate levels (no logging of sensitive data)
+Document the instrumentation strategy for {{PROJECT_NAME}} against the chosen stack:
+- **Tracing:** Spans for significant operations, end-to-end context propagation, relevant semantic attributes.
+- **Metrics:** Business counters and histograms, per-operation latencies, errors by type.
+- **Logging:** Structured logs correlated with the trace identifier; no logging of sensitive data.
 
 {{OBSERVABILITY_STRATEGY}}
 
-## Production Requirements
+## Production-Runtime Requirements
 
-### Graceful Shutdown
-- OS signal capture (SIGINT, SIGTERM)
-- Stop accepting new requests, complete in-progress ones
-- Close external connections, export pending telemetry
-- Configurable timeout
-
-### Health Checks
-- Endpoint /health/live (liveness) and /health/ready (readiness)
-- Critical dependency verification
-
-### Resilience
-- Retry with exponential backoff for transient operations
-- Circuit breaker for external services
-- Configurable timeouts on all operations
-
-## Implementation Checklist
-
-### Phase 1: Foundation
-- [ ] Project structure according to DDD
-- [ ] Domain: entities, value objects, interfaces
-- [ ] Application: basic services and DTOs
-- [ ] Infrastructure: minimal implementations
-- [ ] Domain unit tests
-- [ ] OpenTelemetry: basic traces
-
-### Phase 2: Robustness
-- [ ] Complete graceful shutdown
-- [ ] Health checks
-- [ ] Circuit breaker and retry policies
-- [ ] Integration tests
-- [ ] Business metrics
-
-### Phase 3: Production
-- [ ] Authentication and authorization
-- [ ] Rate limiting
-- [ ] Complete documentation
-- [ ] E2E tests
-- [ ] CI/CD pipeline
+Include this section ONLY if {{PROJECT_NAME}} is a long-running service or API; omit it entirely for a library or CLI. When it applies, document:
+- **Graceful shutdown:** OS signal capture (SIGINT, SIGTERM), stop accepting new requests while completing in-flight ones, close external connections, export pending telemetry, configurable timeout.
+- **Health checks:** liveness and readiness endpoints, with verification of critical dependencies.
+- **Resilience:** retry with exponential backoff for transient operations, circuit breaker for external services, configurable timeouts on all outbound calls.

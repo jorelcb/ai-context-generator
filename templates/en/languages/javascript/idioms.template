@@ -1,4 +1,6 @@
-# {{PROJECT_NAME}} - JavaScript/TypeScript Idiomatic Guide
+# {{PROJECT_NAME}} - JavaScript Idiomatic Guide
+
+> Pure modern JavaScript. For TypeScript-specific guidance (type system, `satisfies`, branded types), see the TypeScript guide.
 
 ## Asynchrony and Parallelism
 
@@ -7,7 +9,7 @@
 - Use `Promise.all()` for independent parallel operations
 - Use `Promise.allSettled()` when you need partial results without short-circuiting on failure
 - Implement throttling and debouncing for high-frequency operations
-- Use worker threads (`worker_threads`) for CPU-intensive operations
+- Use worker threads (`node:worker_threads`) for CPU-intensive operations
 - Apply the queue pattern for ordered asynchronous processing
 
 ### AbortController
@@ -17,12 +19,12 @@
 
 ### Event Loop
 - Do not block the event loop with heavy synchronous operations
-- Use `setImmediate()` or `process.nextTick()` to yield control in long loops
+- Use `setImmediate()` or `queueMicrotask()` to yield control in long loops
 - Understand the difference between microtasks (promises) and macrotasks (timers, I/O)
 
 ## Error Handling
 
-- Use try/catch with async/await — don't leave promises without `.catch()`
+- Use try/catch with async/await — don't leave promises without a rejection handler
 - Define custom error classes that extend `Error` with descriptive properties
 - Use `instanceof` to differentiate error types
 - In express/fastify, centralize error handling in error middleware
@@ -33,44 +35,45 @@
 
 ### Naming
 - `camelCase` for variables and functions
-- `PascalCase` for classes, interfaces, types, and enums
+- `PascalCase` for classes
 - `kebab-case` for file and directory names
 - `UPPER_SNAKE_CASE` for constants and environment variables
 - Descriptive prefixes: `is`, `has`, `should` for booleans; `get`, `set`, `create` for functions
 
-### Import Organization
-```
-// stdlib / node builtins
-import path from 'node:path'
+### Modern Syntax
+- `const` by default, `let` only when reassigned — never `var`
+- Use optional chaining (`?.`) and nullish coalescing (`??`) instead of `&&`/`||` guards
+- Use `#private` class fields for true encapsulation, not `_`-prefixed convention
+- Use array/object destructuring, spread, and `structuredClone()` for deep copies
+- Prefer `for...of` and array methods (`map`/`filter`/`reduce`) over index loops
+
+### Import Organization (ESM)
+```javascript
+// node builtins (always node: prefixed)
+import { readFile } from 'node:fs/promises'
 
 // external dependencies
 import express from 'express'
 
 // internal modules
-import { UserService } from './services/user-service'
+import { UserService } from './services/user-service.js'
 ```
-Separated by blank lines, grouped in that order.
-
-### TypeScript
-- Use `interface` for public contracts, `type` for unions and utility types
-- Avoid `any` — use `unknown` when the type is truly unknown
-- Use `readonly` for immutable properties
-- Prefer `as const` over enums when sufficient
-- Generate declarations (`.d.ts`) for libraries/SDKs
+ESM is the default. Use the `node:` prefix for stdlib imports; include the `.js` extension on relative imports.
 
 ## Version and Tooling Constraints
 
-- Node.js LTS (>= 18) with ES2022+ features
-- ESM (`import/export`) over CommonJS (`require`) in new projects
-- TypeScript for type safety in any non-trivial project
-- ESLint + Prettier as standard formatters
+- Node.js 20 / 22 LTS (Node 18 is EOL since April 2025) with modern ES features
+- ESM by default: set `"type": "module"` in `package.json`; use `import`/`export`, not `require`
+- `fetch` is global and native — no `node-fetch`/`axios` needed for basic HTTP
+- Native `node:test` runner is built in — no Jest/Mocha required for new projects
+- ESLint (flat config, `eslint.config.js`) + Prettier as standard linter/formatter
 - `package-lock.json` versioned in the repository
 
-## Testing in JavaScript/TypeScript
+## Testing in JavaScript
 
-- Jest or Vitest as main framework
-- Tests placed alongside code (`__tests__/` or `.test.ts` next to the file)
-- `jest.mock()` to mock complete modules
-- `jest.spyOn()` to intercept calls without replacing implementation
-- `supertest` for HTTP endpoint testing
-- `jest.useFakeTimers()` for tests with timers and delays
+- Native `node:test` runner with `node:assert/strict` — run with `node --test`
+- Use `test()` / `describe()` / `it()`; `node:test` supports subtests and `--watch`
+- `mock` from `node:test` (`mock.fn()`, `mock.method()`) for spies and stubs
+- `vitest` as an alternative when you need a richer ecosystem or a browser/jsdom environment
+- Co-locate tests (`*.test.js` next to the file) or in a `test/` directory
+- `mock.timers` for deterministic tests with timers and delays

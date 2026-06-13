@@ -1,56 +1,30 @@
-# Bitacora de Interacciones - {{PROJECT_NAME}}
+# Bitácora de Interacciones — {{PROJECT_NAME}}
 
-## Formato de Sesion
+Esta es una bitácora de solo-anexado (append-only) de Registros de Decisiones de Arquitectura (ADR) e interacciones significativas que afectan al diseño de {{PROJECT_NAME}}. Añade las nuevas entradas en orden cronológico; nunca reescribas la historia.
 
-```markdown
-## Sesion: [Fecha] - [Titulo Descriptivo]
+## Formato ADR
 
-### Contexto
-- **Estado:** [Estado del proyecto]
-- **Branch:** [Rama de trabajo]
-- **Objetivo:** [Que se busca resolver o implementar]
+Cada entrada sigue:
+- **ADR-N:** título
+- **Fecha:** fecha ISO
+- **Contexto:** por qué se necesitaba la decisión
+- **Decisión:** qué se eligió
+- **Alternativas consideradas:** qué se rechazó y por qué
+- **Consecuencias:** compromisos aceptados
 
-### Tareas Realizadas
-1. **[Titulo]** - [Descripcion breve, archivos afectados, resultado]
+## Decisiones Iniciales
 
-### Decisiones Arquitectonicas
-- **[Decision]:** [Justificacion] | Alternativas: [descartadas y por que]
+### ADR-001: Contexto inicial generado por Codify
+- **Fecha:** {{TODAY}}
+- **Contexto:** Proyecto inicializado con Codify; arquitectura y convenciones base documentadas en los archivos de contexto generados.
+- **Decisión:** Adoptar la arquitectura y las convenciones documentadas como línea base del proyecto.
+- **Alternativas consideradas:** Ninguna registrada en el arranque — esta entrada captura el punto de partida, no una elección en disputa.
+- **Consecuencias:** Las futuras decisiones arquitectónicas se anexan a continuación a medida que se toman.
 
-### Problemas y Soluciones
-- **[Problema]:** [Causa raiz] -> [Solucion aplicada]
+## Registro de Evolución
 
-### Estado Final
-- **Completado:** [lista]
-- **Pendiente:** [lista]
-```
+{{EVOLUTION_ENTRIES}}
 
-## ADR Template
+## Preguntas Abiertas
 
-```markdown
-## ADR-[N]: [Titulo]
-**Estado:** [Propuesta | Aceptada | Deprecada]
-**Contexto:** [Situacion que requiere decision]
-**Decision:** [Lo que se decidio]
-**Consecuencias:** [Positivas y negativas]
-```
-
-## Convenciones
-- Tipos: FEAT, FIX, REFACTOR, CONFIG, DOCS, TEST, PERF, CHORE
-- Estados: Completado, En progreso, Fallido, Pendiente
-
----
-
-## Sesion: {{DATE}} - Inicializacion del Proyecto
-
-### Contexto
-- **Estado:** Proyecto nuevo
-- **Branch:** main
-- **Objetivo:** Establecer estructura base del proyecto
-
-### Tareas Realizadas
-1. **Estructura de carpetas** - Creada segun {{ARCHITECTURE}}
-2. **Configuracion inicial** - Dependencias y archivos de config
-
-### Estado Final
-- **Completado:** Estructura base, configuracion, documentacion inicial
-- **Pendiente:** Implementacion de dominio, tests, integraciones
+{{OPEN_QUESTIONS}}

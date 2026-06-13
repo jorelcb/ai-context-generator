@@ -1,145 +1,60 @@
-# {{PROJECT_NAME}} - Guia de Desarrollo
+# Guía de Desarrollo — {{PROJECT_NAME}}
 
-## Mentalidad de Produccion
+## Metodología
 
-Este es un componente de produccion que debe cumplir requisitos estrictos de confiabilidad, observabilidad y rendimiento. No es un proyecto academico ni prueba de concepto. Cada decision debe considerar mantenibilidad y operabilidad a largo plazo.
+{{PROJECT_NAME}} se desarrolla siguiendo DDD / Clean Architecture. El trabajo fluye de adentro hacia afuera: primero se modela el dominio, se lo orquesta en la capa de aplicación y luego se conectan los adaptadores de infraestructura e interfaces. Las definiciones de las capas están en `context/CONTEXT.md` — esta guía cubre el *proceso*, no las definiciones.
 
-## Metodologia de Trabajo
+## Agregar una Feature
 
-### Flujo de Desarrollo
-1. **Planifica antes de actuar**: Presenta un plan claro antes de escribir o modificar codigo
-2. **Trabajo incremental**: Construye paso a paso, asegurando calidad en cada etapa
-3. **Testing continuo**: Escribe tests MIENTRAS desarrollas cada componente, no despues
-4. **Validacion constante**: Verifica que cada componente funciona antes de continuar
-5. **Solicita clarificacion**: Si algun requisito es ambiguo, pregunta antes de proceder
+1. **Identificar el caso de uso.** ¿Qué operación pide el mundo al sistema y qué agregado la posee?
+2. **Modelar el dominio.** Agregar o extender la entidad / value object / agregado. Codificar las invariantes en el dominio; definir aquí cualquier puerto (interface) nuevo que el caso de uso necesite.
+3. **Escribir tests unitarios de dominio.** Cubrir invariantes y casos límite directamente contra el dominio, sin infraestructura.
+4. **Orquestar en la capa de aplicación.** Agregar el command o query (CQRS) y sus DTOs. Coordinar los objetos de dominio a través de sus puertos; mantener la lógica de negocio fuera de esta capa.
+5. **Implementar los adaptadores de infraestructura.** Proveer implementaciones concretas de los puertos del dominio (repositorios, gateways, providers).
+6. **Cablear el punto de entrada de interfaces.** Agregar el handler HTTP/gRPC o el comando CLI que mapea el input externo al command/query de aplicación.
+7. **Cablear en el composition root.** Inyectar los adaptadores en los servicios de aplicación; nada en el dominio ni en la aplicación construye sus propias dependencias.
 
-### Testing como Practica Integrada
-- **Tests unitarios**: Inmediatamente despues de crear cada funcion/metodo del dominio
-- **Tests de integracion**: Junto con cada adaptador de infraestructura
-- **BDD cuando sea apropiado**: Para logica de negocio compleja, escribe el escenario primero
-- **Coverage minimo**: 80% en dominio, 70% en aplicacion, 60% en infraestructura
+## Testing
 
-## Estilo de Comunicacion
+- **Pirámide de tests:** tests unitarios de dominio (los más numerosos, los más rápidos) → tests de aplicación/integración → tests end-to-end solo para caminos críticos.
+- **Dominio en aislamiento:** testear el dominio con fakes/stubs que implementan sus puertos; sin base de datos ni red reales.
+- **Tests de integración:** ejercitar los adaptadores de infraestructura contra implementaciones reales o in-memory del puerto que cumplen.
+- **BDD cuando aplique:** para lógica de negocio compleja, escribir el escenario antes de la implementación.
+- **Targets de cobertura:** {{COVERAGE_TARGETS}} — definir por capa, exigiendo al dominio el listón más alto.
 
-### Al escribir codigo:
-- Comenta solo decisiones arquitectonicas criticas o workarounds temporales
-- Nombra variables y funciones de manera autodocumentada
-- Estructura el codigo para que sea obvio, no clever
-- Sigue convenciones idiomaticas del lenguaje
+## Checklist de Code Review
 
-### Al explicar decisiones:
-- Se conciso pero completo
-- Justifica decisiones arquitectonicas con trade-offs claros
-- Menciona alternativas consideradas cuando sea relevante
-- Referencia patrones o principios especificos
-
-### Al encontrar problemas:
-- Diagnostica la causa raiz, no solo los sintomas
-- Propone soluciones con pros y contras
-- Considera el impacto en produccion
-- Documenta en lecciones aprendidas
-
-## Autonomia Arquitectonica
-
-### Poder de Decision
-El documento de contexto proporciona una base solida, pero existe completa libertad para proponer optimizaciones y cambios en cualquier aspecto:
-
-- **Modelado del dominio**: Mejores representaciones de entidades o agregados
-- **Interfaces y abstracciones**: Abstracciones mas elegantes o funcionales
-- **Patrones arquitectonicos**: Si un patron diferente resuelve mejor el problema
-- **Decisiones tecnicas**: Si una libreria o approach ofrece ventajas significativas
-- **Organizacion del codigo**: Si una estructura diferente mejora la mantenibilidad
-
-### Como Proponer Cambios
-1. Documenta el problema o limitacion actual
-2. Propone la alternativa con sus beneficios
-3. Analiza los trade-offs involucrados
-4. Justifica por que el cambio mejora el sistema
-5. Implementa gradualmente, manteniendo compatibilidad donde sea critico
-
-## Checklist de Auto-Validacion
-
-Antes de considerar cualquier componente como completo:
-- [ ] Respeta la separacion de capas DDD?
-- [ ] Es testeable de manera aislada?
-- [ ] Maneja todos los casos de error posibles?
-- [ ] Es observable en produccion?
-- [ ] Puede escalar horizontalmente si es necesario?
-- [ ] Se recupera gracefully de fallos transitorios?
-- [ ] El codigo es mantenible por otro desarrollador?
-
-## Expectativas de Entrega
-
-Cada componente debe:
-1. **Funcionar** correctamente en su happy path y casos de error
-2. **Estar testeado** con casos unitarios relevantes
-3. **Ser observable** con metricas y trazas apropiadas
-4. **Estar documentado** donde no sea obvio
-5. **Ser resiliente** ante fallos esperados
+- [ ] El cambio respeta la separación de capas DDD (sin imports de dominio → capa externa).
+- [ ] Las nuevas dependencias externas se expresan como puertos del dominio, no llamadas directas.
+- [ ] El objeto de dominio es testeable en aislamiento, sin infraestructura presente.
+- [ ] Las invariantes viven en el dominio, no en código de aplicación o interfaces.
+- [ ] Los errores se manejan o propagan con contexto; ninguno se traga en silencio.
+- [ ] Las dependencias se inyectan por constructor y se cablean solo en el composition root.
+- [ ] El cambio viene acompañado de tests unitarios que cumplen el target de cobertura de la capa.
 
 ## Seguridad
 
-- TLS/mTLS para comunicaciones cuando sea necesario
-- Autenticacion y autorizacion segun el tipo de proyecto
-- Sanitizacion de logs (no exponer datos sensibles)
-- Gestion segura de credenciales (variables de entorno, secrets manager)
-- Nunca commitear credenciales o datos sensibles
+{{SECURITY_PRACTICES}}
 
-## Configuracion
+- Validar y sanitizar el input en la capa de interfaces antes de que llegue al código de aplicación/dominio.
+- Traducir las fallas de nivel infraestructura a errores de dominio antes de que crucen un puerto.
+- Acceder a los secretos solo vía configuración; nunca leerlos directamente en código de dominio o aplicación, y nunca commitearlos.
+- {{ADDITIONAL_SECURITY_RULES}}
 
-### Fuentes de Configuracion (en orden de precedencia)
-1. Variables de entorno
-2. Archivo de configuracion
-3. Valores por defecto
+## Observabilidad
 
-### Estructura esperada
-La configuracion debe cubrir:
-- Datos de la aplicacion (nombre, entorno, version)
-- Parametros del servidor o punto de entrada (puertos, timeouts)
-- Telemetria (exporter, endpoint, habilitacion)
-- Conexiones externas (bases de datos, servicios, messaging)
-- Graceful shutdown (grace period configurable)
+{{OBSERVABILITY_PRACTICES}}
 
-## Guias por Tipo de Proyecto
+- Instrumentar contra el stack elegido por el proyecto ({{OBSERVABILITY_STACK}}); nunca usar variables globales para el tracer — inyectarlo.
+- Logging estructurado en los boundaries de interfaces y aplicación, correlacionado con el identificador de traza.
+- Tracing: iniciar spans en la capa de interfaces y propagar el contexto a través de las llamadas de aplicación e infraestructura.
+- Métricas: emitir contadores/histogramas de negocio y latencias por operación en los boundaries de adaptador.
 
-### API/Servicio
-- Endpoints RESTful bien definidos siguiendo estandares REST
-- Documentacion OpenAPI/Swagger generada automaticamente
-- Versionado de API cuando sea necesario
-- Rate limiting y autenticacion
+## Expectativas de Entrega
 
-### CLI
-- Comandos intuitivos con interfaz clara
-- Configuracion flexible: archivos, env vars y flags
-- Output formateado: JSON, YAML, tabla o texto plano
-- Codigos de salida significativos
+{{DELIVERY_EXPECTATIONS}}
 
-### Library/SDK
-- API publica clara y bien documentada
-- Minimas dependencias externas
-- Compatibilidad con multiples versiones del runtime
-- Documentacion con ejemplos de uso
-
-### Webapp
-- Arquitectura SPA o SSR segun requisitos de SEO y performance
-- Gestion de estado centralizada
-- Responsive design con mobile-first approach
-
-## Conceptos DDD Clave
-
-- **Lenguaje Ubicuo**: Terminologia comun y consistente en todo el codigo
-- **Agregados**: Definen limites de consistencia transaccional
-- **Value Objects**: Objetos inmutables sin identidad
-- **Repositories**: Abstracciones de persistencia definidas en el dominio
-- **Domain Events**: Eventos que representan cambios significativos en el dominio
-- **Bounded Contexts**: Limites claros entre subdominios
-
-## Observabilidad Detallada
-
-### Requerimientos OpenTelemetry
-- NO usar variables globales para tracer — usar inyeccion de dependencias
-- Propagacion de contexto completa en todas las operaciones
-- Spans detallados para operaciones significativas
-- Atributos semanticos relevantes en cada span (service.name, service.version)
-- Metricas de negocio: contadores, histogramas, gauges
-- Logs estructurados correlacionados con TraceID
+- Cada componente funciona tanto en su happy path como en sus casos de error, con tests que lo acompañan.
+- Los puertos del dominio se definen antes que el adaptador de infraestructura que los implementa.
+- Los cambios al composition root se revisan por acoplamiento no intencional entre capas.
+- Incluir requisitos de runtime en producción (health checks, graceful shutdown, circuit breakers) SOLO si {{PROJECT_NAME}} es un servicio o API de larga vida; omitirlos para una librería o CLI.

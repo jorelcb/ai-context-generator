@@ -1,79 +1,63 @@
-# {{PROJECT_NAME}} - Development Guide
+# Development Guide — {{PROJECT_NAME}}
 
-## Work Methodology
+## Methodology
 
-### Development Flow
-1. **Plan before acting**: Present a clear plan before writing or modifying code
-2. **Incremental work**: Build step by step, ensuring quality at each stage
-3. **Continuous testing**: Write tests WHILE developing each component, not after
-4. **Constant validation**: Verify each component works before moving on
-5. **Ask for clarification**: If any requirement is ambiguous, ask before proceeding
+State how work flows in this project: how a change moves from intent to merged code, and where tests fit. Keep it specific to the project's architecture and tooling. If the description does not say, emit `[DEFINE: development workflow]`.
 
-### Testing as Integrated Practice
-- **Unit tests**: Immediately after creating each function/method
-- **Integration tests**: Alongside each external integration
-- **BDD when appropriate**: For complex logic, write the scenario first
+## Adding a Feature
 
-## Communication Style
+A generic, architecture-agnostic sequence. Adapt the partition names to this project's structure.
 
-### When writing code:
-- Comment only critical decisions or temporary workarounds
-- Name variables and functions in a self-documenting way
-- Structure code to be obvious, not clever
-- Follow idiomatic language conventions
+1. **Locate the seam.** Find where the new behavior belongs — which module/layer owns it and which existing code it extends.
+2. **Define the contract first.** Name the function/endpoint/interface, its inputs, outputs, and error cases before writing the body.
+3. **Write the failing test.** Capture the expected behavior as a test against the contract.
+4. **Implement.** Keep the change inside the owning partition; reach other partitions only through their existing entry points.
+5. **Wire it up.** Register routes, handlers, config, or DI as the project requires.
+6. **Run the test suite.** All tests green, including the new one.
+7. **Run the linter/formatter** before opening a PR.
 
-### When explaining decisions:
-- Be concise but complete
-- Justify decisions with clear trade-offs
-- Mention considered alternatives when relevant
+## Testing
 
-### When encountering problems:
-- Diagnose the root cause, not just symptoms
-- Propose solutions with pros and cons
-- Consider production impact
+Follow the test pyramid:
+- **Unit tests** — most numerous and fastest; cover logic in isolation, dependencies faked/stubbed.
+- **Integration tests** — exercise real boundaries (DB, external APIs, queues) for the components that own them.
+- **End-to-end tests** — a thin layer over critical user paths only.
 
-## Autonomy
+- **Coverage targets:** {{COVERAGE_TARGETS}}
+- Each behavior change ships with the test that proves it. A bug fix ships with a regression test that fails before the fix.
 
-There is complete freedom to propose optimizations and changes in any aspect of the project:
-- Data modeling and abstractions
-- Patterns and technical decisions
-- Code organization
+## Code Review Checklist
 
-### How to Propose Changes
-1. Document the current problem or limitation
-2. Propose the alternative with its benefits
-3. Analyze the trade-offs
-4. Justify why the change improves the system
-
-## Validation Checklist
-
-Before considering any component complete:
-- [ ] Does it handle all possible error cases?
-- [ ] Is it testable in isolation?
-- [ ] Is it observable in production?
-- [ ] Does it recover from transient failures?
-- [ ] Is the code maintainable by another developer?
-
-## Delivery Expectations
-
-Each component must:
-1. **Work** correctly in happy path and error cases
-2. **Be tested** with relevant cases
-3. **Be documented** where not obvious
-4. **Be resilient** to expected failures
+- [ ] Change lives in the partition that owns the responsibility; no cross-layer shortcuts.
+- [ ] Public contracts (signatures, endpoints, schemas) are intentional and documented where non-obvious.
+- [ ] New behavior is covered by tests; a bug fix has a regression test.
+- [ ] Error cases are handled, not swallowed; failures are observable.
+- [ ] No secrets, credentials, or tokens in code, fixtures, or logs.
+- [ ] Linter/formatter clean; naming follows project conventions.
 
 ## Security
 
-- Log sanitization (do not expose sensitive data)
-- Secure credential management (environment variables, secrets manager)
-- Never commit credentials or sensitive data
+{{SECURITY_PRACTICES}}
 
-## Configuration
+- Validate and sanitize all external input at the boundary, before it reaches business logic.
+- Never log sensitive data (credentials, tokens, PII); redact at the logging boundary.
+- Read secrets from environment or a secrets manager — never hard-code or commit them.
+- {{ADDITIONAL_SECURITY_RULES}}
 
-### Configuration Sources (in order of precedence)
-1. Environment variables
-2. Configuration file
-3. Default values
+## Observability
 
-### Expected Structure
-Configuration should cover relevant project parameters: application data, server or entry point parameters, external connections, and graceful shutdown.
+{{OBSERVABILITY_PRACTICES}}
+
+- Structured logging at boundaries (request entry/exit, external calls) with a correlation id where available.
+- Metrics for latency and error rate on the paths that matter.
+- Tracing across external calls if the project is distributed.
+
+Include the specifics only when relevant to the project type; omit for a library or one-shot CLI.
+
+## Delivery Expectations
+
+{{DELIVERY_EXPECTATIONS}}
+
+- Every PR builds, passes the full test suite, and is linter-clean.
+- A change is "done" when it works on the happy path AND its error cases, is tested, and is documented where non-obvious.
+- Configuration follows a clear precedence (environment variables → config file → defaults) and covers connections and graceful shutdown where applicable.

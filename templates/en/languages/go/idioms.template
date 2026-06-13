@@ -7,8 +7,9 @@
 - Use channels for goroutine communication — prefer sharing memory by communicating, not communicating by sharing memory
 - Avoid race conditions with `sync.Mutex` or `sync.RWMutex` where needed
 - Use `sync.Map` for shared structures across goroutines when the access pattern justifies it
-- Implement backpressure and rate limiting with `semaphore` or buffered channels
+- Implement backpressure and rate limiting with `golang.org/x/sync/semaphore` or buffered channels
 - Apply the worker pool pattern with channels for concurrent processing
+- Run `go test -race` and `go build -race` to catch data races early
 
 ### Context
 - Propagate `context.Context` as the first parameter in every function that can be cancelled or timed out
@@ -25,7 +26,8 @@
 ## Error Handling
 
 - Use error wrapping with `fmt.Errorf("context: %w", err)` to preserve the error chain
-- Define domain errors as types with `errors.New()` or custom types implementing `error`
+- Combine multiple errors with `errors.Join(err1, err2)` (1.20+) instead of ad-hoc concatenation
+- Define domain errors as sentinel values (`errors.New()`) or custom types implementing `error`
 - Use `errors.Is()` and `errors.As()` for error comparison — never direct string comparison
 - Return errors, don't log them and then return — pick one
 - Use `panic` only for unrecoverable programming errors, never for control flow
@@ -47,7 +49,7 @@ external dependencies
 
 internal project modules
 ```
-Separated by blank lines, grouped in that order.
+Separated by blank lines, grouped in that order (`gofumpt`/`goimports` enforce it).
 
 ### Structs and Methods
 - Constructor with `NewXxx()` that returns the instance (or pointer + error if it can fail)
@@ -55,18 +57,33 @@ Separated by blank lines, grouped in that order.
 - Pointer receiver when the method mutates state or the struct is large
 - Value receiver for non-mutating methods on small structs
 
+## Modern Standard Library (Go 1.21–1.24)
+
+- Use the `slices` and `maps` packages instead of hand-rolled loops (`slices.Contains`, `slices.SortFunc`, `maps.Keys`, `maps.Clone`)
+- Use the `min`, `max`, and `clear` builtins (1.21) instead of helper functions
+- Use range-over-func iterators (`for v := range seq`, 1.23) to expose custom sequences; return `iter.Seq`/`iter.Seq2`
+- Use `cmp.Or` and `cmp.Compare` for comparator and fallback logic
+- Loop variables are per-iteration since 1.22 — no more `v := v` capture shim in goroutines/closures
+
+### Structured Logging
+- Use `log/slog` for structured logging — never `log.Printf` for anything machine-parsed
+- Attach a `*slog.Logger` per request/operation; pass key-value attrs (`slog.String`, `slog.Int`)
+- Route through `slog.SetDefault` with a JSON or text handler; carry context with `logger.InfoContext(ctx, ...)`
+
 ## Version and Tooling Constraints
 
-- Go 1.21+ — leverage generics where they simplify without over-engineering
+- Go 1.24+ — leverage generics where they simplify without over-engineering
+- Pin the language version with the `go` + `toolchain` directives in `go.mod` for reproducible builds
 - Use the standard library whenever sufficient before adding dependencies
-- `go vet`, `golangci-lint` as part of CI
-- Modules with `go.mod` versioned in the repository
+- `go vet`, `golangci-lint`, and `gofumpt` as part of CI
+- Modules with `go.mod`/`go.sum` versioned in the repository
 
 ## Testing in Go
 
 - Tests in the same package (`_test.go`) for white-box tests
 - Tests in separate `_test` package for black-box tests (public API)
-- Table-driven tests as the main pattern
+- Table-driven tests as the main pattern; pair with `t.Run` subtests for named cases
+- Use `testing/synctest` (1.24, experimental) for deterministic concurrent tests
 - `testify` for assertions if readability is needed
 - `httptest` for HTTP handler testing
-- `t.Parallel()` on tests that don't share state
+- `t.Parallel()` on tests that don't share state; `t.Cleanup()` for teardown

@@ -1,6 +1,6 @@
-# {{PROJECT_NAME}} - Guia Idiomatica Python
+# {{PROJECT_NAME}} - Guía Idiomática Python
 
-## Asincronia y Paralelismo
+## Asincronía y Paralelismo
 
 ### Patrones Fundamentales
 - Usa `asyncio` para operaciones I/O bound (HTTP, DB, archivos)
@@ -10,33 +10,34 @@
 - Aplica `asyncio.Lock` cuando haya acceso concurrente a estado compartido
 
 ### Async Context Managers
-- Usa `async with` para recursos que necesiten setup/teardown asincrono
+- Usa `async with` para recursos que necesiten setup/teardown asíncrono
 - Implementa `__aenter__` y `__aexit__` en clases que manejen conexiones
 - Usa `contextlib.asynccontextmanager` para context managers ligeros
 
-### Timeouts y Cancelacion
-- Usa `asyncio.wait_for(coro, timeout=)` para timeouts en operaciones async
-- Usa `asyncio.TaskGroup` (Python 3.11+) para gestion estructurada de tareas concurrentes
-- Gestiona el event loop apropiadamente — no mezcles sync y async sin bridges explícitos
+### Timeouts y Cancelación
+- Usa `asyncio.timeout(seconds)` (3.11+) como context manager — prefiérelo sobre `asyncio.wait_for`
+- Usa `asyncio.TaskGroup` para concurrencia estructurada — cancela las tareas hermanas ante un fallo y lanza `ExceptionGroup`
+- Gestiona el event loop apropiadamente — no mezcles sync y async sin bridges explícitos (`asyncio.to_thread`)
 
 ## Manejo de Errores
 
-- Define excepciones custom que hereden de `Exception` (o subclases especificas)
+- Define excepciones custom que hereden de `Exception` (o subclases específicas)
 - Usa `raise ... from original_error` para preservar la cadena de errores
-- Atrapa excepciones especificas, nunca `except Exception` generico (salvo en boundaries)
-- Usa `logging.exception()` dentro de except blocks para incluir traceback automaticamente
+- Atrapa excepciones específicas, nunca `except Exception` genérico (salvo en boundaries)
+- Usa `except*` con `ExceptionGroup` (3.11+) al manejar fallos concurrentes de un `TaskGroup`
+- Usa `logging.exception()` dentro de except blocks para incluir traceback automáticamente
 - En APIs, traduce excepciones de dominio a respuestas HTTP apropiadas en la capa de interfaces
 
 ## Convenciones del Lenguaje
 
 ### Naming
-- `snake_case` para variables, funciones y modulos
+- `snake_case` para variables, funciones y módulos
 - `PascalCase` para clases
 - `UPPER_SNAKE_CASE` para constantes
-- Prefijo `_` para atributos/metodos privados (convencion, no enforcement)
+- Prefijo `_` para atributos/métodos privados (convención, no enforcement)
 - Sufijo descriptivo para booleanos: `is_active`, `has_permission`, `should_retry`
 
-### Organizacion de Imports
+### Organización de Imports
 ```python
 # stdlib
 import os
@@ -46,32 +47,40 @@ from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-# modulos internos
+# módulos internos
 from src.domain.models import User
 ```
-Separados por linea en blanco, ordenados alfabeticamente. Usar `isort` para automatizar.
+Separados por línea en blanco, ordenados alfabéticamente. `ruff` ordena los imports (reglas isort).
 
 ### Type Hints
-- Type hints obligatorios en todas las firmas de funciones publicas
-- Usa `pydantic.BaseModel` para validacion de datos en boundaries
-- Usa `typing.Protocol` para interfaces (duck typing explicito)
-- Usa `Optional[T]` o `T | None` (Python 3.10+) para valores opcionales
-- Usa `TypeVar` y `Generic` para clases y funciones genericas
+- Type hints obligatorios en todas las firmas de funciones públicas
+- Usa la sintaxis genérica de PEP 695 (3.12+): `def first[T](xs: list[T]) -> T` y `type UserId = int` — sin boilerplate de `TypeVar`/`Generic`
+- Usa `X | None` para valores opcionales — nunca `Optional[X]`
+- Usa genéricos nativos (`list[str]`, `dict[str, int]`) — nunca `typing.List`/`typing.Dict`
+- Usa `pydantic.BaseModel` para validación de datos en boundaries
+- Usa `typing.Protocol` para interfaces estructurales (duck typing explícito)
 
-## Restricciones de Version y Tooling
+### Pattern Matching
+- Usa `match`/`case` para dispatch estructural en vez de cadenas de `if/elif isinstance`
+- Haz match sobre dataclasses, dicts y secuencias; usa guards (`case Point(x) if x > 0`) y `case _` para el default
 
-- Python 3.11+ con type hints obligatorios
-- `pydantic` para validacion de datos en boundaries
-- `poetry` o `pip-tools` para gestion de dependencias con lockfile
+## Restricciones de Versión y Tooling
+
+- Python 3.12+ con type hints obligatorios
+- `uv` como gestor dominante de paquetes/proyecto (resolver + venv + lockfile vía `uv.lock`) — reemplaza poetry/pip-tools
+- `tomllib` (stdlib, 3.11+) para leer TOML — sin dependencia externa `toml`
+- `pydantic` para validación de datos en boundaries
 - `ruff` como linter y formatter (reemplaza flake8, black, isort)
-- `mypy` o `pyright` para type checking estatico
-- `pyproject.toml` como archivo central de configuracion
+- `mypy` o `pyright` para type checking estático
+- `pyproject.toml` como archivo central de configuración
 
 ## Testing en Python
 
 - `pytest` como framework principal
 - Tests en directorio `tests/` reflejando la estructura de `src/`
-- Fixtures con `@pytest.fixture` para setup reutilizable
+- Sentencias `assert` planas (pytest las reescribe) — evita el estilo `unittest` con `self.assertEqual`
+- Fixtures con `@pytest.fixture` para setup reutilizable; `tmp_path` para aislamiento de filesystem
+- `@pytest.mark.parametrize` para casos table-driven
 - `pytest-asyncio` para tests de funciones async
 - `unittest.mock.patch` o `pytest-mock` para mocking
 - `httpx` con `AsyncClient` para testing de APIs FastAPI/Starlette

@@ -45,9 +45,7 @@ Translate outbound port calls into operations against external systems. Examples
 
 The composition root (typically in `cmd/` or `main.go`) is the **only** place that knows about both ports and concrete adapters. It wires them together at startup.
 
-```
-{{COMPOSITION_ROOT_EXAMPLE}}
-```
+Show a short composition-root snippet for the detected language wiring 2-3 adapters to their ports.
 
 ## Data Flow
 

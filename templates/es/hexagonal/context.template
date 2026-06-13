@@ -45,9 +45,7 @@ Traducen llamadas de outbound ports en operaciones contra sistemas externos. Eje
 
 El composition root (típicamente en `cmd/` o `main.go`) es el **único** lugar que conoce tanto los ports como los adaptadores concretos. Los cablea al inicio.
 
-```
-{{COMPOSITION_ROOT_EXAMPLE}}
-```
+Muestra un fragmento breve de composition root para el lenguaje detectado que cablee 2-3 adaptadores a sus ports.
 
 ## Flujo de Datos
 

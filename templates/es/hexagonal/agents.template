@@ -12,17 +12,25 @@
 
 ## Comandos
 
+Prefiere los comandos EXACTOS del proyecto. Si no se conocen, emite `[DEFINE: <pista>]` en lugar de inventar uno.
+
 ```bash
+# Setup / instalar dependencias
+{{SETUP_COMMAND}}
+
 # Build
 {{BUILD_COMMAND}}
 
-# Test
+# Ejecutar todos los tests
 {{TEST_COMMAND}}
+
+# Ejecutar un solo test
+{{SINGLE_TEST_COMMAND}}
 
 # Run
 {{RUN_COMMAND}}
 
-# Lint
+# Lint / formato
 {{LINT_COMMAND}}
 ```
 
@@ -88,8 +96,13 @@ Descripción de directorios principales:
 - Saltearse el port y llamar adaptadores directamente desde el núcleo
 - {{MUST_NOT_RULES}}
 
+## Gotchas
+
+Documenta trampas no obvias específicas de ESTE repo (variables de entorno requeridas, cachés que limpiar, áreas inestables, servicios que deben estar corriendo). Pobla esta sección SOLO a partir de la descripción/escaneo; si no se conoce ninguna, omite la sección.
+
 ## Contexto Adicional
 
 - Arquitectura y diseño técnico: `context/CONTEXT.md`
 - Historial de decisiones y sesiones: `context/INTERACTIONS_LOG.md`
 - Metodología de desarrollo: `context/DEVELOPMENT_GUIDE.md`
+- Idiomas del lenguaje: `context/IDIOMS.md` (lístalo solo cuando se haya generado una guía idiomática del lenguaje para este proyecto)

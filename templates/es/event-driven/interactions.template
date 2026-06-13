@@ -14,29 +14,11 @@ Cada entrada sigue:
 
 ## Decisiones Iniciales
 
-### ADR-001: Adoptar Arquitectura Event-Driven
+### ADR-001: Contexto inicial generado por Codify
 - **Fecha:** {{TODAY}}
-- **Contexto:** {{EVENT_DRIVEN_ADOPTION_CONTEXT}}
-- **Decisión:** Usar CQRS para separar caminos de escritura y lectura. Usar {{EVENT_SOURCING_DECISION}} para event sourcing. Coordinar flujos cross-aggregate vía sagas.
-- **Alternativas consideradas:**
-  - CRUD de modelo único con DB relacional: rechazado porque {{CRUD_REJECTION_REASON}}
-  - Microservicios con REST sincrónico: rechazado por acoplamiento estrecho y fallas en cascada
-- **Consecuencias:** consistencia eventual, complejidad de evolución de schema, overhead operacional de event store y message bus
-
-### ADR-002: Tecnología de Event Store
-- **Fecha:** {{TODAY}}
-- **Decisión:** {{EVENT_STORE_TECHNOLOGY}}
-- **Consecuencias:** {{EVENT_STORE_CONSEQUENCES}}
-
-### ADR-003: Message Bus / Plataforma de Streaming
-- **Fecha:** {{TODAY}}
-- **Decisión:** {{MESSAGE_BUS_TECHNOLOGY}}
-- **Consecuencias:** {{MESSAGE_BUS_CONSEQUENCES}}
-
-### ADR-004: Estrategia de Outbox / Publicación Confiable
-- **Fecha:** {{TODAY}}
-- **Decisión:** {{OUTBOX_STRATEGY}}
-- **Consecuencias:** entrega at-least-once; los consumidores deben ser idempotentes
+- **Contexto:** proyecto inicializado con Codify usando el preset Event-Driven
+- **Decisión:** adoptar la arquitectura y convenciones documentadas como línea base del proyecto
+- **Consecuencias:** las decisiones posteriores se anexan a continuación
 
 ## Log de Evolución
 

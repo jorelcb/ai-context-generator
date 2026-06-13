@@ -1,68 +1,32 @@
-# Bitacora de Interacciones - {{PROJECT_NAME}}
+# Log de Interacciones — {{PROJECT_NAME}}
 
-## Formato de Sesion
+Este es un **log append-only de Architecture Decision Records (ADRs)** para {{PROJECT_NAME}}. Registra *por qué* el diseño es como es. Agrega una entrada nueva cada vez que una decisión cambie la arquitectura, las convenciones o un trade-off significativo — nunca reescribas ni borres entradas pasadas.
 
-```markdown
-## Sesion: [Fecha] - [Titulo Descriptivo]
+## Formato de ADR
 
-### Contexto
-- **Estado:** [Estado del proyecto]
-- **Branch:** [Rama de trabajo]
-- **Objetivo:** [Que se busca resolver o implementar]
+Cada entrada sigue esta forma:
+- **ADR-N:** título
+- **Fecha:** fecha ISO
+- **Contexto:** por qué la decisión fue necesaria
+- **Decisión:** qué se eligió
+- **Alternativas consideradas:** qué se rechazó y por qué
+- **Consecuencias:** trade-offs aceptados
 
-### Tareas Realizadas
-1. **[Titulo]** - [Descripcion breve, archivos afectados, resultado]
+Decisiones que conviene registrar especialmente: límites de agregados y bounded contexts, elección del patrón arquitectónico y sus trade-offs, domain events y su propagación, estrategia de testing (escenarios BDD, mocks vs fakes) y decisiones de observabilidad/resiliencia.
 
-### Decisiones Arquitectonicas
-- **[Decision]:** [Justificacion] | Alternativas: [descartadas y por que]
+## Decisiones Iniciales
 
-### Problemas y Soluciones
-- **[Problema]:** [Causa raiz] -> [Solucion aplicada]
+### ADR-001: Contexto inicial generado por Codify
+- **Fecha:** {{TODAY}}
+- **Contexto:** proyecto inicializado con Codify.
+- **Decisión:** adoptar la arquitectura y las convenciones documentadas como línea base.
+- **Alternativas consideradas:** ninguna registrada en el bootstrap.
+- **Consecuencias:** las decisiones futuras se agregan debajo a medida que se toman.
 
-### Estado Final
-- **Completado:** [lista]
-- **Pendiente:** [lista]
-```
+## Log de Evolución
 
-## ADR Template
+Agrega aquí las decisiones arquitectónicas posteriores como ADR-002, ADR-003, … (aún sin entradas).
 
-```markdown
-## ADR-[N]: [Titulo]
-**Estado:** [Propuesta | Aceptada | Deprecada]
-**Contexto:** [Situacion que requiere decision]
-**Decision:** [Lo que se decidio]
-**Consecuencias:** [Positivas y negativas]
-```
+## Preguntas Abiertas
 
-Documentar especialmente decisiones sobre:
-- Limites de agregados y bounded contexts (DDD)
-- Eleccion de patrones arquitectonicos y trade-offs
-- Domain events y su propagacion
-- Estrategias de testing (BDD scenarios, mocks vs fakes)
-- Decisiones de observabilidad y resiliencia
-
-## Convenciones
-- Tipos: FEAT, FIX, REFACTOR, CONFIG, DOCS, TEST, PERF, CHORE
-- Estados: Completado, En progreso, Fallido, Pendiente
-
----
-
-## Sesion: {{DATE}} - Inicializacion del Proyecto
-
-### Contexto
-- **Estado:** Proyecto nuevo
-- **Branch:** main
-- **Objetivo:** Establecer estructura base del proyecto
-
-### Tareas Realizadas
-1. **Estructura de carpetas** - Creada segun {{ARCHITECTURE}} con separacion DDD de 4 capas
-2. **Configuracion inicial** - Dependencias, archivos de config, instrumentacion base
-
-### Decisiones Arquitectonicas
-- **DDD/Clean Architecture:** Separacion estricta de capas con dependency rule hacia adentro
-- **Inyeccion de dependencias:** Constructor injection, sin variables globales
-- **Observabilidad:** OpenTelemetry integrado desde el inicio
-
-### Estado Final
-- **Completado:** Estructura base, configuracion, documentacion inicial
-- **Pendiente:** Implementacion de dominio, tests, integraciones
+Registra aquí las preguntas arquitectónicas sin resolver, cada una con contexto suficiente para retomarla más tarde (aún sin entradas).

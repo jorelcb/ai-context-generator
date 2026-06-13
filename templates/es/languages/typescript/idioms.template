@@ -1,0 +1,57 @@
+# {{PROJECT_NAME}} - Guía Idiomática TypeScript
+
+> Guía específica de TypeScript. Para patrones de runtime/async compartidos con JS puro, consulta la guía de JavaScript.
+
+## Sistema de Tipos
+
+### Disciplina de Solidez
+- Nunca uses `any` — usa `unknown` y estrecha con type guards o validación por schema en los boundaries
+- Usa `satisfies` para validar un literal contra un tipo sin ensancharlo: `const cfg = {...} satisfies Config`
+- Usa `as const` para inferencia de literales/tuplas; combínalo con `satisfies` en vez de anotaciones explícitas
+- Evita los casts `as` — saltan el chequeo; prefiere guards, `satisfies` o funciones constructoras
+- Trata `null` y `undefined` como distintos; apóyate en `strictNullChecks` en vez del non-null `!`
+
+### Modelado de Dominio
+- Modela variantes como uniones discriminadas con una etiqueta literal `kind`/`type`; haz `switch` sobre ella para exhaustividad
+- Fuerza la exhaustividad con un caso default `never`: `const _exhaustive: never = x`
+- Usa branded/nominal types para primitivos de dominio: `type UserId = string & { readonly __brand: 'UserId' }` — evita mezclar strings crudos
+- Prefiere alias `type` para uniones y composiciones; usa `interface` para contratos de objeto extensibles
+- Aprovecha los utility types (`Pick`, `Omit`, `Partial`, `Readonly`, `Record`, `ReturnType`) en vez de redeclarar formas
+- Usa template literal types para strings con forma restringida (p. ej. nombres de rutas o eventos)
+
+## Manejo de Errores
+
+- Lanza subclases de `Error` con campos discriminantes; tipa los catch vía `unknown` y estrecha
+- Considera una unión `Result<T, E>` (`{ ok: true; value } | { ok: false; error }`) para fallos esperados y recuperables
+- Usa `cause` (ES2022) para encadenar errores: `new Error('msg', { cause })`
+- Valida input externo con una librería de schema (`zod`, `valibot`) e infiere el tipo estático desde el schema
+
+## Patrones Idiomáticos
+
+- Activa `noUncheckedIndexedAccess` — el acceso por índice retorna `T | undefined`, forzando manejo real de null
+- Prefiere arrays/propiedades `readonly` y actualizaciones inmutables sobre la mutación
+- Usa decorators estándar TC39 (Stage 3) — no los legacy `experimentalDecorators`; tipalos con `ClassMethodDecoratorContext`
+- Coloca los tipos junto al código que describen; exporta los tipos públicos desde el barrel del módulo
+- Evita enums cuando una unión de literales `as const` basta (menor output, tipado estructural)
+
+## Tooling
+
+- TypeScript 5.x con un `tsconfig.json` estricto: `"strict": true`, `noUncheckedIndexedAccess`, `noImplicitOverride`, `exactOptionalPropertyTypes`
+- Output ESM (`"module": "nodenext"`, `"moduleResolution": "nodenext"`) — incluye extensiones `.js` en imports relativos
+- Usa imports/exports solo-de-tipo (`import type`) para mantener la info de tipos fuera del bundle de runtime
+- ESLint con `typescript-eslint` (reglas type-aware) + Prettier
+- Separa build/typecheck: `tsc --noEmit` para chequeo; `tsup`/`esbuild`/`swc` para transpilación rápida
+
+## Testing
+
+- `vitest` (soporte TS + ESM de primera clase) o el runner nativo `node:test` con `tsx`/`ts-node`
+- Tipa los test doubles; haz aserciones sobre resultados discriminados en vez de chequeos stringly-typed
+- Usa tests a nivel de tipo (`expectTypeOf` en vitest, o `tsd`) para fijar los contratos de tipos públicos
+- Coloca los tests junto al código (`*.test.ts`) o refleja `src/` bajo `test/`
+
+## Anti-Patrones
+
+- `any`, `as` sin chequear y non-null `!` para callar al compilador
+- `// @ts-ignore` — usa `// @ts-expect-error` (da error si la línea luego pasa el type-check)
+- Enums donde encajan uniones `as const`; namespaces en código ESM (usa módulos)
+- Redeclarar formas que un utility type podría derivar

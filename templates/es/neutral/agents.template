@@ -12,24 +12,32 @@
 ## Comandos
 
 ```bash
+# Setup / instalar dependencias
+{{SETUP_COMMAND}}
+
 # Build
 {{BUILD_COMMAND}}
 
-# Test
+# Ejecutar todos los tests
 {{TEST_COMMAND}}
+
+# Ejecutar un solo test
+{{SINGLE_TEST_COMMAND}}
 
 # Run
 {{RUN_COMMAND}}
 
-# Lint
+# Lint / formato
 {{LINT_COMMAND}}
 ```
+
+Usa los comandos EXACTOS que define este proyecto: léelos de su Makefile, los scripts de `package.json`, `go.mod`/task runner, la config de CI o el README. No los parafrasees ni inventes flags. Si un comando es genuinamente desconocido, deja `[DEFINE: <lo que falta>]` en su lugar en vez de inventarlo. Prefiere el comando de test individual que un agente usaría de verdad en un ciclo editar-probar ajustado (p. ej. `go test -run TestName ./pkg`, `pytest path::test`, `npm test -- -t "name"`).
 
 ## Convenciones Clave
 
 - **Naming:** {{NAMING_CONVENTIONS}}
 - **Estructura de imports:** {{IMPORT_CONVENTIONS}}
-- **Error handling:** {{ERROR_HANDLING_CONVENTIONS}}
+- **Manejo de errores:** {{ERROR_HANDLING_CONVENTIONS}}
 - **Commits:** Conventional Commits (feat, fix, refactor, docs, test, chore)
 - **Branching:** {{BRANCHING_STRATEGY}}
 
@@ -39,7 +47,7 @@
 {{PROJECT_STRUCTURE}}
 ```
 
-Descripcion de directorios principales:
+Descripción de directorios principales:
 - {{DIRECTORY_DESCRIPTIONS}}
 
 ## Restricciones
@@ -50,7 +58,13 @@ Descripcion de directorios principales:
 ### NO DEBE:
 - {{MUST_NOT_RULES}}
 
+## Trampas (Gotchas)
+
+Documenta las trampas no obvias específicas de ESTE repositorio: variables de entorno que deben estar definidas antes de ejecutar nada, cachés que limpiar, pasos de generación de código que reejecutar, zonas de tests inestables o servicios que deben estar levantados localmente. Complétalo SOLO a partir de la descripción o el escaneo; si no se conoce ninguna, omite esta sección en lugar de inventarla.
+
 ## Contexto Adicional
 
-- Arquitectura y diseno tecnico: `context/CONTEXT.md`
+- Arquitectura y diseño técnico: `context/CONTEXT.md`
+- Metodología de desarrollo: `context/DEVELOPMENT_GUIDE.md`
 - Historial de decisiones y sesiones: `context/INTERACTIONS_LOG.md`
+- Idiomatismos del lenguaje: `context/IDIOMS.md` (incluye esta línea solo cuando se haya generado una guía idiomática del lenguaje para este proyecto)
