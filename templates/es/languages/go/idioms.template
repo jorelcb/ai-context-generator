@@ -1,20 +1,21 @@
-# {{PROJECT_NAME}} - Guia Idiomatica Go
+# {{PROJECT_NAME}} - Guía Idiomática Go
 
 ## Concurrencia
 
 ### Patrones Fundamentales
-- Gestiona goroutines explicitamente con `sync.WaitGroup`
-- Usa channels para comunicacion entre goroutines — prefiere comunicar compartiendo memoria, no compartir memoria comunicando
+- Gestiona goroutines explícitamente con `sync.WaitGroup`
+- Usa channels para comunicación entre goroutines — prefiere comunicar compartiendo memoria, no compartir memoria comunicando
 - Evita race conditions con `sync.Mutex` o `sync.RWMutex` donde sea necesario
-- Usa `sync.Map` para estructuras compartidas entre goroutines cuando el patron de acceso lo justifique
-- Implementa backpressure y rate limiting con `semaphore` o buffered channels
-- Aplica el patron de worker pool con channels para procesamiento concurrente
+- Usa `sync.Map` para estructuras compartidas entre goroutines cuando el patrón de acceso lo justifique
+- Implementa backpressure y rate limiting con `golang.org/x/sync/semaphore` o buffered channels
+- Aplica el patrón de worker pool con channels para procesamiento concurrente
+- Ejecuta `go test -race` y `go build -race` para detectar data races temprano
 
 ### Context
-- Propaga `context.Context` como primer parametro en toda funcion que pueda cancelarse o tener timeout
+- Propaga `context.Context` como primer parámetro en toda función que pueda cancelarse o tener timeout
 - Usa `context.WithTimeout` y `context.WithCancel` para evitar operaciones colgadas
-- Respeta la cancelacion del contexto en loops y operaciones de larga duracion
-- Nunca almacenes context en structs — pasalo siempre como parametro
+- Respeta la cancelación del contexto en loops y operaciones de larga duración
+- Nunca almacenes context en structs — pásalo siempre como parámetro
 
 ### Channels
 - Prefiere channels unidireccionales (`<-chan`, `chan<-`) en firmas de funciones
@@ -25,10 +26,11 @@
 ## Manejo de Errores
 
 - Usa error wrapping con `fmt.Errorf("contexto: %w", err)` para preservar la cadena de errores
-- Define errores de dominio como tipos con `errors.New()` o tipos custom que implementen `error`
-- Usa `errors.Is()` y `errors.As()` para comparacion de errores — nunca comparacion directa de strings
-- Retorna errores, no los logees y luego retornes — elige uno
-- Usa `panic` solo para errores de programacion irrecuperables, nunca para control de flujo
+- Combina múltiples errores con `errors.Join(err1, err2)` (1.20+) en vez de concatenación ad-hoc
+- Define errores de dominio como valores centinela (`errors.New()`) o tipos custom que implementen `error`
+- Usa `errors.Is()` y `errors.As()` para comparación de errores — nunca comparación directa de strings
+- Retorna errores, no los loguees y luego retornes — elige uno
+- Usa `panic` solo para errores de programación irrecuperables, nunca para control de flujo
 
 ## Convenciones del Lenguaje
 
@@ -36,37 +38,52 @@
 - `camelCase` para variables y funciones no exportadas
 - `PascalCase` para funciones, tipos, constantes e interfaces exportadas
 - Interfaces nombradas por comportamiento: `Reader`, `Writer`, `Storer` — no `IReader`
-- Interfaces de un solo metodo preferidas — componer para interfaces complejas
-- Acronimos en mayusculas consistentes: `HTTPHandler`, `APIClient`, `userID`
+- Interfaces de un solo método preferidas — componer para interfaces complejas
+- Acrónimos en mayúsculas consistentes: `HTTPHandler`, `APIClient`, `userID`
 
-### Organizacion de Imports
+### Organización de Imports
 ```
 stdlib
 
 dependencias externas
 
-modulos internos del proyecto
+módulos internos del proyecto
 ```
-Separados por linea en blanco, agrupados en ese orden.
+Separados por línea en blanco, agrupados en ese orden (`gofumpt`/`goimports` lo imponen).
 
-### Structs y Metodos
+### Structs y Métodos
 - Constructor con `NewXxx()` que retorna la instancia (o puntero + error si puede fallar)
 - Receiver con nombre corto y consistente (1-2 letras del tipo, no `this` ni `self`)
-- Pointer receiver cuando el metodo muta estado o el struct es grande
-- Value receiver para metodos sin mutacion en structs pequenos
+- Pointer receiver cuando el método muta estado o el struct es grande
+- Value receiver para métodos sin mutación en structs pequeños
 
-## Restricciones de Version y Tooling
+## Librería Estándar Moderna (Go 1.21–1.24)
 
-- Go 1.21+ — aprovechar generics donde simplifiquen sin over-engineering
-- Usar la libreria estandar siempre que sea suficiente antes de agregar dependencias
-- `go vet`, `golangci-lint` como parte del CI
-- Modules con `go.mod` versionado en el repositorio
+- Usa los paquetes `slices` y `maps` en vez de loops manuales (`slices.Contains`, `slices.SortFunc`, `maps.Keys`, `maps.Clone`)
+- Usa los builtins `min`, `max` y `clear` (1.21) en vez de funciones helper
+- Usa iteradores range-over-func (`for v := range seq`, 1.23) para exponer secuencias propias; retorna `iter.Seq`/`iter.Seq2`
+- Usa `cmp.Or` y `cmp.Compare` para lógica de comparador y fallback
+- Las variables de loop son por-iteración desde 1.22 — ya no hace falta el shim `v := v` en goroutines/closures
+
+### Logging Estructurado
+- Usa `log/slog` para logging estructurado — nunca `log.Printf` para algo que se parsee por máquina
+- Adjunta un `*slog.Logger` por request/operación; pasa atributos clave-valor (`slog.String`, `slog.Int`)
+- Configura vía `slog.SetDefault` con un handler JSON o texto; propaga contexto con `logger.InfoContext(ctx, ...)`
+
+## Restricciones de Versión y Tooling
+
+- Go 1.24+ — aprovechar generics donde simplifiquen sin over-engineering
+- Fija la versión del lenguaje con las directivas `go` + `toolchain` en `go.mod` para builds reproducibles
+- Usar la librería estándar siempre que sea suficiente antes de agregar dependencias
+- `go vet`, `golangci-lint` y `gofumpt` como parte del CI
+- Modules con `go.mod`/`go.sum` versionados en el repositorio
 
 ## Testing en Go
 
 - Tests en el mismo paquete (`_test.go`) para tests de caja blanca
-- Tests en paquete `_test` separado para tests de caja negra (API publica)
-- Table-driven tests como patron principal
+- Tests en paquete `_test` separado para tests de caja negra (API pública)
+- Table-driven tests como patrón principal; combínalos con subtests `t.Run` para casos nombrados
+- Usa `testing/synctest` (1.24, experimental) para tests concurrentes deterministas
 - `testify` para assertions si se necesita legibilidad extra
 - `httptest` para testing de handlers HTTP
-- `t.Parallel()` en tests que no comparten estado
+- `t.Parallel()` en tests que no comparten estado; `t.Cleanup()` para teardown

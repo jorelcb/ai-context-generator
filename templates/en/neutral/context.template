@@ -1,46 +1,59 @@
-# {{PROJECT_NAME}} - Architectural Context
+# Architectural Context — {{PROJECT_NAME}}
 
 ## Architecture
 
-Main pattern: {{ARCHITECTURE_PATTERN}}
+State the architectural style the project actually follows (e.g. layered, modular monolith, event-driven, pipeline, microservices, plain MVC). Do not impose a style — describe the one the description or codebase reveals. If the style is unclear, emit `[DEFINE: architectural style]` and describe the module organization observed instead.
 
-### Layers and Responsibilities
+## Layers / Modules
 
-{{LAYER_DEFINITIONS}}
+Describe the major partitions of the system and the responsibility boundary of each. A good definition names the partition, states the **single responsibility** it owns, and is specific enough that a reader can decide where a new piece of code belongs.
+
+For each layer or module, document:
+- **Responsibility** — the one thing it owns
+- **What it depends on** — which other partitions it is allowed to call
+- **What depends on it** — who calls into it
+
+Example (layered web service):
+- **HTTP handlers** — parse/validate requests, call services, format responses. Depends on services. Knows nothing about SQL.
+- **Services** — business logic and orchestration. Depends on repositories. No HTTP types.
+- **Repositories** — persistence. Depends on the database driver only.
 
 ### Dependency Rule
 
-{{DEPENDENCY_RULE}}
+State the allowed direction of dependencies in one sentence (e.g. "handlers → services → repositories; nothing points back"). If the project enforces this with tooling (import linters, module boundaries), name it. If no rule is established, emit `[DEFINE: dependency direction]`.
 
-## Main Components
+## Components
 
-{{COMPONENTS}}
+List the concrete components/packages that carry weight in this system (3–8). For each, document:
+- **Responsibility** — what it does
+- **Interfaces it exposes** — the entry points other code calls
+- **Dependencies it consumes** — external systems or internal modules it relies on
 
-For each component:
-- Responsibility
-- Interfaces it exposes
-- Dependencies it consumes
+Example:
+- **`AuthService`** — verifies credentials, issues tokens. Exposes `Login`, `Refresh`. Consumes `UserRepository`, a token signer.
+
+Generate only components the description supports; do not invent components. If none are known, emit `[DEFINE: key components]`.
 
 ## Data Flow
 
-{{DATA_FLOW}}
+Trace one representative request end to end: entry point → which components it passes through → where state is read/written → what is returned. Name the partitions it crosses so the path is concrete, not abstract.
 
-Describe how requests/data flow through the layers, from entry point to persistence or response.
+Example: `POST /orders → OrderHandler → OrderService.Place() → InventoryGateway (reserve) + OrderRepository (persist) → 201 with order id`.
+
+If the system is not request-driven (batch, CLI, daemon), trace its main loop or pipeline instead.
 
 ## Design Decisions
 
-| Decision | Justification | Discarded Alternatives |
-|----------|--------------|----------------------|
-| {{DESIGN_DECISIONS}} | | |
+Record the load-bearing architectural choices for this project. Generate 3–6 entries; each row pairs a **decision** with its **justification** and the **discarded alternatives** and why they lost. Populate only decisions the description supports — do not fabricate trade-offs.
+
+| Decision | Justification | Discarded alternatives |
+|----------|---------------|------------------------|
+| _Generate one row per real decision (e.g. "PostgreSQL for persistence" / "relational integrity + team familiarity" / "MongoDB — no document shape need")._ | | |
 
 ## External Integrations
 
-{{EXTERNAL_INTEGRATIONS}}
-
-Only include if the project has integrations with external APIs, databases, messaging services, etc.
+Include this section only if the project talks to external APIs, databases, queues, or third-party services. For each integration, document: what it is, why it is needed, the failure mode if it is unavailable, and how the project isolates it (client wrapper, gateway, anti-corruption layer). If there are no external integrations, omit this section rather than leaving it empty.
 
 ## Observability
 
-{{OBSERVABILITY_STRATEGY}}
-
-Tracing, logging, and metrics strategy. Only include if relevant to the project type.
+Include this section only if relevant to the project type (services, long-running processes). Describe the logging, metrics, and tracing strategy: what is logged and at what level, which metrics matter, and whether requests are traced. For a library or one-shot CLI, omit this section.

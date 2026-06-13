@@ -1,0 +1,62 @@
+# {{PROJECT_NAME}} - Rust Idiomatic Guide
+
+## Ownership and Borrowing
+
+- Let ownership drive the design: prefer moving values; borrow (`&`, `&mut`) only as long as needed
+- Accept `&str`/`&[T]` in function signatures, return owned `String`/`Vec<T>` — borrow on input, own on output
+- Use `Cow<'_, str>` when a value is usually borrowed but occasionally owned
+- Reach for `Rc`/`Arc` (+ `RefCell`/`Mutex`) only when shared ownership is genuinely required, not to dodge the borrow checker
+- Keep lifetimes implicit where elision allows; annotate only when the compiler asks
+- Derive `Clone` deliberately — a stray `.clone()` in a hot path is a smell, not a fix
+
+## Error Handling
+
+- Return `Result<T, E>` for recoverable errors; reserve `panic!` for unrecoverable invariant violations
+- Use the `?` operator to propagate errors — avoid manual `match` on every `Result`
+- Use `thiserror` to derive typed, structured error enums for libraries (callers can match on variants)
+- Use `anyhow::Result` with `.context("...")` for application/binary code where a single error type suffices
+- Use `Option<T>` for absence; combinators (`map`, `and_then`, `unwrap_or_default`, `ok_or`) over manual matching
+- Never `.unwrap()`/`.expect()` on fallible runtime values in production paths — only on provable invariants (and document why)
+
+## Idiomatic Patterns
+
+- Prefer iterator chains (`map`/`filter`/`fold`/`collect`) and closures over index loops; they are zero-cost
+- Use the newtype pattern (`struct UserId(u64)`) to give domain meaning to primitives and prevent mix-ups
+- Model state with enums + exhaustive `match`; let the compiler enforce all cases are handled
+- Use `impl Trait` in argument and return position to keep signatures clean
+- Implement standard traits (`From`/`TryFrom`, `Display`, `Default`, `Iterator`) instead of bespoke methods
+- Prefer `if let`/`let ... else` for single-variant handling; use `matches!` for boolean checks
+- Make illegal states unrepresentable — encode invariants in the type system, validate at construction
+
+## Concurrency and Async
+
+- Use `tokio` as the async runtime; mark async entry points with `#[tokio::main]`
+- `.await` futures; spawn concurrent work with `tokio::spawn`, join with `tokio::join!`/`try_join!`
+- Share state across tasks with `Arc<Mutex<T>>` (or `tokio::sync::Mutex` when held across `.await`)
+- Use channels (`tokio::sync::mpsc`, `oneshot`) for message passing between tasks
+- Lean on `Send + Sync` bounds and the type system — the compiler statically prevents data races
+- Use `rayon` for data-parallel CPU work (`par_iter`) instead of hand-rolled threads
+
+## Tooling
+
+- Rust 2021/2024 edition, stable toolchain via `rustup`; pin with `rust-toolchain.toml`
+- `cargo build`/`cargo test`/`cargo run`; dependencies and lockfile in `Cargo.toml`/`Cargo.lock`
+- `cargo clippy -- -D warnings` in CI — treat lints as errors
+- `cargo fmt` (rustfmt) for consistent formatting
+- `cargo doc` with `///` doc comments; doctests run as part of `cargo test`
+
+## Testing
+
+- Unit tests in a `#[cfg(test)] mod tests` block in the same file
+- Integration tests in the top-level `tests/` directory (exercise the public crate API)
+- `#[test]` for sync, `#[tokio::test]` for async tests
+- Use `assert_eq!`/`assert!`; reach for `proptest` for property-based testing
+- Doctests in `///` examples double as compiled, runnable documentation
+
+## Anti-Patterns
+
+- `.unwrap()`/`.expect()` on runtime-fallible values; `panic!` for control flow
+- Cloning to silence the borrow checker instead of restructuring ownership
+- `Arc<Mutex<_>>` everywhere when message passing or clearer ownership would do
+- Stringly-typed domain data instead of newtypes/enums
+- `unsafe` without a documented invariant and a safety comment

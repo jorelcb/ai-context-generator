@@ -1,0 +1,62 @@
+# {{PROJECT_NAME}} - Guía Idiomática Rust
+
+## Ownership y Borrowing
+
+- Deja que el ownership guíe el diseño: prefiere mover valores; presta (`&`, `&mut`) solo el tiempo necesario
+- Acepta `&str`/`&[T]` en las firmas, retorna `String`/`Vec<T>` con ownership — presta en la entrada, posee en la salida
+- Usa `Cow<'_, str>` cuando un valor suele estar prestado pero ocasionalmente se posee
+- Recurre a `Rc`/`Arc` (+ `RefCell`/`Mutex`) solo cuando el ownership compartido es realmente necesario, no para esquivar el borrow checker
+- Mantén los lifetimes implícitos donde la elisión lo permita; anótalos solo cuando el compilador lo pida
+- Deriva `Clone` deliberadamente — un `.clone()` perdido en un hot path es un síntoma, no un arreglo
+
+## Manejo de Errores
+
+- Retorna `Result<T, E>` para errores recuperables; reserva `panic!` para violaciones de invariantes irrecuperables
+- Usa el operador `?` para propagar errores — evita el `match` manual sobre cada `Result`
+- Usa `thiserror` para derivar enums de error tipados y estructurados en librerías (los llamadores pueden hacer match por variante)
+- Usa `anyhow::Result` con `.context("...")` en código de aplicación/binario donde basta un único tipo de error
+- Usa `Option<T>` para la ausencia; combinadores (`map`, `and_then`, `unwrap_or_default`, `ok_or`) sobre el match manual
+- Nunca `.unwrap()`/`.expect()` sobre valores falibles en runtime en producción — solo sobre invariantes demostrables (y documenta por qué)
+
+## Patrones Idiomáticos
+
+- Prefiere cadenas de iteradores (`map`/`filter`/`fold`/`collect`) y closures sobre loops por índice; son zero-cost
+- Usa el patrón newtype (`struct UserId(u64)`) para dar significado de dominio a los primitivos y evitar confusiones
+- Modela el estado con enums + `match` exhaustivo; deja que el compilador imponga que todos los casos se manejen
+- Usa `impl Trait` en posición de argumento y retorno para mantener firmas limpias
+- Implementa traits estándar (`From`/`TryFrom`, `Display`, `Default`, `Iterator`) en vez de métodos ad-hoc
+- Prefiere `if let`/`let ... else` para manejar una sola variante; usa `matches!` para chequeos booleanos
+- Haz que los estados ilegales sean irrepresentables — codifica invariantes en el sistema de tipos, valida en la construcción
+
+## Concurrencia y Async
+
+- Usa `tokio` como runtime async; marca los puntos de entrada async con `#[tokio::main]`
+- Haz `.await` sobre los futures; lanza trabajo concurrente con `tokio::spawn`, únelo con `tokio::join!`/`try_join!`
+- Comparte estado entre tareas con `Arc<Mutex<T>>` (o `tokio::sync::Mutex` si se mantiene a través de un `.await`)
+- Usa channels (`tokio::sync::mpsc`, `oneshot`) para el paso de mensajes entre tareas
+- Apóyate en los bounds `Send + Sync` y el sistema de tipos — el compilador previene data races estáticamente
+- Usa `rayon` para trabajo CPU data-paralelo (`par_iter`) en vez de hilos manuales
+
+## Tooling
+
+- Edición Rust 2021/2024, toolchain stable vía `rustup`; fíjala con `rust-toolchain.toml`
+- `cargo build`/`cargo test`/`cargo run`; dependencias y lockfile en `Cargo.toml`/`Cargo.lock`
+- `cargo clippy -- -D warnings` en CI — trata los lints como errores
+- `cargo fmt` (rustfmt) para formato consistente
+- `cargo doc` con doc comments `///`; los doctests se ejecutan como parte de `cargo test`
+
+## Testing
+
+- Tests unitarios en un bloque `#[cfg(test)] mod tests` en el mismo archivo
+- Tests de integración en el directorio top-level `tests/` (ejercitan la API pública del crate)
+- `#[test]` para sync, `#[tokio::test]` para tests async
+- Usa `assert_eq!`/`assert!`; recurre a `proptest` para testing basado en propiedades
+- Los doctests en ejemplos `///` sirven a la vez como documentación compilada y ejecutable
+
+## Anti-Patrones
+
+- `.unwrap()`/`.expect()` sobre valores falibles en runtime; `panic!` para control de flujo
+- Clonar para callar al borrow checker en vez de reestructurar el ownership
+- `Arc<Mutex<_>>` por todos lados cuando el paso de mensajes o un ownership más claro bastaría
+- Datos de dominio stringly-typed en vez de newtypes/enums
+- `unsafe` sin un invariante documentado y un comentario de seguridad

@@ -5,50 +5,45 @@
 ## Tech Stack
 
 - **Language:** {{LANGUAGE}} {{LANGUAGE_VERSION}}
-- **Architecture:** {{ARCHITECTURE}} (following DDD/Clean Architecture principles)
-- **Testing:** {{TESTING_FRAMEWORK}} (BDD for acceptance, BDD for complex business logic)
+- **Architecture:** {{ARCHITECTURE}} (DDD / Clean Architecture)
+- **Testing:** {{TESTING_FRAMEWORK}}
 - **Key dependencies:** {{KEY_DEPENDENCIES}}
-- **Observability:** OpenTelemetry (tracing, metrics, structured logging)
+- **Observability:** {{OBSERVABILITY_STACK}}
 
 ## Commands
 
 ```bash
+# Setup / install dependencies
+{{SETUP_COMMAND}}
 # Build
 {{BUILD_COMMAND}}
-
-# Test
+# Run all tests
 {{TEST_COMMAND}}
-
+# Run a single test
+{{SINGLE_TEST_COMMAND}}
 # Run
 {{RUN_COMMAND}}
-
-# Lint
+# Lint / format
 {{LINT_COMMAND}}
 ```
 
-## Architectural Principles
+Prefer the EXACT commands this project already defines (Makefile, package.json scripts, go.mod tooling, task runner). If a command is not known from the description or scan, leave a `[DEFINE: <hint>]` marker instead — never invent a command that has not been verified.
 
-### DDD - Layer Separation
-- **Domain:** Pure business logic, no external dependencies. Entities, value objects, aggregates, interfaces/ports, domain errors
-- **Application:** Orchestrates use cases. Commands, queries (CQRS), DTOs. Depends only on domain
-- **Infrastructure:** Concrete adapters (repositories, gateways, providers). Implements domain interfaces
-- **Interfaces:** Entry points (HTTP, CLI, gRPC). Adapts input/output to external format
+## Architecture
 
-### Clean Architecture - Dependency Rule
-Dependencies always point inward: Interfaces -> Infrastructure -> Application -> Domain.
-Domain NEVER imports from outer layers. Abstractions are defined in domain, implementations in infrastructure.
+This project follows DDD / Clean Architecture with four layers (Domain, Application, Infrastructure, Interfaces) and an inward-pointing dependency rule. The full, normative definition lives in `context/CONTEXT.md` — do not restate it here.
 
 ### Dependency Injection
-Constructor injection for ALL dependencies. NO global variables for services or configuration.
+Constructor injection for ALL dependencies. No global variables for services or configuration; adapters are wired at the composition root.
 
 ## Key Conventions
 
-- **Naming:** {{NAMING_CONVENTIONS}} — follow idiomatic language conventions
-- **Import structure:** {{IMPORT_CONVENTIONS}}
-- **Error handling:** {{ERROR_HANDLING_CONVENTIONS}} — all errors handled or propagated with context, zero silent errors
-- **Commits:** Conventional Commits (feat, fix, refactor, docs, test, chore)
-- **Branching:** {{BRANCHING_STRATEGY}}
-- **Testing:** Minimum coverage 80% domain, 70% application, 60% infrastructure. Unit tests alongside each component
+- **Naming:** {{NAMING_CONVENTIONS}} — follow idiomatic language conventions.
+- **Import structure:** {{IMPORT_CONVENTIONS}} — the domain never imports from outer layers.
+- **Error handling:** {{ERROR_HANDLING_CONVENTIONS}} — every error handled or propagated with context; zero silent errors.
+- **Commits:** Conventional Commits (feat, fix, refactor, docs, test, chore).
+- **Branching:** {{BRANCHING_STRATEGY}}.
+- **Testing:** unit tests alongside each component (not after). Coverage targets in `context/DEVELOPMENT_GUIDE.md`.
 
 ## Project Structure
 
@@ -56,7 +51,7 @@ Constructor injection for ALL dependencies. NO global variables for services or 
 {{PROJECT_STRUCTURE}}
 ```
 
-Generate the structure following the DDD convention for the detected language. For Go: cmd/, internal/domain, internal/application, internal/infrastructure, internal/interfaces. For TypeScript/Node: src/domain, src/application, src/infrastructure, src/interfaces. For Python: src/domain, src/application, src/infrastructure, src/interfaces. Adapt to idiomatic conventions.
+Generate the structure following the DDD convention for the detected language. For Go: `cmd/`, `internal/domain`, `internal/application`, `internal/infrastructure`, `internal/interfaces`. For TypeScript/Node and Python: `src/domain`, `src/application`, `src/infrastructure`, `src/interfaces`. Adapt to idiomatic conventions.
 
 Main directory descriptions:
 - {{DIRECTORY_DESCRIPTIONS}}
@@ -64,26 +59,29 @@ Main directory descriptions:
 ## Constraints
 
 ### MUST:
-- Respect DDD layer separation in every design decision
-- Define interfaces/ports in domain, implementations in infrastructure
-- Implement health checks and OpenTelemetry instrumentation from the start
-- Handle graceful shutdown for all long-lived components
-- Propagate tracing context end-to-end
-- Write unit tests alongside each component (not after)
-- Use explicit dependency injection
+- Respect DDD layer separation in every design decision.
+- Define interfaces/ports in the domain, implementations in infrastructure.
+- Use explicit constructor-based dependency injection.
+- Propagate context (including tracing context) end-to-end.
+- Write unit tests alongside each component, not afterward.
 - {{MUST_RULES}}
 
 ### MUST NOT:
-- Allow domain to know infrastructure details
-- Mix responsibilities across architectural layers
-- Use heavy frameworks when the standard library is sufficient
-- Create premature abstractions — evolve based on real need
-- Ignore errors or propagate them without context
-- Commit credentials — use environment variables
-- Optimize prematurely — first correct, then fast
+- Allow the domain to know infrastructure details.
+- Mix responsibilities across architectural layers.
+- Use heavy frameworks when the standard library is sufficient.
+- Create premature abstractions — evolve based on real need.
+- Ignore errors or propagate them without context.
+- Commit credentials — use environment variables or a secrets manager.
 - {{MUST_NOT_RULES}}
+
+## Gotchas
+
+Document non-obvious pitfalls specific to THIS repository — surprising build steps, required env vars, ordering constraints, fragile integrations. Populate ONLY from the description or scan; if none are known, omit this section.
 
 ## Additional Context
 
 - Architecture and technical design: `context/CONTEXT.md`
-- Decision history and sessions: `context/INTERACTIONS_LOG.md`
+- Development methodology and process: `context/DEVELOPMENT_GUIDE.md`
+- Decision history (ADRs): `context/INTERACTIONS_LOG.md`
+- Language idioms: `context/IDIOMS.md` (link only when an idiomatic language guide was generated)

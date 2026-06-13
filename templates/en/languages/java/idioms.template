@@ -1,0 +1,53 @@
+# {{PROJECT_NAME}} - Java Idiomatic Guide
+
+## Concurrency
+
+- Use virtual threads (Project Loom, 21+) for I/O-bound work: `Executors.newVirtualThreadPerTaskExecutor()` — cheap, scale to millions, write blocking-style code
+- Keep platform-thread pools for CPU-bound work; don't pool virtual threads
+- Avoid `synchronized` blocks that span blocking calls on virtual threads (pinning) — prefer `ReentrantLock`
+- Use `java.util.concurrent` primitives (`ConcurrentHashMap`, `CompletableFuture`, `Atomic*`) over hand-rolled locking
+- Prefer immutable data shared across threads; confine mutable state to a single owner
+- Use structured concurrency (`StructuredTaskScope`, preview) to scope and cancel related subtasks together
+
+## Error Handling
+
+- Use checked exceptions for recoverable conditions callers must handle; unchecked for programming errors
+- Wrap-and-rethrow with a cause: `throw new ServiceException("context", e)` — never swallow the original
+- Catch the narrowest exception type; never catch bare `Exception`/`Throwable` except at boundaries
+- Use try-with-resources for anything `AutoCloseable` — no manual `finally` close
+- Return `Optional<T>` for "maybe absent"; never return `null` from such methods (and never `Optional` for fields/params)
+
+## Idiomatic Patterns
+
+- Use `record` for immutable data carriers — auto `equals`/`hashCode`/`toString`, compact canonical constructors for validation
+- Use sealed classes/interfaces (`sealed ... permits`) to model closed hierarchies the compiler can reason about
+- Combine sealed types + records with pattern matching `switch` for exhaustive, expression-style dispatch
+- Use pattern matching for `instanceof` (`if (o instanceof User u)`) and record deconstruction patterns
+- Use `var` for local variables when the initializer makes the type obvious — not for fields or public APIs
+- Use text blocks (`"""..."""`) for multi-line strings (SQL, JSON, templates)
+- Favor the Streams API for transformations; keep pipelines side-effect-free and avoid `forEach` for mutation
+- Prefer immutable collections (`List.of`, `Map.of`, `Stream.toList()`) and defensive copies
+
+## Tooling
+
+- Java 21+ LTS; declare the toolchain/`release` in the build to pin the language level
+- Build with Maven or Gradle (Gradle with the Kotlin DSL for new projects); commit the wrapper (`mvnw`/`gradlew`)
+- Lock dependency versions; use a BOM for coherent multi-module versions
+- Format/lint with Spotless (google-java-format / Palantir) + Error Prone or Checkstyle in CI
+- Manage JDK versions with SDKMAN! or toolchains rather than the system JDK
+
+## Testing
+
+- JUnit 5 (Jupiter) as the framework: `@Test`, `@ParameterizedTest`, `@Nested`, `@DisplayName`
+- AssertJ for fluent, readable assertions (`assertThat(x).isEqualTo(...)`) over bare `assertEquals`
+- Mockito for mocks/stubs; prefer constructor injection so collaborators are easy to substitute
+- Testcontainers for integration tests against real databases/brokers
+- Keep tests in `src/test/java` mirroring the package structure
+
+## Anti-Patterns
+
+- Returning `null` where `Optional` or an empty collection fits
+- Mutable shared state without synchronization; pooling virtual threads
+- Anemic getter/setter classes where a `record` would do
+- Long `if/else instanceof` chains instead of pattern-matching `switch`
+- Catch-and-ignore (empty catch blocks); checked-exception laundering into `RuntimeException` without context

@@ -1,46 +1,59 @@
-# {{PROJECT_NAME}} - Contexto Arquitectonico
+# Contexto Arquitectónico — {{PROJECT_NAME}}
 
 ## Arquitectura
 
-Patron principal: {{ARCHITECTURE_PATTERN}}
+Indica el estilo arquitectónico que el proyecto realmente sigue (p. ej. por capas, monolito modular, orientado a eventos, pipeline, microservicios, MVC simple). No impongas un estilo: describe el que revela la descripción o el código. Si el estilo no está claro, emite `[DEFINE: estilo arquitectónico]` y describe en su lugar la organización de módulos observada.
 
-### Capas y Responsabilidades
+## Capas / Módulos
 
-{{LAYER_DEFINITIONS}}
+Describe las particiones principales del sistema y el límite de responsabilidad de cada una. Una buena definición nombra la partición, indica la **responsabilidad única** que posee y es lo bastante específica como para que el lector decida dónde encaja una nueva pieza de código.
+
+Para cada capa o módulo, documenta:
+- **Responsabilidad** — lo único que le pertenece
+- **De qué depende** — qué otras particiones puede invocar
+- **Quién depende de ella** — quién la invoca
+
+Ejemplo (servicio web por capas):
+- **Manejadores HTTP** — parsean/validan peticiones, llaman a los servicios, formatean respuestas. Dependen de los servicios. No saben nada de SQL.
+- **Servicios** — lógica de negocio y orquestación. Dependen de los repositorios. Sin tipos HTTP.
+- **Repositorios** — persistencia. Dependen solo del driver de base de datos.
 
 ### Regla de Dependencia
 
-{{DEPENDENCY_RULE}}
+Indica en una frase la dirección permitida de las dependencias (p. ej. "manejadores → servicios → repositorios; nada apunta hacia atrás"). Si el proyecto lo refuerza con herramientas (linters de imports, límites de módulos), nómbralas. Si no hay regla establecida, emite `[DEFINE: dirección de dependencias]`.
 
-## Componentes Principales
+## Componentes
 
-{{COMPONENTS}}
+Lista los componentes/paquetes concretos que cargan peso en este sistema (3–8). Para cada uno, documenta:
+- **Responsabilidad** — qué hace
+- **Interfaces que expone** — los puntos de entrada que otro código invoca
+- **Dependencias que consume** — sistemas externos o módulos internos de los que depende
 
-Para cada componente:
-- Responsabilidad
-- Interfaces que expone
-- Dependencias que consume
+Ejemplo:
+- **`AuthService`** — verifica credenciales, emite tokens. Expone `Login`, `Refresh`. Consume `UserRepository`, un firmador de tokens.
+
+Genera solo los componentes que la descripción respalda; no inventes componentes. Si no se conoce ninguno, emite `[DEFINE: componentes clave]`.
 
 ## Flujo de Datos
 
-{{DATA_FLOW}}
+Traza una petición representativa de extremo a extremo: punto de entrada → componentes que atraviesa → dónde se lee/escribe estado → qué se devuelve. Nombra las particiones que cruza para que el recorrido sea concreto, no abstracto.
 
-Describir como fluyen las requests/datos a traves de las capas, desde el punto de entrada hasta la persistencia o respuesta.
+Ejemplo: `POST /orders → OrderHandler → OrderService.Place() → InventoryGateway (reservar) + OrderRepository (persistir) → 201 con id de la orden`.
 
-## Decisiones de Diseno
+Si el sistema no es orientado a peticiones (batch, CLI, demonio), traza en su lugar su bucle o pipeline principal.
 
-| Decision | Justificacion | Alternativas Descartadas |
-|----------|--------------|-------------------------|
-| {{DESIGN_DECISIONS}} | | |
+## Decisiones de Diseño
+
+Registra las decisiones arquitectónicas de carga de este proyecto. Genera entre 3 y 6 entradas; cada fila empareja una **decisión** con su **justificación** y las **alternativas descartadas** y por qué perdieron. Completa solo decisiones que la descripción respalde — no fabriques compromisos.
+
+| Decisión | Justificación | Alternativas descartadas |
+|----------|---------------|--------------------------|
+| _Genera una fila por decisión real (p. ej. "PostgreSQL para persistencia" / "integridad relacional + familiaridad del equipo" / "MongoDB — sin necesidad de forma documental")._ | | |
 
 ## Integraciones Externas
 
-{{EXTERNAL_INTEGRATIONS}}
-
-Solo incluir si el proyecto tiene integraciones con APIs externas, bases de datos, servicios de mensajeria, etc.
+Incluye esta sección solo si el proyecto se comunica con APIs externas, bases de datos, colas o servicios de terceros. Para cada integración, documenta: qué es, por qué se necesita, el modo de fallo si no está disponible y cómo el proyecto la aísla (wrapper de cliente, gateway, capa anticorrupción). Si no hay integraciones externas, omite esta sección en lugar de dejarla vacía.
 
 ## Observabilidad
 
-{{OBSERVABILITY_STRATEGY}}
-
-Estrategia de tracing, logging y metricas. Solo incluir si es relevante para el tipo de proyecto.
+Incluye esta sección solo si es relevante para el tipo de proyecto (servicios, procesos de larga duración). Describe la estrategia de logging, métricas y tracing: qué se registra y a qué nivel, qué métricas importan y si las peticiones se trazan. Para una librería o un CLI de un solo uso, omite esta sección.

@@ -12,17 +12,25 @@
 
 ## Commands
 
+Prefer the project's EXACT commands. If they are not known, emit `[DEFINE: <hint>]` rather than inventing one.
+
 ```bash
+# Setup / install dependencies
+{{SETUP_COMMAND}}
+
 # Build
 {{BUILD_COMMAND}}
 
-# Test
+# Run all tests
 {{TEST_COMMAND}}
+
+# Run a single test
+{{SINGLE_TEST_COMMAND}}
 
 # Run
 {{RUN_COMMAND}}
 
-# Lint
+# Lint / format
 {{LINT_COMMAND}}
 ```
 
@@ -88,8 +96,13 @@ Main directory descriptions:
 - Skip the port and call adapters directly from core
 - {{MUST_NOT_RULES}}
 
+## Gotchas
+
+Document non-obvious pitfalls specific to THIS repo (required env vars, caches to clear, flaky areas, services that must be running). Populate ONLY from the description/scan; if none are known, omit the section.
+
 ## Additional Context
 
 - Architecture and technical design: `context/CONTEXT.md`
 - Decision history and sessions: `context/INTERACTIONS_LOG.md`
 - Development methodology: `context/DEVELOPMENT_GUIDE.md`
+- Language idioms: `context/IDIOMS.md` (list only when an idiomatic language guide was generated for this project)

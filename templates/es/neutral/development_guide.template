@@ -1,79 +1,63 @@
-# {{PROJECT_NAME}} - Guia de Desarrollo
+# Guía de Desarrollo — {{PROJECT_NAME}}
 
-## Metodologia de Trabajo
+## Metodología
 
-### Flujo de Desarrollo
-1. **Planifica antes de actuar**: Presenta un plan claro antes de escribir o modificar codigo
-2. **Trabajo incremental**: Construye paso a paso, asegurando calidad en cada etapa
-3. **Testing continuo**: Escribe tests MIENTRAS desarrollas cada componente, no despues
-4. **Validacion constante**: Verifica que cada componente funciona antes de continuar
-5. **Solicita clarificacion**: Si algun requisito es ambiguo, pregunta antes de proceder
+Indica cómo fluye el trabajo en este proyecto: cómo un cambio pasa de la intención al código mergeado y dónde encajan los tests. Mantenlo específico a la arquitectura y las herramientas del proyecto. Si la descripción no lo dice, emite `[DEFINE: flujo de desarrollo]`.
 
-### Testing como Practica Integrada
-- **Tests unitarios**: Inmediatamente despues de crear cada funcion/metodo
-- **Tests de integracion**: Junto con cada integracion externa
-- **BDD cuando sea apropiado**: Para logica compleja, escribe el escenario primero
+## Añadir una Funcionalidad
 
-## Estilo de Comunicacion
+Una secuencia genérica, agnóstica de la arquitectura. Adapta los nombres de las particiones a la estructura de este proyecto.
 
-### Al escribir codigo:
-- Comenta solo decisiones criticas o workarounds temporales
-- Nombra variables y funciones de manera autodocumentada
-- Estructura el codigo para que sea obvio, no clever
-- Sigue convenciones idiomaticas del lenguaje
+1. **Localiza la costura.** Encuentra dónde encaja el nuevo comportamiento: qué módulo/capa lo posee y qué código existente extiende.
+2. **Define el contrato primero.** Nombra la función/endpoint/interfaz, sus entradas, salidas y casos de error antes de escribir el cuerpo.
+3. **Escribe el test que falla.** Captura el comportamiento esperado como un test contra el contrato.
+4. **Implementa.** Mantén el cambio dentro de la partición que lo posee; alcanza otras particiones solo a través de sus puntos de entrada existentes.
+5. **Conéctalo.** Registra rutas, manejadores, configuración o inyección de dependencias según requiera el proyecto.
+6. **Ejecuta la suite de tests.** Todo en verde, incluido el nuevo.
+7. **Ejecuta el linter/formateador** antes de abrir un PR.
 
-### Al explicar decisiones:
-- Se conciso pero completo
-- Justifica decisiones con trade-offs claros
-- Menciona alternativas consideradas cuando sea relevante
+## Testing
 
-### Al encontrar problemas:
-- Diagnostica la causa raiz, no solo los sintomas
-- Propone soluciones con pros y contras
-- Considera el impacto en produccion
+Sigue la pirámide de tests:
+- **Tests unitarios** — los más numerosos y rápidos; cubren lógica de forma aislada, con dependencias falseadas/stubbed.
+- **Tests de integración** — ejercitan límites reales (BD, APIs externas, colas) para los componentes que los poseen.
+- **Tests de extremo a extremo** — una capa fina sobre los caminos críticos de usuario únicamente.
 
-## Autonomia
+- **Objetivos de cobertura:** {{COVERAGE_TARGETS}}
+- Cada cambio de comportamiento se entrega con el test que lo demuestra. Una corrección de bug se entrega con un test de regresión que falla antes del arreglo.
 
-Existe completa libertad para proponer optimizaciones y cambios en cualquier aspecto del proyecto:
-- Modelado de datos y abstracciones
-- Patrones y decisiones tecnicas
-- Organizacion del codigo
+## Checklist de Revisión de Código
 
-### Como Proponer Cambios
-1. Documenta el problema o limitacion actual
-2. Propone la alternativa con sus beneficios
-3. Analiza los trade-offs
-4. Justifica por que el cambio mejora el sistema
-
-## Checklist de Validacion
-
-Antes de considerar cualquier componente como completo:
-- [ ] Maneja todos los casos de error posibles?
-- [ ] Es testeable de manera aislada?
-- [ ] Es observable en produccion?
-- [ ] Se recupera de fallos transitorios?
-- [ ] El codigo es mantenible por otro desarrollador?
-
-## Expectativas de Entrega
-
-Cada componente debe:
-1. **Funcionar** correctamente en happy path y casos de error
-2. **Estar testeado** con casos relevantes
-3. **Estar documentado** donde no sea obvio
-4. **Ser resiliente** ante fallos esperados
+- [ ] El cambio vive en la partición que posee la responsabilidad; sin atajos entre capas.
+- [ ] Los contratos públicos (firmas, endpoints, esquemas) son intencionales y están documentados donde no sean obvios.
+- [ ] El nuevo comportamiento está cubierto por tests; una corrección de bug tiene test de regresión.
+- [ ] Los casos de error se manejan, no se tragan; los fallos son observables.
+- [ ] Sin secretos, credenciales ni tokens en código, fixtures o logs.
+- [ ] Linter/formateador limpio; el naming sigue las convenciones del proyecto.
 
 ## Seguridad
 
-- Sanitizacion de logs (no exponer datos sensibles)
-- Gestion segura de credenciales (variables de entorno, secrets manager)
-- Nunca commitear credenciales o datos sensibles
+{{SECURITY_PRACTICES}}
 
-## Configuracion
+- Valida y sanea toda entrada externa en el límite, antes de que alcance la lógica de negocio.
+- Nunca registres datos sensibles (credenciales, tokens, PII); redáctalos en el límite de logging.
+- Lee los secretos desde el entorno o un secrets manager — nunca los hardcodees ni los commitees.
+- {{ADDITIONAL_SECURITY_RULES}}
 
-### Fuentes de Configuracion (en orden de precedencia)
-1. Variables de entorno
-2. Archivo de configuracion
-3. Valores por defecto
+## Observabilidad
 
-### Estructura esperada
-La configuracion debe cubrir los parametros relevantes del proyecto: datos de la aplicacion, parametros del servidor o punto de entrada, conexiones externas y shutdown graceful.
+{{OBSERVABILITY_PRACTICES}}
+
+- Logging estructurado en los límites (entrada/salida de peticiones, llamadas externas) con un id de correlación cuando esté disponible.
+- Métricas de latencia y tasa de error en los caminos que importan.
+- Tracing a través de las llamadas externas si el proyecto es distribuido.
+
+Incluye los detalles solo cuando sean relevantes para el tipo de proyecto; omite para una librería o un CLI de un solo uso.
+
+## Expectativas de Entrega
+
+{{DELIVERY_EXPECTATIONS}}
+
+- Cada PR compila, pasa la suite completa de tests y está limpio de linter.
+- Un cambio está "hecho" cuando funciona en el happy path Y en sus casos de error, está testeado y documentado donde no sea obvio.
+- La configuración sigue una precedencia clara (variables de entorno → archivo de configuración → valores por defecto) y cubre las conexiones y el shutdown graceful donde aplique.

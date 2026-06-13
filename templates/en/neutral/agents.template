@@ -12,18 +12,26 @@
 ## Commands
 
 ```bash
+# Setup / install dependencies
+{{SETUP_COMMAND}}
+
 # Build
 {{BUILD_COMMAND}}
 
-# Test
+# Run all tests
 {{TEST_COMMAND}}
+
+# Run a single test
+{{SINGLE_TEST_COMMAND}}
 
 # Run
 {{RUN_COMMAND}}
 
-# Lint
+# Lint / format
 {{LINT_COMMAND}}
 ```
+
+Use the EXACT commands this project defines — read them from its Makefile, `package.json` scripts, `go.mod`/task runner, CI config, or README. Do not paraphrase or guess flags. If a command is genuinely unknown, leave `[DEFINE: <what is missing>]` in its place rather than inventing one. Prefer the single-test command an agent would actually use in a tight edit-test loop (e.g. `go test -run TestName ./pkg`, `pytest path::test`, `npm test -- -t "name"`).
 
 ## Key Conventions
 
@@ -50,7 +58,13 @@ Main directory descriptions:
 ### MUST NOT:
 - {{MUST_NOT_RULES}}
 
+## Gotchas
+
+Document non-obvious pitfalls specific to THIS repo: environment variables that must be set before anything runs, caches to clear, code-generation steps to re-run, flaky test areas, or services that must be up locally. Populate ONLY from the description or scan; if none are known, omit this section rather than inventing one.
+
 ## Additional Context
 
 - Architecture and technical design: `context/CONTEXT.md`
+- Development methodology: `context/DEVELOPMENT_GUIDE.md`
 - Decision history and sessions: `context/INTERACTIONS_LOG.md`
+- Language idioms: `context/IDIOMS.md` (list this line only when an idiomatic language guide was generated for this project)

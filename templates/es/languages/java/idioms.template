@@ -1,0 +1,53 @@
+# {{PROJECT_NAME}} - Guía Idiomática Java
+
+## Concurrencia
+
+- Usa virtual threads (Project Loom, 21+) para trabajo I/O bound: `Executors.newVirtualThreadPerTaskExecutor()` — baratos, escalan a millones, permiten escribir código en estilo bloqueante
+- Reserva los pools de platform threads para trabajo CPU bound; no agrupes (pool) virtual threads
+- Evita bloques `synchronized` que abarquen llamadas bloqueantes en virtual threads (pinning) — prefiere `ReentrantLock`
+- Usa primitivas de `java.util.concurrent` (`ConcurrentHashMap`, `CompletableFuture`, `Atomic*`) sobre locking manual
+- Prefiere datos inmutables compartidos entre hilos; confina el estado mutable a un único dueño
+- Usa concurrencia estructurada (`StructuredTaskScope`, preview) para acotar y cancelar subtareas relacionadas en conjunto
+
+## Manejo de Errores
+
+- Usa checked exceptions para condiciones recuperables que el llamador debe manejar; unchecked para errores de programación
+- Envuelve-y-relanza con la causa: `throw new ServiceException("contexto", e)` — nunca tragues el original
+- Atrapa el tipo de excepción más estrecho; nunca atrapes `Exception`/`Throwable` pelado salvo en boundaries
+- Usa try-with-resources para todo lo `AutoCloseable` — sin cierre manual en `finally`
+- Retorna `Optional<T>` para "quizá ausente"; nunca retornes `null` desde esos métodos (y nunca `Optional` para campos/parámetros)
+
+## Patrones Idiomáticos
+
+- Usa `record` para portadores de datos inmutables — `equals`/`hashCode`/`toString` automáticos, constructores canónicos compactos para validación
+- Usa sealed classes/interfaces (`sealed ... permits`) para modelar jerarquías cerradas sobre las que el compilador puede razonar
+- Combina sealed types + records con pattern matching `switch` para dispatch exhaustivo en estilo de expresión
+- Usa pattern matching para `instanceof` (`if (o instanceof User u)`) y record deconstruction patterns
+- Usa `var` para variables locales cuando el inicializador hace obvio el tipo — no para campos ni APIs públicas
+- Usa text blocks (`"""..."""`) para strings multilínea (SQL, JSON, plantillas)
+- Favorece la Streams API para transformaciones; mantén los pipelines sin efectos secundarios y evita `forEach` para mutar
+- Prefiere colecciones inmutables (`List.of`, `Map.of`, `Stream.toList()`) y copias defensivas
+
+## Tooling
+
+- Java 21+ LTS; declara el toolchain/`release` en el build para fijar el nivel de lenguaje
+- Build con Maven o Gradle (Gradle con el Kotlin DSL en proyectos nuevos); versiona el wrapper (`mvnw`/`gradlew`)
+- Fija las versiones de dependencias; usa un BOM para versiones coherentes multi-módulo
+- Formato/lint con Spotless (google-java-format / Palantir) + Error Prone o Checkstyle en CI
+- Gestiona las versiones de JDK con SDKMAN! o toolchains en vez del JDK del sistema
+
+## Testing
+
+- JUnit 5 (Jupiter) como framework: `@Test`, `@ParameterizedTest`, `@Nested`, `@DisplayName`
+- AssertJ para aserciones fluidas y legibles (`assertThat(x).isEqualTo(...)`) sobre `assertEquals` pelado
+- Mockito para mocks/stubs; prefiere inyección por constructor para sustituir colaboradores fácilmente
+- Testcontainers para tests de integración contra bases de datos/brokers reales
+- Mantén los tests en `src/test/java` reflejando la estructura de paquetes
+
+## Anti-Patrones
+
+- Retornar `null` donde encaja un `Optional` o una colección vacía
+- Estado compartido mutable sin sincronización; agrupar (pool) virtual threads
+- Clases anémicas de getter/setter donde bastaría un `record`
+- Cadenas largas de `if/else instanceof` en vez de un `switch` con pattern matching
+- Catch-and-ignore (bloques catch vacíos); blanquear checked exceptions en `RuntimeException` sin contexto

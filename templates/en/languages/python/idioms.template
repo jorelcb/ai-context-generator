@@ -15,15 +15,16 @@
 - Use `contextlib.asynccontextmanager` for lightweight context managers
 
 ### Timeouts and Cancellation
-- Use `asyncio.wait_for(coro, timeout=)` for timeouts on async operations
-- Use `asyncio.TaskGroup` (Python 3.11+) for structured concurrency
-- Manage the event loop appropriately — don't mix sync and async without explicit bridges
+- Use `asyncio.timeout(seconds)` (3.11+) as a context manager — prefer it over `asyncio.wait_for`
+- Use `asyncio.TaskGroup` for structured concurrency — it cancels siblings on failure and raises `ExceptionGroup`
+- Manage the event loop appropriately — don't mix sync and async without explicit bridges (`asyncio.to_thread`)
 
 ## Error Handling
 
 - Define custom exceptions that inherit from `Exception` (or specific subclasses)
 - Use `raise ... from original_error` to preserve the error chain
 - Catch specific exceptions, never bare `except Exception` (except at boundaries)
+- Use `except*` with `ExceptionGroup` (3.11+) when handling concurrent failures from `TaskGroup`
 - Use `logging.exception()` inside except blocks to include traceback automatically
 - In APIs, translate domain exceptions to appropriate HTTP responses at the interface layer
 
@@ -49,29 +50,37 @@ from pydantic import BaseModel
 # internal modules
 from src.domain.models import User
 ```
-Separated by blank lines, sorted alphabetically. Use `isort` to automate.
+Separated by blank lines, sorted alphabetically. `ruff` handles import sorting (isort rules).
 
 ### Type Hints
 - Type hints required on all public function signatures
+- Use PEP 695 generic syntax (3.12+): `def first[T](xs: list[T]) -> T` and `type UserId = int` — no `TypeVar`/`Generic` boilerplate
+- Use `X | None` for optional values — never `Optional[X]`
+- Use built-in generics (`list[str]`, `dict[str, int]`) — never `typing.List`/`typing.Dict`
 - Use `pydantic.BaseModel` for data validation at boundaries
-- Use `typing.Protocol` for interfaces (explicit duck typing)
-- Use `Optional[T]` or `T | None` (Python 3.10+) for optional values
-- Use `TypeVar` and `Generic` for generic classes and functions
+- Use `typing.Protocol` for structural interfaces (explicit duck typing)
+
+### Pattern Matching
+- Use `match`/`case` for structural dispatch over chained `if/elif isinstance`
+- Match on dataclasses, dicts, and sequences; use guards (`case Point(x) if x > 0`) and `case _` for the default
 
 ## Version and Tooling Constraints
 
-- Python 3.11+ with mandatory type hints
+- Python 3.12+ with mandatory type hints
+- `uv` as the dominant package/project manager (resolver + venv + lockfile via `uv.lock`) — replaces poetry/pip-tools
+- `tomllib` (stdlib, 3.11+) for reading TOML — no third-party `toml` dependency
 - `pydantic` for data validation at boundaries
-- `poetry` or `pip-tools` for dependency management with lockfile
 - `ruff` as linter and formatter (replaces flake8, black, isort)
 - `mypy` or `pyright` for static type checking
-- `pyproject.toml` as central configuration file
+- `pyproject.toml` as the central configuration file
 
 ## Testing in Python
 
-- `pytest` as main framework
+- `pytest` as the main framework
 - Tests in `tests/` directory mirroring `src/` structure
-- Fixtures with `@pytest.fixture` for reusable setup
+- Plain `assert` statements (pytest rewrites them) — avoid `unittest`-style `self.assertEqual`
+- Fixtures with `@pytest.fixture` for reusable setup; `tmp_path` for filesystem isolation
+- `@pytest.mark.parametrize` for table-driven cases
 - `pytest-asyncio` for async function tests
 - `unittest.mock.patch` or `pytest-mock` for mocking
 - `httpx` with `AsyncClient` for FastAPI/Starlette API testing

@@ -291,8 +291,16 @@ codify analyze /path/to/my-project
 | `INTERACTIONS_LOG.md`  | Session log and ADRs                                                                 |
 | `DEVELOPMENT_GUIDE.md` | Work methodology, testing practices, security, delivery expectations                 |
 | `IDIOMS.md`            | Language-specific concurrency, error handling, conventions _(requires `--language`)_ |
+| `CLAUDE.md`            | Bridge for Claude Code: imports `@AGENTS.md` + room for Claude-specific notes        |
 
-Place these files at your project root. Compatible agents (Claude Code, Cursor, Codex, etc.) read them automatically.
+`AGENTS.md` is the canonical root that compatible agents (Cursor, Codex, Gemini
+CLI, …) read automatically; the generated `CLAUDE.md` bridges it into Claude
+Code, which reads `CLAUDE.md` rather than AGENTS.md natively (an existing
+`CLAUDE.md` is never overwritten). See ADR-0014.
+
+Idiomatic guides ship for Go, TypeScript, JavaScript, Python, Rust, and Java
+(`--language <name>`); `analyze` auto-detects the language, distinguishing
+TypeScript from JavaScript via `tsconfig.json`.
 
 #### Options
 
