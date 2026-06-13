@@ -26,7 +26,7 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 )
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -48,7 +48,7 @@ uvicorn>=0.23.0
 sqlalchemy>=2.0
 pytest>=7.0
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte(requirements), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "requirements.txt"), []byte(requirements), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -73,7 +73,7 @@ func TestScan_JSProject(t *testing.T) {
     "typescript": "^5.0.0"
   }
 }`
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -84,6 +84,24 @@ func TestScan_JSProject(t *testing.T) {
 	assert.Contains(t, result.Dependencies, "next")
 	assert.Contains(t, result.Dependencies, "react")
 	assert.Contains(t, result.Dependencies, "typescript")
+}
+
+func TestScan_TypeScriptProject(t *testing.T) {
+	dir := t.TempDir()
+
+	pkgJSON := `{"name": "my-app", "dependencies": {"express": "^4.18.0"}}`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0o644))
+	// A tsconfig.json next to package.json promotes the language to TypeScript
+	// so the TS-specific idiom guide and --language value are selected.
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "tsconfig.json"), []byte(`{"compilerOptions":{"strict":true}}`), 0o644))
+
+	s := NewProjectScanner()
+	result, err := s.Scan(dir)
+
+	require.NoError(t, err)
+	assert.Equal(t, "TypeScript", result.Language)
+	assert.Equal(t, "Express", result.Framework)
+	assert.Contains(t, result.Dependencies, "express")
 }
 
 func TestScan_DirectoryTree(t *testing.T) {
@@ -97,10 +115,10 @@ func TestScan_DirectoryTree(t *testing.T) {
 		"tests",
 	}
 	for _, d := range dirs {
-		require.NoError(t, os.MkdirAll(filepath.Join(dir, d), 0755))
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, d), 0o755))
 	}
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "cmd/api/main.go"), []byte("package main"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "cmd/api/main.go"), []byte("package main"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -115,7 +133,7 @@ func TestScan_README(t *testing.T) {
 	dir := t.TempDir()
 
 	readme := "# My Project\n\nThis is a test project.\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte(readme), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -128,8 +146,8 @@ func TestScan_README(t *testing.T) {
 func TestScan_ExistingContext(t *testing.T) {
 	dir := t.TempDir()
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# My Agent Context"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("# Claude Instructions"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# My Agent Context"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("# Claude Instructions"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -143,9 +161,9 @@ func TestScan_ExistingContext(t *testing.T) {
 func TestScan_ConfigSignals(t *testing.T) {
 	dir := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte("FROM golang"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Makefile"), []byte("build:"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte("FROM golang"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Makefile"), []byte("build:"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -202,11 +220,11 @@ func TestScan_ExpandedContextFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create expanded context files
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte("# Contributing\n\nPlease follow conventional commits."), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "ARCHITECTURE.md"), []byte("# Architecture\n\nClean Architecture with DDD."), 0644))
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".claude"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".claude/CLAUDE.md"), []byte("# Claude context"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "openapi.yaml"), []byte("openapi: 3.0.0\ninfo:\n  title: My API"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte("# Contributing\n\nPlease follow conventional commits."), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "ARCHITECTURE.md"), []byte("# Architecture\n\nClean Architecture with DDD."), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".claude"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".claude/CLAUDE.md"), []byte("# Claude context"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "openapi.yaml"), []byte("openapi: 3.0.0\ninfo:\n  title: My API"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -222,11 +240,11 @@ func TestScan_ContextGlobs(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create files matching glob patterns
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".cursor/rules"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".cursor/rules/go-patterns.md"), []byte("# Go patterns"), 0644))
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "docs/adr"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "docs/adr/001-use-ddd.md"), []byte("# ADR 001: Use DDD"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "docs/adr/002-use-bdd.md"), []byte("# ADR 002: Use BDD"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".cursor/rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".cursor/rules/go-patterns.md"), []byte("# Go patterns"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "docs/adr"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "docs/adr/001-use-ddd.md"), []byte("# ADR 001: Use DDD"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "docs/adr/002-use-bdd.md"), []byte("# ADR 002: Use BDD"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -245,7 +263,7 @@ func TestScan_ChangelogTruncation(t *testing.T) {
 	for i := 1; i <= 200; i++ {
 		lines += fmt.Sprintf("## v%d.0.0 - 2024-01-%02d\n", i, i%28+1)
 	}
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "CHANGELOG.md"), []byte(lines), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "CHANGELOG.md"), []byte(lines), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -267,7 +285,7 @@ func TestScan_LargeContextFileTruncation(t *testing.T) {
 	for i := 1; i <= 300; i++ {
 		lines += fmt.Sprintf("Line %d of contributing guide\n", i)
 	}
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte(lines), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "CONTRIBUTING.md"), []byte(lines), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -301,7 +319,7 @@ lint:
 clean:
 	rm -rf bin/
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Makefile"), []byte(makefile), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Makefile"), []byte(makefile), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -342,7 +360,7 @@ tasks:
     cmds:
       - golangci-lint run
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Taskfile.yml"), []byte(taskfile), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Taskfile.yml"), []byte(taskfile), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -376,13 +394,13 @@ func TestDetectTestingPatterns_GoWithBDD(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create Go test files
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "main_test.go"), []byte("package main"), 0644))
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, "features"), 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "features/login.feature"), []byte("Feature: Login"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "main_test.go"), []byte("package main"), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "features"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "features/login.feature"), []byte("Feature: Login"), 0o644))
 
 	// Create go.mod with godog dependency
 	goMod := "module example\n\nrequire (\n\tgithub.com/cucumber/godog v0.14.0\n)\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goMod), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -397,12 +415,12 @@ func TestDetectTestingPatterns_JSWithJest(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create test files
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "app.test.ts"), []byte("test('works')"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "app.test.ts"), []byte("test('works')"), 0o644))
 
 	// Create package.json with jest
 	pkgJSON := `{"devDependencies": {"jest": "^29.0.0", "typescript": "^5.0.0"}}`
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "jest.config.ts"), []byte("module.exports = {}"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte(pkgJSON), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "jest.config.ts"), []byte("module.exports = {}"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -416,8 +434,8 @@ func TestDetectTestingPatterns_JSWithJest(t *testing.T) {
 func TestDetectTestingPatterns_CoverageConfig(t *testing.T) {
 	dir := t.TempDir()
 
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "codecov.yml"), []byte("coverage:\n  status:\n    project: yes"), 0644))
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "pytest.ini"), []byte("[pytest]\ntestpaths = tests"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "codecov.yml"), []byte("coverage:\n  status:\n    project: yes"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pytest.ini"), []byte("[pytest]\ntestpaths = tests"), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -431,7 +449,7 @@ func TestSummarizeCIWorkflows_GitHub(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create GitHub Actions workflow
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0o755))
 	workflow := `name: CI
 
 on:
@@ -459,7 +477,7 @@ jobs:
     steps:
       - run: go build ./...
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".github/workflows/ci.yml"), []byte(workflow), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".github/workflows/ci.yml"), []byte(workflow), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -477,7 +495,7 @@ jobs:
 func TestSummarizeCIWorkflows_InlineTriggers(t *testing.T) {
 	dir := t.TempDir()
 
-	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".github/workflows"), 0o755))
 	workflow := `name: Quick CI
 on: [push, pull_request]
 
@@ -487,7 +505,7 @@ jobs:
     steps:
       - run: echo "ok"
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, ".github/workflows/quick.yml"), []byte(workflow), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".github/workflows/quick.yml"), []byte(workflow), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -524,7 +542,7 @@ tokio = { version = "1", features = ["full"] }
 [dev-dependencies]
 assert_matches = "1"
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte(cargoToml), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Cargo.toml"), []byte(cargoToml), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -561,7 +579,7 @@ func TestScan_JavaProject(t *testing.T) {
   </dependencies>
 </project>
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "pom.xml"), []byte(pomXML), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pom.xml"), []byte(pomXML), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)
@@ -587,7 +605,7 @@ group :development, :test do
   gem "rspec"
 end
 `
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Gemfile"), []byte(gemfile), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "Gemfile"), []byte(gemfile), 0o644))
 
 	s := NewProjectScanner()
 	result, err := s.Scan(dir)

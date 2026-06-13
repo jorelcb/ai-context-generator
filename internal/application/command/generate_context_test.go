@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jorelcb/codify/internal/application/dto"
@@ -75,8 +76,9 @@ func TestGenerateContextCommand_Execute(t *testing.T) {
 	if result.TokensOut != 5000 {
 		t.Errorf("Expected 5000 tokens out, got %d", result.TokensOut)
 	}
-	if len(result.GeneratedFiles) != 3 {
-		t.Errorf("Expected 3 generated files, got %d", len(result.GeneratedFiles))
+	// 3 generated files + the CLAUDE.md bridge emitted alongside AGENTS.md.
+	if len(result.GeneratedFiles) != 4 {
+		t.Errorf("Expected 4 generated files (3 + CLAUDE.md bridge), got %d", len(result.GeneratedFiles))
 	}
 
 	// Verify AGENTS.md was written to project root (not context/)
@@ -86,6 +88,14 @@ func TestGenerateContextCommand_Execute(t *testing.T) {
 		t.Errorf("AGENTS.md not found at root: %v", err)
 	} else if len(content) == 0 {
 		t.Error("AGENTS.md is empty")
+	}
+
+	// Verify the CLAUDE.md bridge was written to root and imports AGENTS.md.
+	bridge, err := os.ReadFile(filepath.Join(tmpDir, "CLAUDE.md"))
+	if err != nil {
+		t.Errorf("CLAUDE.md bridge not found at root: %v", err)
+	} else if !strings.Contains(string(bridge), "@AGENTS.md") {
+		t.Errorf("CLAUDE.md bridge must import @AGENTS.md, got:\n%s", bridge)
 	}
 
 	// Verify other files were written to context/ subdirectory
@@ -99,6 +109,40 @@ func TestGenerateContextCommand_Execute(t *testing.T) {
 		}
 		if len(content) == 0 {
 			t.Errorf("File %s is empty", fname)
+		}
+	}
+}
+
+func TestGenerateContextCommand_Execute_PreservesExistingClaudeMD(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// A brownfield repo (analyze path) may already carry a curated CLAUDE.md.
+	existing := "# CLAUDE.md\n\nhand-written, do not touch\n"
+	if err := os.WriteFile(filepath.Join(tmpDir, "CLAUDE.md"), []byte(existing), 0o644); err != nil {
+		t.Fatalf("seed CLAUDE.md: %v", err)
+	}
+
+	mockProvider := &mockLLMProvider{
+		response: &service.GenerationResponse{
+			Files: []service.GeneratedFile{{Name: "AGENTS.md", Content: "# Agents content"}},
+			Model: "mock",
+		},
+	}
+	cmd := NewGenerateContextCommand(mockProvider, filesystem.NewFileWriter(), filesystem.NewDirectoryManager())
+	config := &dto.ProjectConfig{Name: "p", Description: "d", OutputPath: tmpDir}
+
+	result, err := cmd.Execute(context.Background(), config, nil)
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	got, _ := os.ReadFile(filepath.Join(tmpDir, "CLAUDE.md"))
+	if string(got) != existing {
+		t.Errorf("existing CLAUDE.md must be preserved, got:\n%s", got)
+	}
+	for _, f := range result.GeneratedFiles {
+		if strings.HasSuffix(f, "CLAUDE.md") {
+			t.Errorf("CLAUDE.md must not be reported as generated when it already existed: %s", f)
 		}
 	}
 }

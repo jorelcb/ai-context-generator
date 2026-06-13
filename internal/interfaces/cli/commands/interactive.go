@@ -118,12 +118,17 @@ func promptPreset() (string, error) {
 	}, "neutral")
 }
 
-// promptLanguage displays programming language selection.
+// promptLanguage displays programming language selection. Each entry maps to a
+// templates/{locale}/languages/<value>/idioms.template guide; "javascript" and
+// "typescript" are distinct so a TS project gets the type-system-aware guide.
 func promptLanguage() (string, error) {
 	return promptSelect("Select programming language", []selectOption{
 		{"Go", "go"},
-		{"JavaScript / TypeScript", "javascript"},
+		{"TypeScript", "typescript"},
+		{"JavaScript", "javascript"},
 		{"Python", "python"},
+		{"Rust", "rust"},
+		{"Java", "java"},
 		{"None (skip idiomatic guides)", ""},
 	}, "")
 }
