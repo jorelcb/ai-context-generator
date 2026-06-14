@@ -22,7 +22,7 @@ import (
 	infratemplate "github.com/jorelcb/codify/internal/infrastructure/template"
 )
 
-const serverVersion = "3.3.0"
+const serverVersion = "4.0.0"
 
 // validContextPresets enumerates accepted preset names for context generation
 // (generate_context + analyze_project tools). The "default" alias was removed
@@ -85,7 +85,7 @@ func generateContextTool() server.ServerTool {
 		mcp.WithString("locale", mcp.Description("Output language: en (English) or es (Spanish)"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
 		mcp.WithBoolean("with_specs", mcp.Description("Also generate SDD spec files after context generation")),
-		mcp.WithString("sdd_standard", mcp.Description("SDD standard for with_specs: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
+		mcp.WithString("sdd_standard", mcp.Description("SDD standard for with_specs: spec-kit (default) or openspec"), mcp.Enum("spec-kit", "openspec"), mcp.DefaultString("spec-kit")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleGenerateContext}
@@ -100,7 +100,7 @@ func generateSpecsTool() server.ServerTool {
 		mcp.WithString("output", mcp.Description("Output directory for the spec files (default: from_context)")),
 		mcp.WithString("locale", mcp.Description("Output language: en or es"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
-		mcp.WithString("sdd_standard", mcp.Description("SDD standard: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
+		mcp.WithString("sdd_standard", mcp.Description("SDD standard: spec-kit (default) or openspec"), mcp.Enum("spec-kit", "openspec"), mcp.DefaultString("spec-kit")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleGenerateSpecs}
@@ -117,7 +117,7 @@ func analyzeProjectTool() server.ServerTool {
 		mcp.WithString("locale", mcp.Description("Output language: en or es"), mcp.DefaultString("en")),
 		mcp.WithString("model", mcp.Description("Claude model to use"), mcp.DefaultString("claude-sonnet-4-6")),
 		mcp.WithBoolean("with_specs", mcp.Description("Also generate SDD spec files after context generation")),
-		mcp.WithString("sdd_standard", mcp.Description("SDD standard for with_specs: openspec (default) or spec-kit"), mcp.Enum("openspec", "spec-kit"), mcp.DefaultString("openspec")),
+		mcp.WithString("sdd_standard", mcp.Description("SDD standard for with_specs: spec-kit (default) or openspec"), mcp.Enum("spec-kit", "openspec"), mcp.DefaultString("spec-kit")),
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleAnalyzeProject}
@@ -739,12 +739,10 @@ func executeSpecs(ctx context.Context, name, fromContextPath, outputPath, locale
 		OutputPath:      outputPath,
 		Model:           model,
 		Locale:          locale,
-		Layout:          standard.OutputLayout(),
+		FeatureID:       slugifySpecFeatureID(name),
 		StandardID:      standard.ID(),
 		StandardHints:   standard.SystemPromptHints(locale),
-	}
-	if standard.OutputLayout() == service.LayoutFeatureGrouped {
-		config.FeatureID = slugifySpecFeatureID(name)
+		Artifacts:       standard.BootstrapArtifacts(),
 	}
 
 	result, err := specCmd.Execute(ctx, config, existingContext, guides)
@@ -753,10 +751,9 @@ func executeSpecs(ctx context.Context, name, fromContextPath, outputPath, locale
 	}
 
 	// Update AGENTS.md with a specs reference, reusing the resolved standard so
-	// the listed file names match the layout that was actually generated. The
-	// section body comes from the shared sdd helper — the local copy this file
-	// used to carry had already drifted from the CLI's (it omitted the
-	// featureID prefix in the FeatureGrouped layout).
+	// the listed paths match what was actually generated. The section body
+	// comes from the shared sdd helper (single source of truth for both
+	// interfaces).
 	agentsPath := filepath.Join(outputPath, "AGENTS.md")
 	content, readErr := os.ReadFile(agentsPath)
 	if readErr == nil && !strings.Contains(string(content), "specs/") {

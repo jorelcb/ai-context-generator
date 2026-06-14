@@ -41,14 +41,14 @@ func TestLoadSpecGuides_AllStandardsAndLocales(t *testing.T) {
 }
 
 // TestLoadSpecGuides_DefaultStandard verifies the empty-standard path (what the
-// MCP passes when sdd_standard is omitted) resolves to OpenSpec and loads.
+// MCP passes when sdd_standard is omitted) resolves to Spec-Kit and loads.
 func TestLoadSpecGuides_DefaultStandard(t *testing.T) {
 	standard, err := sdd.NewDefaultRegistry().Resolve("", "", "")
 	if err != nil {
 		t.Fatalf("resolve default standard: %v", err)
 	}
-	if standard.ID() != "openspec" {
-		t.Fatalf("default standard = %q, want openspec", standard.ID())
+	if standard.ID() != "spec-kit" {
+		t.Fatalf("default standard = %q, want spec-kit", standard.ID())
 	}
 	guides, err := loadSpecGuides("en", standard)
 	if err != nil {

@@ -40,10 +40,11 @@ func TestSpecConfig_Validate(t *testing.T) {
 		cfg     *SpecConfig
 		wantErr bool
 	}{
-		{"happy", &SpecConfig{ProjectName: "x", FromContextPath: "/c", OutputPath: "/o"}, false},
-		{"missing name", &SpecConfig{FromContextPath: "/c", OutputPath: "/o"}, true},
-		{"missing context path", &SpecConfig{ProjectName: "x", OutputPath: "/o"}, true},
-		{"missing output", &SpecConfig{ProjectName: "x", FromContextPath: "/c"}, true},
+		{"happy", &SpecConfig{ProjectName: "x", FromContextPath: "/c", OutputPath: "/o", FeatureID: "x"}, false},
+		{"missing name", &SpecConfig{FromContextPath: "/c", OutputPath: "/o", FeatureID: "x"}, true},
+		{"missing context path", &SpecConfig{ProjectName: "x", OutputPath: "/o", FeatureID: "x"}, true},
+		{"missing output", &SpecConfig{ProjectName: "x", FromContextPath: "/c", FeatureID: "x"}, true},
+		{"missing feature id", &SpecConfig{ProjectName: "x", FromContextPath: "/c", OutputPath: "/o"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -9,9 +9,10 @@ import (
 )
 
 // DefaultStandardID identifies the standard used when no flag, no project
-// config, and no user config select one. ADR-0011 fija OpenSpec como default
-// para preservar el comportamiento de v1.x.
-const DefaultStandardID = "openspec"
+// config, and no user config select one. Since v4.0.0 the default is Spec-Kit
+// (decision D1 of the 2026-06 audit): it is the more widely adopted standard
+// and codify's artifacts/workflows are aligned to its current upstream.
+const DefaultStandardID = "spec-kit"
 
 // Registry guarda los SpecStandard adapters disponibles, indexados por ID.
 // Las entradas se cablean en NewDefaultRegistry; agregar un standard nuevo

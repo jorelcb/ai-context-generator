@@ -98,8 +98,8 @@ func TestUnset(t *testing.T) {
 
 func TestBuiltinDefaults_SDDStandard(t *testing.T) {
 	cfg := BuiltinDefaults()
-	if cfg.SDDStandard != "openspec" {
-		t.Errorf("default sdd_standard: got %q, want openspec (ADR-0011)", cfg.SDDStandard)
+	if cfg.SDDStandard != "spec-kit" {
+		t.Errorf("default sdd_standard: got %q, want spec-kit (D1, v4.0.0)", cfg.SDDStandard)
 	}
 }
 

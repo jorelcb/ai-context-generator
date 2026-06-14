@@ -32,33 +32,37 @@ func SpecTemplateMapping(std service.SpecStandard) map[string]string {
 
 // SpecsReferenceSection construye el bloque "## Specifications" que se anexa
 // a AGENTS.md tras generar specs, listando cada bootstrap artifact con su path
-// según el layout del estándar:
-//   - LayoutFlat:            "specs/<file>"
-//   - LayoutFeatureGrouped:  "specs/<featureID>/<file>"
+// resuelto (Dir con {feature} expandido + FileName).
 //
 // Compartido por CLI y MCP por la misma razón que SpecTemplatePath: las dos
-// copias que existían ya habían divergido (la del MCP omitía el prefijo de
-// featureID en el layout agrupado).
+// copias que existían ya habían divergido. Ahora deriva los paths del mismo
+// modelo per-artifact que usa el writer, así que la lista siempre coincide
+// con lo que se generó.
 func SpecsReferenceSection(locale string, std service.SpecStandard, featureID string) string {
 	header := "\n## Specifications\n\n"
 	if locale == "es" {
 		header = "\n## Especificaciones\n\n"
 	}
 
-	prefix := "specs/"
-	if std.OutputLayout() == service.LayoutFeatureGrouped && featureID != "" {
-		prefix = "specs/" + featureID + "/"
-	}
-
 	var sb strings.Builder
 	sb.WriteString(header)
 	for _, a := range std.BootstrapArtifacts() {
 		sb.WriteString("- `")
-		sb.WriteString(prefix)
-		sb.WriteString(a.FileName)
+		sb.WriteString(ArtifactPath(a, featureID))
 		sb.WriteString("`\n")
 	}
 	return sb.String()
+}
+
+// ArtifactPath resolves an artifact's repo-relative path: its Dir with the
+// {feature} token expanded to featureID, joined with FileName. Forward slashes
+// (these are document references, not OS paths).
+func ArtifactPath(a service.SpecArtifact, featureID string) string {
+	dir := strings.ReplaceAll(a.Dir, service.FeatureToken, featureID)
+	if dir == "" {
+		return a.FileName
+	}
+	return strings.TrimRight(dir, "/") + "/" + a.FileName
 }
 
 // ApplySpecOutputNames anota cada TemplateGuide con el nombre de archivo de

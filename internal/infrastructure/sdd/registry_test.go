@@ -170,10 +170,9 @@ type stubAdapter struct {
 	display string
 }
 
-func (s stubAdapter) ID() string                             { return s.id }
-func (s stubAdapter) DisplayName() string                    { return s.display }
+func (s stubAdapter) ID() string                                 { return s.id }
+func (s stubAdapter) DisplayName() string                        { return s.display }
 func (s stubAdapter) BootstrapArtifacts() []service.SpecArtifact { return nil }
-func (s stubAdapter) OutputLayout() service.OutputLayout     { return service.LayoutFlat }
-func (s stubAdapter) TemplateDir() string                    { return s.id }
-func (s stubAdapter) SystemPromptHints(locale string) string { return "" }
-func (s stubAdapter) LifecycleWorkflowIDs() []string         { return nil }
+func (s stubAdapter) TemplateDir() string                        { return s.id }
+func (s stubAdapter) SystemPromptHints(locale string) string     { return "" }
+func (s stubAdapter) LifecycleWorkflowIDs() []string             { return nil }

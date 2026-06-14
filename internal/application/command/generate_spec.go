@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jorelcb/codify/internal/application/dto"
 	"github.com/jorelcb/codify/internal/domain/service"
@@ -33,8 +34,7 @@ func NewGenerateSpecCommand(
 // Execute runs the spec generation pipeline:
 // 1. Build generation request with existing context and spec mode
 // 2. Call LLM provider
-// 3. Create specs output directory
-// 4. Write generated spec files to disk
+// 3. Place each generated file at its artifact's resolved directory
 func (c *GenerateSpecCommand) Execute(
 	ctx context.Context,
 	config *dto.SpecConfig,
@@ -61,21 +61,41 @@ func (c *GenerateSpecCommand) Execute(
 		return nil, fmt.Errorf("LLM spec generation failed: %w", err)
 	}
 
-	// 3. Create specs output directory honoring the active SpecStandard's layout.
-	//    LayoutFlat            → <output>/specs/
-	//    LayoutFeatureGrouped  → <output>/specs/<FeatureID>/
-	specsDir := filepath.Join(config.OutputPath, "specs")
-	if config.Layout == service.LayoutFeatureGrouped && config.FeatureID != "" {
-		specsDir = filepath.Join(specsDir, config.FeatureID)
-	}
-	if err := c.directoryManager.CreateDir(specsDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create specs directory: %w", err)
+	// 3. Place each generated file at its artifact's directory. The directory
+	//    comes from the active SpecStandard (SpecArtifact.Dir), with the
+	//    {feature} token expanded to the feature/capability slug — so Spec-Kit
+	//    lands under specs/<feature>/, OpenSpec under openspec/specs/<cap>/, and
+	//    a project-level artifact (constitution) under .specify/memory/.
+	byFile := make(map[string]service.SpecArtifact, len(config.Artifacts))
+	for _, a := range config.Artifacts {
+		byFile[a.FileName] = a
 	}
 
-	// 4. Write each generated spec file
 	var generatedFiles []string
+	rootForResult := config.OutputPath
 	for _, file := range response.Files {
-		filePath := filepath.Join(specsDir, file.Name)
+		artifact, ok := byFile[file.Name]
+		if !ok {
+			// No artifact metadata — write at the output root (defensive).
+			artifact = service.SpecArtifact{FileName: file.Name}
+		}
+		dir := strings.ReplaceAll(artifact.Dir, service.FeatureToken, config.FeatureID)
+		targetDir := filepath.Join(config.OutputPath, dir)
+		if err := c.directoryManager.CreateDir(targetDir, 0o755); err != nil {
+			return nil, fmt.Errorf("failed to create directory %s: %w", targetDir, err)
+		}
+		filePath := filepath.Join(targetDir, file.Name)
+
+		// SkipIfExists protects project-level artifacts (e.g. the constitution)
+		// from being clobbered on a per-feature re-run.
+		if artifact.SkipIfExists {
+			if exists, err := c.directoryManager.Exists(filePath); err != nil {
+				return nil, fmt.Errorf("check existing %s: %w", filePath, err)
+			} else if exists {
+				continue
+			}
+		}
+
 		if err := c.fileWriter.WriteFile(filePath, []byte(file.Content), os.FileMode(0o644)); err != nil {
 			return nil, fmt.Errorf("failed to write %s: %w", file.Name, err)
 		}
@@ -83,7 +103,7 @@ func (c *GenerateSpecCommand) Execute(
 	}
 
 	return &dto.GenerationResult{
-		OutputPath:     specsDir,
+		OutputPath:     rootForResult,
 		GeneratedFiles: generatedFiles,
 		Model:          response.Model,
 		TokensIn:       response.TokensIn,

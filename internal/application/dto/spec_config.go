@@ -7,11 +7,11 @@ import (
 
 // SpecConfig holds configuration for generating SDD specifications.
 //
-// Layout/FeatureID/StandardID son opcionales — si Layout es la zero value
-// (LayoutFlat) el comportamiento es el histórico de OpenSpec: archivos
-// directamente bajo specs/. Cuando Layout es LayoutFeatureGrouped, los
-// archivos se escriben bajo specs/<FeatureID>/. StandardID se persiste para
-// que logs y consumidores aguas abajo sepan qué adapter generó los archivos.
+// Each artifact carries its own directory (SpecArtifact.Dir, possibly with the
+// {feature} token); FeatureID supplies the slug that fills that token, so a
+// single field expresses every standard's layout (Spec-Kit's specs/<feature>/,
+// OpenSpec's openspec/specs/<capability>/, etc.). StandardID is persisted so
+// logs and downstream consumers know which adapter produced the files.
 type SpecConfig struct {
 	ProjectName     string
 	FromContextPath string // path to existing output directory (contains AGENTS.md and context/)
@@ -19,22 +19,24 @@ type SpecConfig struct {
 	Model           string
 	Locale          string
 
-	// Layout describe la organización en disco (Flat vs FeatureGrouped).
-	// Determinado por el SpecStandard activo.
-	Layout service.OutputLayout
-
-	// FeatureID es el subdir bajo specs/ cuando Layout=LayoutFeatureGrouped.
-	// Vacío para Flat. El caller tipicamente lo deriva del projectName.
+	// FeatureID is the slug substituted for the {feature} token in each
+	// artifact's directory. The caller typically derives it from the
+	// projectName (a feature/capability slug).
 	FeatureID string
 
-	// StandardID identifica el SpecStandard activo (e.g., "openspec",
-	// "spec-kit"). Útil para logs y validaciones aguas abajo.
+	// StandardID identifies the active SpecStandard (e.g., "spec-kit",
+	// "openspec"). Useful for logs and downstream validations.
 	StandardID string
 
-	// StandardHints es el bloque que el SpecStandard activo agrega al
-	// system prompt para reforzar convenciones. Vacío para OpenSpec
-	// (su formato es la base implícita); no-vacío para Spec-Kit.
+	// StandardHints is the block the active SpecStandard appends to the spec
+	// system prompt to reinforce its conventions (literal requirement syntax,
+	// file-naming rules, etc.).
 	StandardHints string
+
+	// Artifacts are the active standard's bootstrap artifacts (with their Dir
+	// and SkipIfExists). The command places each generated file at
+	// OutputPath/<Dir with {feature} expanded>/<FileName>.
+	Artifacts []service.SpecArtifact
 }
 
 // Validate validates the spec configuration
@@ -48,8 +50,8 @@ func (sc *SpecConfig) Validate() error {
 	if sc.OutputPath == "" {
 		return shared.ErrInvalidInput("output path is required")
 	}
-	if sc.Layout == service.LayoutFeatureGrouped && sc.FeatureID == "" {
-		return shared.ErrInvalidInput("feature id is required for feature-grouped layout")
+	if sc.FeatureID == "" {
+		return shared.ErrInvalidInput("feature id is required")
 	}
 	return nil
 }
