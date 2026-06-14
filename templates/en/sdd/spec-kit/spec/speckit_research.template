@@ -1,23 +1,30 @@
-# Research: {{FEATURE_NAME}}
+# Research: [FEATURE NAME]
 
-> Spec-Kit optional artifact. Captures background investigation that
-> informs the spec/plan/tasks. Generate ONLY when there are real unknowns
-> or technology choices that needed evaluation. Lives at
+> Spec-Kit format (v0.10.x). This file is a STRUCTURAL GUIDE for an LLM.
+> Phase 0 output. Generate ONLY when there are real unknowns requiring
+> investigation — produce ONE entry per `[NEEDS CLARIFICATION]` from spec.md
+> (and per technology choice that needed evaluation). If the feature has no
+> genuine unknowns, do not create this file. Lives at
 > `specs/<feature-id>/research.md`.
 
-## Decisions Made
+## [Topic / Unknown 1]
 
-| Decision | Rationale | Alternatives rejected |
-|---|---|---|
-| {{DECISION_1}} | {{RATIONALE_1}} | {{ALT_1_REJECTED}} |
-| {{DECISION_2}} | {{RATIONALE_2}} | {{ALT_2_REJECTED}} |
+> Resolves: [reference the NEEDS CLARIFICATION marker or open question this addresses]
 
-## Open Questions Resolved
+**Decision**: [What was chosen]
 
-- {{QUESTION_1}} → {{ANSWER_1}}
-- {{QUESTION_2}} → {{ANSWER_2}}
+**Rationale**: [Why this choice, given the project constraints and context]
 
-## References
+**Alternatives considered**: [What else was evaluated and why it was rejected]
 
-- {{LINK_OR_DOC_1}}
-- {{LINK_OR_DOC_2}}
+## [Topic / Unknown 2]
+
+> Resolves: [reference the NEEDS CLARIFICATION marker or open question this addresses]
+
+**Decision**: [What was chosen]
+
+**Rationale**: [Why this choice]
+
+**Alternatives considered**: [What else was evaluated and why it was rejected]
+
+[Add one section per remaining unknown that required investigation.]

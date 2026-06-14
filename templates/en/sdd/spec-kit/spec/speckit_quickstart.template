@@ -1,33 +1,35 @@
-# Quickstart: {{FEATURE_NAME}}
+# Quickstart: [FEATURE NAME]
 
-> Spec-Kit optional artifact. Concrete steps that exercise the primary user
-> story end to end — used for manual verification and as an integration
-> test reference. Lives at `specs/<feature-id>/quickstart.md`.
+> Spec-Kit format (v0.10.x). Phase 1 OPTIONAL artifact — generate ONLY if the
+> feature warrants it. Concrete steps that exercise the primary user story
+> end to end, for manual verification and as an integration-test reference.
+> Lives at `specs/<feature-id>/quickstart.md`.
 
 ## Prerequisites
 
-- {{PREREQ_1}}
-- {{PREREQ_2}}
+- [Prerequisite, e.g., "Service running locally on port 8080"]
+- [Prerequisite]
 
 ## Steps
 
-1. {{STEP_1_ACTION}}
-   - Expected: {{STEP_1_EXPECTATION}}
+1. [Action to perform]
+   - Expected: [observable result]
 
-2. {{STEP_2_ACTION}}
-   - Expected: {{STEP_2_EXPECTATION}}
+2. [Action to perform]
+   - Expected: [observable result]
 
-3. {{STEP_3_ACTION}}
-   - Expected: {{STEP_3_EXPECTATION}}
+3. [Action to perform]
+   - Expected: [observable result]
 
 ## Success Criteria
 
 The feature is working if:
-- [ ] {{CRITERION_1}}
-- [ ] {{CRITERION_2}}
-- [ ] {{CRITERION_3}}
+
+- [ ] [Criterion tied to a Success Criteria item in spec.md]
+- [ ] [Criterion]
+- [ ] [Criterion]
 
 ## Cleanup
 
-- {{CLEANUP_STEP_1}}
-- {{CLEANUP_STEP_2}}
+- [Step to restore the environment to its initial state]
+- [Step]

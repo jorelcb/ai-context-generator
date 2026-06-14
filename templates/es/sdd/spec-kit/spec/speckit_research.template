@@ -1,23 +1,30 @@
-# Investigacion: {{FEATURE_NAME}}
+# Investigación: [NOMBRE DE LA FUNCIONALIDAD]
 
-> Artefacto opcional Spec-Kit. Captura investigacion previa que informa
-> spec/plan/tasks. Generar SOLO cuando hay incognitas reales o decisiones
-> tecnologicas que requirieron evaluacion. Vive en
-> `specs/<feature-id>/research.md`.
+> Formato Spec-Kit (v0.10.x). Este archivo es una GUÍA ESTRUCTURAL para un LLM.
+> Salida de la Fase 0. Genera ESTE archivo SOLO cuando haya incógnitas reales
+> que requieran investigación — produce UNA entrada por cada
+> `[NEEDS CLARIFICATION]` de spec.md (y por cada decisión tecnológica que
+> requirió evaluación). Si la funcionalidad no tiene incógnitas genuinas, no
+> crees este archivo. Vive en `specs/<feature-id>/research.md`.
 
-## Decisiones Tomadas
+## [Tema / Incógnita 1]
 
-| Decision | Razon | Alternativas Rechazadas |
-|---|---|---|
-| {{DECISION_1}} | {{RAZON_1}} | {{ALT_1_RECHAZADA}} |
-| {{DECISION_2}} | {{RAZON_2}} | {{ALT_2_RECHAZADA}} |
+> Resuelve: [referencia el marcador NEEDS CLARIFICATION o la pregunta abierta que aborda]
 
-## Preguntas Abiertas Resueltas
+**Decisión**: [Qué se eligió]
 
-- {{PREGUNTA_1}} → {{RESPUESTA_1}}
-- {{PREGUNTA_2}} → {{RESPUESTA_2}}
+**Justificación**: [Por qué esta elección, dadas las restricciones y el contexto del proyecto]
 
-## Referencias
+**Alternativas consideradas**: [Qué más se evaluó y por qué se rechazó]
 
-- {{LINK_O_DOC_1}}
-- {{LINK_O_DOC_2}}
+## [Tema / Incógnita 2]
+
+> Resuelve: [referencia el marcador NEEDS CLARIFICATION o la pregunta abierta que aborda]
+
+**Decisión**: [Qué se eligió]
+
+**Justificación**: [Por qué esta elección]
+
+**Alternativas consideradas**: [Qué más se evaluó y por qué se rechazó]
+
+[Añade una sección por cada incógnita restante que requirió investigación.]

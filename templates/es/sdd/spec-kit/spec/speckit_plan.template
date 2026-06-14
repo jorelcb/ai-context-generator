@@ -1,57 +1,123 @@
-# Plan de Implementacion: {{FEATURE_NAME}}
+# Plan de Implementación: [FUNCIONALIDAD]
 
-> Formato Spec-Kit. Captura **como** se construye el feature — contexto
-> tecnico, decisiones de diseno y el camino de spec a codigo funcionando.
-> Vive en `specs/<feature-id>/plan.md`.
+> Formato Spec-Kit (v0.10.x). Este archivo es una GUÍA ESTRUCTURAL para un LLM.
+> Genera contenido REAL a partir del contexto del proyecto. Captura **cómo** se
+> construirá la funcionalidad — contexto técnico, el gate de la constitución y
+> la estructura desde la spec hasta el código funcionando. Donde un detalle sea
+> desconocido, escribe `NEEDS CLARIFICATION` (o
+> `[NEEDS CLARIFICATION: <pregunta>]`) en lugar de inventar. Vive en
+> `specs/<feature-id>/plan.md`.
 
-## Contexto Tecnico
+**Rama**: `[###-nombre-funcionalidad]` | **Fecha**: [FECHA] | **Spec**: [enlace a spec.md]
 
-| Aspecto | Decision |
-|---|---|
-| Lenguaje | {{LENGUAJE_Y_VERSION}} |
-| Framework principal | {{FRAMEWORK}} |
-| Datastore | {{DB}} |
-| Target de despliegue | {{TARGET}} |
-| Estrategia de tests | {{ESTRATEGIA_TESTS}} |
+**Entrada**: Especificación de funcionalidad desde `specs/[###-nombre-funcionalidad]/spec.md`
 
-## Constitution Check
+## Resumen
 
-Confirmar que el plan respeta las convenciones del proyecto:
-- [ ] Arquitectura: {{PATRON_ARQUITECTONICO}} respetado
-- [ ] Naming: coincide con modulos existentes
-- [ ] Layering de tests: split unit/integration/e2e consistente con el repo
-- [ ] Politica de dependencias: {{NOTA_DE_POLITICA}}
+[Extraer de la spec: requisito principal + enfoque técnico derivado de la investigación]
+
+## Contexto Técnico
+
+<!--
+  Reemplaza cada valor con el detalle técnico concreto de este proyecto,
+  inferido del contexto. Usa NEEDS CLARIFICATION para cualquier valor que el
+  contexto no determine.
+-->
+
+**Lenguaje/Versión**: [p. ej., Python 3.11, Swift 5.9, Rust 1.75 o NEEDS CLARIFICATION]
+
+**Dependencias Principales**: [p. ej., FastAPI, UIKit, LLVM o NEEDS CLARIFICATION]
+
+**Almacenamiento**: [si aplica, p. ej., PostgreSQL, CoreData, archivos o N/A]
+
+**Pruebas**: [p. ej., pytest, XCTest, cargo test o NEEDS CLARIFICATION]
+
+**Plataforma Objetivo**: [p. ej., servidor Linux, iOS 15+, WASM o NEEDS CLARIFICATION]
+
+**Tipo de Proyecto**: [p. ej., library/cli/web-service/mobile-app/compiler/desktop-app o NEEDS CLARIFICATION]
+
+**Objetivos de Rendimiento**: [específico del dominio, p. ej., 1000 req/s, 10k líneas/seg, 60 fps o NEEDS CLARIFICATION]
+
+**Restricciones**: [específico del dominio, p. ej., <200ms p95, <100MB memoria, offline-capable o NEEDS CLARIFICATION]
+
+**Escala/Alcance**: [específico del dominio, p. ej., 10k usuarios, 1M LOC, 50 pantallas o NEEDS CLARIFICATION]
+
+## Verificación de la Constitución
+
+*GATE: Debe pasar antes de la investigación de la Fase 0. Volver a verificar tras el diseño de la Fase 1.*
+
+[Gates determinados a partir de la constitución en `.specify/memory/constitution.md`. Reformula cada
+principio aplicable de ese archivo como un gate verificable, e indica si este plan lo satisface.
+Si el archivo de la constitución no existe, emite NEEDS CLARIFICATION y procede con las convenciones
+del proyecto.]
 
 ## Estructura del Proyecto
 
-Archivos que este feature agrega o modifica:
+### Documentación (esta funcionalidad)
 
+```text
+specs/[###-funcionalidad]/
+├── plan.md              # Este archivo (salida del comando /speckit-plan)
+├── research.md          # Salida de la Fase 0 (comando /speckit-plan)
+├── data-model.md        # Salida de la Fase 1 (comando /speckit-plan)
+├── quickstart.md        # Salida de la Fase 1 (comando /speckit-plan)
+├── contracts/           # Salida de la Fase 1 (comando /speckit-plan)
+└── tasks.md             # Salida de la Fase 2 (comando /speckit-tasks - NO lo crea /speckit-plan)
 ```
-{{PATHS_DE_ARCHIVOS_NUEVOS_O_MODIFICADOS}}
+
+### Código Fuente (raíz del repositorio)
+
+<!--
+  Reemplaza el árbol de ejemplo de abajo con la disposición concreta de esta
+  funcionalidad. Elimina las opciones no usadas y expande la estructura elegida
+  con rutas reales (p. ej., apps/admin, packages/algo). El plan entregado NO
+  debe incluir las etiquetas de Opción.
+-->
+
+```text
+# [ELIMINAR SI NO SE USA] Opción 1: Proyecto único (POR DEFECTO)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [ELIMINAR SI NO SE USA] Opción 2: Aplicación web (cuando se detecta "frontend" + "backend")
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [ELIMINAR SI NO SE USA] Opción 3: Móvil + API (cuando se detecta "iOS/Android")
+api/
+└── [igual que el backend de arriba]
+
+ios/ o android/
+└── [estructura específica de plataforma: módulos de funcionalidad, flujos de UI, pruebas de plataforma]
 ```
 
-## Fases de Diseno
+**Decisión de Estructura**: [Documenta la estructura seleccionada y referencia los
+directorios reales capturados arriba]
 
-### Fase 1 — Esqueleto
-- {{PASO_SCAFFOLD}}
-- {{PASO_SCAFFOLD}}
+## Seguimiento de Complejidad
 
-### Fase 2 — Logica core
-- {{PASO_CORE}}
-- {{PASO_CORE}}
+> **Completar SOLO si la Verificación de la Constitución tiene violaciones que deban justificarse**
 
-### Fase 3 — Wiring y tests
-- {{PASO_WIRING}}
-- {{PASO_TESTING}}
-
-## Trade-offs Considerados
-
-| Opcion | Pros | Contras | Decision |
-|---|---|---|---|
-| {{OPCION_A}} | {{PROS_A}} | {{CONTRAS_A}} | {{ELEGIDA_O_RECHAZADA}} |
-| {{OPCION_B}} | {{PROS_B}} | {{CONTRAS_B}} | {{ELEGIDA_O_RECHAZADA}} |
-
-## Riesgos
-
-- {{RIESGO_1}} — Mitigacion: {{MITIGACION_1}}
-- {{RIESGO_2}} — Mitigacion: {{MITIGACION_2}}
+| Violación | Por qué es necesaria | Alternativa más simple rechazada porque |
+|-----------|----------------------|-----------------------------------------|
+| [p. ej., 4.º proyecto] | [necesidad actual] | [por qué 3 proyectos son insuficientes] |
+| [p. ej., patrón Repository] | [problema específico] | [por qué el acceso directo a BD es insuficiente] |

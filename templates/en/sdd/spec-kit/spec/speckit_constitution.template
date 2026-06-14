@@ -1,0 +1,84 @@
+# [PROJECT_NAME] Constitution
+
+> Spec-Kit format (v0.10.x). This file is a STRUCTURAL GUIDE for an LLM.
+> Generate REAL principles derived from the project context. Lives at
+> `.specify/memory/constitution.md` and is the source of truth for the
+> Constitution Check gate in plan.md.
+>
+> Principles MUST be non-negotiable, declarative, and TESTABLE — each one must
+> be phrased so a reviewer can objectively verify a plan or PR complies. Avoid
+> vague aspirations. If a value the constitution needs (e.g., the ratification
+> date) is not given in the context, use `[NEEDS CLARIFICATION: <question>]`
+> or fall back to today's date for first ratification.
+
+## Core Principles
+
+### I. [PRINCIPLE_NAME]
+
+[Declarative, testable statement of the principle — what MUST or MUST NOT happen.]
+
+**Rationale**: [Why this principle exists and what it protects.]
+
+### II. [PRINCIPLE_NAME]
+
+[Declarative, testable statement of the principle.]
+
+**Rationale**: [Why this principle exists.]
+
+### III. [PRINCIPLE_NAME] (NON-NEGOTIABLE)
+
+[Declarative, testable statement. Mark the hardest gates NON-NEGOTIABLE.]
+
+**Rationale**: [Why this principle exists.]
+
+### IV. [PRINCIPLE_NAME]
+
+[Declarative, testable statement of the principle.]
+
+**Rationale**: [Why this principle exists.]
+
+### V. [PRINCIPLE_NAME]
+
+[Declarative, testable statement of the principle.]
+
+**Rationale**: [Why this principle exists.]
+
+[Add or remove principles to match the project. 3–7 principles is typical.]
+
+## [Additional Constraints / Security / Performance Standards]
+
+<!--
+  Optional section. Use it for cross-cutting constraints that are not full
+  principles: technology-stack requirements, compliance standards, security
+  baselines, performance budgets, deployment policies. Rename the heading to
+  fit. Delete the section if the project has no such constraints.
+-->
+
+[Constraint content derived from the project context.]
+
+## Development Workflow / Quality Gates
+
+<!--
+  Define the workflow rules that enforce the principles above: code-review
+  requirements, required test gates, CI checks, approval process before merge
+  or deploy. These are the concrete checks a Constitution Check in plan.md
+  will assert against.
+-->
+
+[Workflow and quality-gate content derived from the project context.]
+
+## Governance
+
+<!--
+  State how the constitution is maintained. At minimum:
+  - This constitution supersedes other practices where they conflict.
+  - Amendment procedure (who proposes, how it is approved, migration plan).
+  - Versioning policy: MAJOR for breaking/removed principles, MINOR for a new
+    principle or materially expanded guidance, PATCH for clarifications.
+  - Compliance review: all plans/PRs verify compliance; complexity must be
+    justified in plan.md's Complexity Tracking.
+-->
+
+[Governance rules derived from the project context.]
+
+**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]

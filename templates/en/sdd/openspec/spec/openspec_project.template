@@ -1,0 +1,57 @@
+# Project: {{PROJECT_NAME}}
+
+> OpenSpec format. This file lives at `openspec/project.md` and is the
+> agent-facing context for the project — the equivalent of a README written
+> for an AI agent. Derive every section from the provided project context.
+> For anything the context does not establish, write `[DEFINE: <hint>]`
+> instead of inventing facts.
+
+## Purpose
+
+One or two paragraphs answering: what does this system do, for whom, and why
+does it exist? State the core problem solved and the primary value delivered.
+Keep it concrete — no marketing language.
+
+## Tech Stack
+
+The languages, frameworks, runtimes, datastores, and major libraries the
+project actually uses. Derive from the context (manifests, descriptions,
+imports). List only what is in use; mark unknowns as `[DEFINE: <hint>]`.
+
+- **Language(s):** [DEFINE: primary language + version]
+- **Framework(s):** [DEFINE: web/app framework, if any]
+- **Datastore(s):** [DEFINE: database, cache, queue]
+- **Key libraries:** [DEFINE: notable runtime dependencies]
+
+## Conventions
+
+How the team writes and ships code. Cover, at minimum:
+
+- **Code style:** formatting tool, lint rules, idioms the project follows
+- **Naming:** files, packages/modules, types, functions, tests
+- **Testing:** framework, where tests live, what is expected to be covered
+- **Commits / branches:** message format (e.g. Conventional Commits), branch
+  naming, PR expectations
+
+Use `[DEFINE: <hint>]` for any convention the context does not reveal.
+
+## Project Structure
+
+The top-level layout that matters for navigation — the directories an agent
+needs to know to find code, tests, config, and docs. A short annotated tree
+or bullet list is enough; do not enumerate every file.
+
+```
+[DEFINE: top-level directories and their responsibilities]
+```
+
+## Key Commands
+
+The commands to build, test, run, and lint the project, exactly as a
+contributor would invoke them. Prefer the project's own task runner
+(Makefile, scripts, package manager) when the context shows one.
+
+- **Build:** [DEFINE: build command]
+- **Test:** [DEFINE: test command]
+- **Run:** [DEFINE: run/start command]
+- **Lint:** [DEFINE: lint/format command]

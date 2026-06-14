@@ -1,34 +1,41 @@
-# Modelo de Datos: {{FEATURE_NAME}}
+# Modelo de Datos: [NOMBRE DE LA FUNCIONALIDAD]
 
-> Artefacto opcional Spec-Kit. Captura entidades, relaciones y reglas de
-> validacion. Generar SOLO cuando el feature tenga semanticas de datos
-> no triviales. Vive en `specs/<feature-id>/data-model.md`.
+> Formato Spec-Kit (v0.10.x). Artefacto OPCIONAL de la Fase 1; genéralo SOLO si
+> la funcionalidad lo amerita (semánticas de datos no triviales). Captura
+> entidades, campos, relaciones, reglas de validación y transiciones de estado.
+> Deriva las entidades de las Entidades Clave de spec.md. Vive en
+> `specs/<feature-id>/data-model.md`.
 
 ## Entidades
 
-### {{ENTIDAD}}
+### [Nombre de la Entidad]
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| {{CAMPO_1}} | {{TIPO_1}} | {{NOTA_1}} |
-| {{CAMPO_2}} | {{TIPO_2}} | {{NOTA_2}} |
+| [campo] | [tipo] | [restricciones / descripción] |
+| [campo] | [tipo] | [restricciones / descripción] |
 
-**Invariantes:**
-- {{INVARIANTE_1}}
-- {{INVARIANTE_2}}
+**Reglas de Validación**:
 
-### {{ENTIDAD}}
+- [Regla, p. ej., "email DEBE ser único y válido según RFC-5322"]
+- [Regla]
+
+**Transiciones de Estado** *(incluir solo si la entidad tiene un ciclo de vida)*:
+
+- `[estado A]` → `[estado B]` cuando [disparador / condición]
+- `[estado B]` → `[estado C]` cuando [disparador / condición]
+
+### [Nombre de la Entidad]
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| {{CAMPO_1}} | {{TIPO_1}} | {{NOTA_1}} |
+| [campo] | [tipo] | [restricciones / descripción] |
+
+**Reglas de Validación**:
+
+- [Regla]
 
 ## Relaciones
 
-- `{{ENTIDAD_A}}` 1..* `{{ENTIDAD_B}}` — {{NATURALEZA_DE_LA_RELACION}}
-- `{{ENTIDAD_C}}` 1..1 `{{ENTIDAD_D}}` — {{NATURALEZA_DE_LA_RELACION}}
-
-## Reglas de Validacion
-
-- {{REGLA_1}}
-- {{REGLA_2}}
+- `[Entidad A]` 1..* `[Entidad B]` — [naturaleza de la relación]
+- `[Entidad C]` 1..1 `[Entidad D]` — [naturaleza de la relación]
