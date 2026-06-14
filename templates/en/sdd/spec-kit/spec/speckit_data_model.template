@@ -1,34 +1,40 @@
-# Data Model: {{FEATURE_NAME}}
+# Data Model: [FEATURE NAME]
 
-> Spec-Kit optional artifact. Captures entities, relationships, and validation
-> rules. Generate ONLY when the feature has non-trivial data semantics.
-> Lives at `specs/<feature-id>/data-model.md`.
+> Spec-Kit format (v0.10.x). Phase 1 OPTIONAL artifact — generate ONLY if the
+> feature warrants it (non-trivial data semantics). Captures entities, fields,
+> relationships, validation rules, and state transitions. Derive entities from
+> spec.md's Key Entities. Lives at `specs/<feature-id>/data-model.md`.
 
 ## Entities
 
-### {{ENTITY_NAME}}
+### [Entity Name]
 
 | Field | Type | Notes |
 |---|---|---|
-| {{FIELD_1}} | {{TYPE_1}} | {{NOTE_1}} |
-| {{FIELD_2}} | {{TYPE_2}} | {{NOTE_2}} |
+| [field] | [type] | [constraints / description] |
+| [field] | [type] | [constraints / description] |
 
-**Invariants:**
-- {{INVARIANT_1}}
-- {{INVARIANT_2}}
+**Validation Rules**:
 
-### {{ENTITY_NAME}}
+- [Rule, e.g., "email MUST be unique and RFC-5322 valid"]
+- [Rule]
+
+**State Transitions** *(include only if the entity has a lifecycle)*:
+
+- `[state A]` → `[state B]` when [trigger / condition]
+- `[state B]` → `[state C]` when [trigger / condition]
+
+### [Entity Name]
 
 | Field | Type | Notes |
 |---|---|---|
-| {{FIELD_1}} | {{TYPE_1}} | {{NOTE_1}} |
+| [field] | [type] | [constraints / description] |
+
+**Validation Rules**:
+
+- [Rule]
 
 ## Relationships
 
-- `{{ENTITY_A}}` 1..* `{{ENTITY_B}}` — {{NATURE_OF_RELATIONSHIP}}
-- `{{ENTITY_C}}` 1..1 `{{ENTITY_D}}` — {{NATURE_OF_RELATIONSHIP}}
-
-## Validation Rules
-
-- {{RULE_1}}
-- {{RULE_2}}
+- `[Entity A]` 1..* `[Entity B]` — [nature of the relationship]
+- `[Entity C]` 1..1 `[Entity D]` — [nature of the relationship]

@@ -1,57 +1,141 @@
-# Especificacion de Feature: {{FEATURE_NAME}}
+# Especificación de Funcionalidad: [NOMBRE DE LA FUNCIONALIDAD]
 
-> Formato Spec-Kit. Captura **que** hace el feature y **por que**, no como
-> se construye. Vive en `specs/<feature-id>/spec.md`.
+> Formato Spec-Kit (v0.10.x). Este archivo es una GUÍA ESTRUCTURAL para un LLM.
+> Genera contenido REAL a partir del contexto del proyecto. Captura **qué** hace
+> la funcionalidad y **por qué**, nunca **cómo** se construye. Donde falte
+> detalle de dominio, emite `[NEEDS CLARIFICATION: <pregunta específica>]` en
+> lugar de inventar. Vive en `specs/<feature-id>/spec.md`.
 
-## Resumen
+**Rama de Funcionalidad**: `[###-nombre-funcionalidad]`
 
-{{DESCRIPCION_DEL_FEATURE_EN_UN_PARRAFO}}
+**Creado**: [FECHA]
 
-## Escenarios de Usuario
+**Estado**: Borrador
 
-### Historia Principal
-**Como** {{ACTOR}}
-**Quiero** {{ACCION}}
-**Para que** {{BENEFICIO}}
+**Entrada**: Descripción del usuario: "[la descripción original de la funcionalidad]"
 
-### Criterios de Aceptacion
+## Escenarios de Usuario y Pruebas *(obligatorio)*
 
-1. **DADO** {{PRECONDICION}}
-   **CUANDO** {{TRIGGER}}
-   **ENTONCES** {{RESULTADO_ESPERADO}}
+<!--
+  IMPORTANTE: Las historias de usuario deben estar PRIORIZADAS como recorridos
+  de usuario ordenados por importancia. Cada historia/recorrido debe ser
+  INDEPENDIENTEMENTE COMPROBABLE: si implementas SOLO una de ellas, deberías
+  seguir teniendo un MVP (Producto Mínimo Viable) viable que aporte valor.
 
-2. **DADO** {{PRECONDICION}}
-   **CUANDO** {{TRIGGER}}
-   **ENTONCES** {{RESULTADO_ESPERADO}}
+  Asigna prioridades (P1, P2, P3, etc.) a cada historia, donde P1 es la más
+  crítica. Piensa en cada historia como una porción autónoma de funcionalidad
+  que se puede:
+  - Desarrollar de forma independiente
+  - Probar de forma independiente
+  - Desplegar de forma independiente
+  - Demostrar a los usuarios de forma independiente
+-->
 
-### Casos Borde
+### Historia de Usuario 1 - [Título Breve] (Prioridad: P1)
 
-| Caso | Comportamiento Esperado |
-|---|---|
-| {{CASO_1}} | {{COMPORTAMIENTO_1}} |
-| {{CASO_2}} | {{COMPORTAMIENTO_2}} |
+[Describe este recorrido de usuario en lenguaje claro, derivado del contexto del proyecto]
 
-## Requisitos Funcionales
+**Por qué esta prioridad**: [Explica el valor y por qué tiene este nivel de prioridad]
 
-- **RF-1:** {{ENUNCIADO}}
-  - Aceptacion: {{CRITERIO_VERIFICABLE}}
-- **RF-2:** {{ENUNCIADO}}
-  - Aceptacion: {{CRITERIO_VERIFICABLE}}
+**Prueba Independiente**: [Describe cómo se puede probar de forma independiente, p. ej., "Se puede probar por completo mediante [acción específica] y aporta [valor específico]"]
 
-## Requisitos No Funcionales
+**Escenarios de Aceptación**:
 
-- **Performance:** {{LATENCIA_O_THROUGHPUT}}
-- **Seguridad:** {{REQUISITO_DE_SEGURIDAD}}
-- **Disponibilidad:** {{TARGET_DE_DISPONIBILIDAD}}
+1. **Dado** [estado inicial], **Cuando** [acción], **Entonces** [resultado esperado]
+2. **Dado** [estado inicial], **Cuando** [acción], **Entonces** [resultado esperado]
 
-## Fuera de Alcance
+---
 
-Items que NO forman parte de este feature:
-- {{ITEM_EXCLUIDO_1}}
-- {{ITEM_EXCLUIDO_2}}
+### Historia de Usuario 2 - [Título Breve] (Prioridad: P2)
 
-## Preguntas Abiertas
+[Describe este recorrido de usuario en lenguaje claro]
 
-Incertidumbres a resolver antes de plan.md:
-- {{PREGUNTA_1}}
-- {{PREGUNTA_2}}
+**Por qué esta prioridad**: [Explica el valor y por qué tiene este nivel de prioridad]
+
+**Prueba Independiente**: [Describe cómo se puede probar de forma independiente]
+
+**Escenarios de Aceptación**:
+
+1. **Dado** [estado inicial], **Cuando** [acción], **Entonces** [resultado esperado]
+
+---
+
+### Historia de Usuario 3 - [Título Breve] (Prioridad: P3)
+
+[Describe este recorrido de usuario en lenguaje claro]
+
+**Por qué esta prioridad**: [Explica el valor y por qué tiene este nivel de prioridad]
+
+**Prueba Independiente**: [Describe cómo se puede probar de forma independiente]
+
+**Escenarios de Aceptación**:
+
+1. **Dado** [estado inicial], **Cuando** [acción], **Entonces** [resultado esperado]
+
+---
+
+[Añade más historias de usuario según se necesite, cada una con una prioridad asignada]
+
+### Casos Límite
+
+<!--
+  Completa esta sección con los casos límite reales que implica el contexto de
+  la funcionalidad. Donde el comportamiento de un caso límite sea genuinamente
+  indefinido, márcalo con [NEEDS CLARIFICATION: <pregunta>].
+-->
+
+- ¿Qué ocurre cuando [condición de frontera]?
+- ¿Cómo maneja el sistema [escenario de error]?
+
+## Requisitos *(obligatorio)*
+
+<!--
+  Los requisitos funcionales DEBEN ser comprobables y no ambiguos. Cada uno
+  expresa una capacidad que el sistema DEBE proveer. Derívalos de las historias
+  de usuario anteriores.
+-->
+
+### Requisitos Funcionales
+
+- **FR-001**: El sistema DEBE [capacidad específica, p. ej., "permitir a los usuarios crear cuentas"]
+- **FR-002**: El sistema DEBE [capacidad específica, p. ej., "validar direcciones de correo"]
+- **FR-003**: Los usuarios DEBEN poder [interacción clave, p. ej., "restablecer su contraseña"]
+- **FR-004**: El sistema DEBE [requisito de datos, p. ej., "persistir las preferencias del usuario"]
+- **FR-005**: El sistema DEBE [comportamiento, p. ej., "registrar todos los eventos de seguridad"]
+
+*Ejemplo de cómo marcar requisitos poco claros:*
+
+- **FR-006**: El sistema DEBE autenticar usuarios mediante [NEEDS CLARIFICATION: método de autenticación no especificado - ¿correo/contraseña, SSO, OAuth?]
+- **FR-007**: El sistema DEBE retener los datos del usuario durante [NEEDS CLARIFICATION: periodo de retención no especificado]
+
+### Entidades Clave *(incluir si la funcionalidad involucra datos)*
+
+- **[Entidad 1]**: [Qué representa, atributos clave sin detalles de implementación]
+- **[Entidad 2]**: [Qué representa, relaciones con otras entidades]
+
+## Criterios de Éxito *(obligatorio)*
+
+<!--
+  Define criterios de éxito MEDIBLES. DEBEN ser agnósticos a la tecnología y
+  medibles (sin detalles de implementación, sin frameworks o APIs concretos).
+-->
+
+### Resultados Medibles
+
+- **SC-001**: [Métrica medible, p. ej., "Los usuarios pueden completar la creación de cuenta en menos de 2 minutos"]
+- **SC-002**: [Métrica medible, p. ej., "El sistema soporta 1000 usuarios concurrentes sin degradación"]
+- **SC-003**: [Métrica de satisfacción, p. ej., "El 90% de los usuarios completa la tarea principal en el primer intento"]
+- **SC-004**: [Métrica de negocio, p. ej., "Reducir los tickets de soporte relacionados con [X] en un 50%"]
+
+## Supuestos
+
+<!--
+  Lista los valores por defecto razonables que elegiste cuando la descripción de
+  la funcionalidad no especificó un detalle. Cada supuesto debe ser uno que
+  revisarías si resultara equivocado.
+-->
+
+- [Supuesto sobre los usuarios objetivo, p. ej., "Los usuarios tienen conectividad a internet estable"]
+- [Supuesto sobre los límites de alcance, p. ej., "El soporte móvil queda fuera de alcance para la v1"]
+- [Supuesto sobre datos/entorno, p. ej., "Se reutilizará el sistema de autenticación existente"]
+- [Dependencia de un sistema/servicio existente, p. ej., "Requiere acceso a la API de perfiles de usuario existente"]

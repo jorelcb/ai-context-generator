@@ -1,34 +1,36 @@
-# Quickstart: {{FEATURE_NAME}}
+# Quickstart: [NOMBRE DE LA FUNCIONALIDAD]
 
-> Artefacto opcional Spec-Kit. Pasos concretos que ejercitan la historia
-> principal de usuario end-to-end — usado para verificacion manual y como
-> referencia para integration tests. Vive en
+> Formato Spec-Kit (v0.10.x). Artefacto OPCIONAL de la Fase 1; genéralo SOLO si
+> la funcionalidad lo amerita. Pasos concretos que ejercitan la historia
+> principal de usuario de principio a fin, para verificación manual y como
+> referencia de prueba de integración. Vive en
 > `specs/<feature-id>/quickstart.md`.
 
-## Prerequisitos
+## Prerrequisitos
 
-- {{PREREQ_1}}
-- {{PREREQ_2}}
+- [Prerrequisito, p. ej., "Servicio corriendo localmente en el puerto 8080"]
+- [Prerrequisito]
 
 ## Pasos
 
-1. {{ACCION_1}}
-   - Esperado: {{EXPECTATIVA_1}}
+1. [Acción a realizar]
+   - Esperado: [resultado observable]
 
-2. {{ACCION_2}}
-   - Esperado: {{EXPECTATIVA_2}}
+2. [Acción a realizar]
+   - Esperado: [resultado observable]
 
-3. {{ACCION_3}}
-   - Esperado: {{EXPECTATIVA_3}}
+3. [Acción a realizar]
+   - Esperado: [resultado observable]
 
-## Criterios de Exito
+## Criterios de Éxito
 
-El feature funciona si:
-- [ ] {{CRITERIO_1}}
-- [ ] {{CRITERIO_2}}
-- [ ] {{CRITERIO_3}}
+La funcionalidad funciona si:
+
+- [ ] [Criterio ligado a un ítem de Criterios de Éxito en spec.md]
+- [ ] [Criterio]
+- [ ] [Criterio]
 
 ## Limpieza
 
-- {{PASO_LIMPIEZA_1}}
-- {{PASO_LIMPIEZA_2}}
+- [Paso para restaurar el entorno a su estado inicial]
+- [Paso]

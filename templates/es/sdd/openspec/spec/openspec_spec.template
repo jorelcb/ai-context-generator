@@ -1,0 +1,93 @@
+# {{PROJECT_NAME}} — Spec de Capacidad
+
+> Formato OpenSpec. Un archivo describe UNA capacidad y vive en
+> `openspec/specs/<capability>/spec.md` (p. ej. `openspec/specs/user-auth/spec.md`).
+> Una capacidad es una habilidad coherente y nombrada del sistema. Deriva la
+> capacidad y sus requisitos del contexto del proyecto provisto — no copies los
+> ejemplos ilustrativos de abajo de forma literal. Para cualquier detalle de
+> dominio que el contexto no establezca, escribe `[DEFINE: <pista>]` en lugar de
+> inventarlo.
+
+## Propósito
+
+Un párrafo breve que indique qué provee esta capacidad y por qué existe. Nombra
+la capacidad en la primera frase. Mantenlo acotado a una sola habilidad — si
+estás describiendo dos habilidades no relacionadas, pertenecen a archivos de
+capacidad separados.
+
+## Requisitos
+
+Esta sección contiene MÚLTIPLES bloques de requisito. Cada bloque DEBE seguir
+esta forma exacta:
+
+- Un encabezado `### Requirement: <Nombre>`.
+- Una única afirmación normativa en lenguaje RFC 2119 — usa **SHALL** (o MUST)
+  para expresar el comportamiento que el sistema está obligado a proveer.
+- AL MENOS UN bloque `#### Scenario: <Nombre>`, cada uno escrito como viñetas
+  GIVEN / WHEN / THEN. Un requisito puede tener varios scenarios (camino feliz,
+  camino de error, caso límite).
+
+Sintaxis literal a reproducir exactamente:
+
+### Requirement: <Nombre imperativo corto>
+
+The system SHALL <comportamiento observable y testeable en lenguaje SHALL/MUST>.
+
+#### Scenario: <Nombre corto del scenario>
+
+- **GIVEN** <estado inicial / precondición>
+- **WHEN** <acción o disparador>
+- **THEN** <resultado esperado y observable>
+
+---
+
+Los dos requisitos siguientes son **ilustrativos — reemplázalos con la capacidad
+y los requisitos reales del proyecto derivados del contexto.** Existen solo para
+mostrar el patrón literal.
+
+### Requirement: Credential validation
+
+The system SHALL reject any sign-in attempt whose password does not match the
+stored credential, without revealing which factor was incorrect.
+
+#### Scenario: Wrong password
+
+- **GIVEN** a registered user with a known email
+- **WHEN** they submit the correct email but an incorrect password
+- **THEN** the system denies access and returns a generic "invalid credentials" error
+
+#### Scenario: Unknown account
+
+- **GIVEN** an email that is not registered
+- **WHEN** a sign-in is attempted with that email
+- **THEN** the system returns the same generic "invalid credentials" error, with no account-existence hint
+
+### Requirement: Session expiry
+
+The system SHALL invalidate an authenticated session after 30 minutes of
+inactivity and require re-authentication.
+
+#### Scenario: Idle timeout
+
+- **GIVEN** an authenticated session with no activity for 30 minutes
+- **WHEN** the user issues their next request
+- **THEN** the system rejects it as unauthenticated and prompts for re-authentication
+
+---
+
+Nota de idioma: las palabras clave de la sintaxis OpenSpec (`### Requirement:`,
+`#### Scenario:`, `GIVEN/WHEN/THEN`, `SHALL/MUST`) son literales del estándar y
+van SIEMPRE en inglés. Solo redacta en español el texto narrativo circundante
+(`## Propósito`, comentarios guía) si el proyecto lo prefiere.
+
+Ahora escribe los requisitos REALES para la capacidad de este proyecto:
+
+- Deriva cada requisito del contexto provisto (features, reglas, restricciones).
+  No rellenes con requisitos genéricos.
+- Cada requisito usa **SHALL/MUST** y tiene **≥1 scenario** en forma
+  GIVEN/WHEN/THEN.
+- Cubre los casos de error y límite relevantes como scenarios adicionales, no
+  solo el camino feliz.
+- Para cualquier regla que el contexto implique pero no especifique por
+  completo, escribe `[DEFINE: <pista>]` dentro del requisito o scenario en lugar
+  de adivinar.

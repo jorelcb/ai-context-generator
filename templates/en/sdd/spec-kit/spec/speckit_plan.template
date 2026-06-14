@@ -1,57 +1,121 @@
-# Implementation Plan: {{FEATURE_NAME}}
+# Implementation Plan: [FEATURE]
 
-> Spec-Kit format. Captures **how** the feature will be built — technical
-> context, design decisions, and the path from spec to working code.
-> Lives at `specs/<feature-id>/plan.md`.
+> Spec-Kit format (v0.10.x). This file is a STRUCTURAL GUIDE for an LLM.
+> Generate REAL content from the project context. Captures **how** the feature
+> will be built — technical context, the constitution gate, and the structure
+> from spec to working code. Where a detail is unknown, write
+> `NEEDS CLARIFICATION` (or `[NEEDS CLARIFICATION: <question>]`) rather than
+> guessing. Lives at `specs/<feature-id>/plan.md`.
+
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link to spec.md]
+
+**Input**: Feature specification from `specs/[###-feature-name]/spec.md`
+
+## Summary
+
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-| Aspect | Decision |
-|---|---|
-| Language | {{LANGUAGE_AND_VERSION}} |
-| Primary framework | {{FRAMEWORK}} |
-| Datastore | {{DB_CHOICE}} |
-| Deployment target | {{DEPLOYMENT_TARGET}} |
-| Test strategy | {{TEST_STRATEGY}} |
+<!--
+  Replace each value with the concrete technical detail for this project,
+  inferred from the project context. Use NEEDS CLARIFICATION for any value
+  the context does not determine.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
+
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
+
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
+
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+
+**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
+
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
+
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
+
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
-Confirm the plan aligns with project conventions:
-- [ ] Architecture: {{ARCHITECTURAL_PATTERN}} respected
-- [ ] Naming: matches existing modules
-- [ ] Test layering: unit/integration/e2e split is consistent with repo
-- [ ] Dependency policy: {{DEPENDENCY_POLICY_NOTE}}
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+
+[Gates determined based on the constitution at `.specify/memory/constitution.md`. Restate each
+applicable principle from that file as a checkable gate, and mark whether this plan satisfies it.
+If the constitution file is absent, emit NEEDS CLARIFICATION and proceed with project conventions.]
 
 ## Project Structure
 
-Files this feature will add or modify:
+### Documentation (this feature)
 
+```text
+specs/[###-feature]/
+├── plan.md              # This file (/speckit-plan command output)
+├── research.md          # Phase 0 output (/speckit-plan command)
+├── data-model.md        # Phase 1 output (/speckit-plan command)
+├── quickstart.md        # Phase 1 output (/speckit-plan command)
+├── contracts/           # Phase 1 output (/speckit-plan command)
+└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
 ```
-{{PATH_TO_NEW_OR_CHANGED_FILES}}
+
+### Source Code (repository root)
+
+<!--
+  Replace the placeholder tree below with the concrete layout for this feature.
+  Delete the unused options and expand the chosen structure with real paths
+  (e.g., apps/admin, packages/something). The delivered plan must NOT include
+  the Option labels.
+-->
+
+```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-## Design Phases
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
-### Phase 1 — Skeleton
-- {{SCAFFOLD_STEP}}
-- {{SCAFFOLD_STEP}}
+## Complexity Tracking
 
-### Phase 2 — Core logic
-- {{CORE_STEP}}
-- {{CORE_STEP}}
+> **Fill ONLY if Constitution Check has violations that must be justified**
 
-### Phase 3 — Wiring & tests
-- {{WIRING_STEP}}
-- {{TESTING_STEP}}
-
-## Trade-offs Considered
-
-| Option | Pros | Cons | Decision |
-|---|---|---|---|
-| {{OPTION_A}} | {{PROS_A}} | {{CONS_A}} | {{CHOSEN_OR_REJECTED}} |
-| {{OPTION_B}} | {{PROS_B}} | {{CONS_B}} | {{CHOSEN_OR_REJECTED}} |
-
-## Risks
-
-- {{RISK_1}} — Mitigation: {{MITIGATION_1}}
-- {{RISK_2}} — Mitigation: {{MITIGATION_2}}
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

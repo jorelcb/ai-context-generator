@@ -352,12 +352,16 @@ codify generate my-api \
 
 #### Generated spec files
 
-| File              | What it does                                  |
-| ----------------- | --------------------------------------------- |
-| `CONSTITUTION.md` | Project DNA: stack, principles, constraints   |
-| `SPEC.md`         | Feature specs with acceptance criteria        |
-| `PLAN.md`         | Technical design and architecture decisions   |
-| `TASKS.md`        | Task breakdown with dependencies and priority |
+Default standard is **GitHub Spec-Kit** (per-feature, under `specs/<feature-id>/`):
+
+| File                          | What it does                                                        |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `spec.md`                     | Prioritized user stories (P1/P2/P3), FR-XXX, measurable SC-XXX      |
+| `plan.md`                     | Technical context, Constitution Check, project structure           |
+| `tasks.md`                    | Tasks by user story (`T001`, `[P]`, `[US1]`), MVP-first phases      |
+| `.specify/memory/constitution.md` | Project principles — the gate `plan.md`'s Constitution Check checks |
+
+`--sdd-standard openspec` instead writes the real OpenSpec tree (`openspec/project.md` + `openspec/specs/<capability>/spec.md` with `### Requirement:` / `#### Scenario:` blocks).
 
 ---
 
@@ -646,7 +650,7 @@ $ /spec-archive add-2fa
 
 ```
 codify generate ─────▶ AGENTS.md, CONTEXT.md       (project memory)
-codify spec ─────────▶ CONSTITUTION.md, SPEC.md... (initial specs)
+codify spec ─────────▶ specs/<feature>/spec.md...  (Spec-Kit specs, default)
 codify workflows ────▶ /spec-propose, /spec-apply, /spec-archive
   --preset spec-                                   (SDD lifecycle skills)
   driven-change
@@ -1304,7 +1308,7 @@ codex mcp add codify -- codify serve
 | `generate_workflows` | Generate workflow files for Claude Code (native skills) or Antigravity (native .md) — supports `static` and `personalized` modes                                   |
 | `generate_hooks`     | Generate Claude Code hook bundles (deterministic guardrails). Static-only, Claude-only. Outputs `hooks.json` + `.sh` scripts for manual merge into `settings.json` |
 
-All generative tools support `locale` (`en`/`es`) and `model` parameters. `generate_context` and `analyze_project` also accept `with_specs` (and `sdd_standard`). `generate_specs` accepts `from_context`, `output` (defaults to `from_context`), and `sdd_standard` (`openspec`/`spec-kit`) — full parity with the `codify spec` CLI. `generate_skills` accepts `mode`, `category`, `preset`, `target`, and `project_context`. `generate_workflows` accepts `mode`, `preset`, `target` (`claude`/`antigravity`), and `project_context`. `generate_hooks` accepts `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) and `output` — no model, context, or locale (hooks are English-only, static-only).
+All generative tools support `locale` (`en`/`es`) and `model` parameters. `generate_context` and `analyze_project` also accept `with_specs` (and `sdd_standard`). `generate_specs` accepts `from_context`, `output` (defaults to `from_context`), and `sdd_standard` (`spec-kit`/`openspec`) — full parity with the `codify spec` CLI. `generate_skills` accepts `mode`, `category`, `preset`, `target`, and `project_context`. `generate_workflows` accepts `mode`, `preset`, `target` (`claude`/`antigravity`), and `project_context`. `generate_hooks` accepts `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) and `output` — no model, context, or locale (hooks are English-only, static-only).
 
 #### Read-only tools (no API key needed)
 
@@ -1561,7 +1565,7 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 
 - ✅ `generate` — context from a description (4 files, +1 with `--language`)
 - ✅ `analyze` — context from an existing repo via project scanner (18+ context-file patterns, build-target parsing, CI/CD detection, framework + dependency parsing for 8 languages)
-- ✅ `spec` + `--with-specs` flag — SDD specs (CONSTITUTION, SPEC, PLAN, TASKS)
+- ✅ `spec` + `--with-specs` flag — SDD specs (Spec-Kit default: user stories + SC-XXX; OpenSpec alt.)
 - ✅ Streaming output, anti-hallucination grounding rules, output validators (`[DEFINE]` markers, frontmatter, code-fence balance)
 - ✅ Anthropic prompt caching across per-file generation loop
 

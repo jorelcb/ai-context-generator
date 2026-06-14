@@ -152,7 +152,7 @@ The output and Next steps are identical to the greenfield path — only the inpu
 After bootstrap, equip the project with the layers you actually need. Each command is independent and skippable.
 
 ```bash
-# SDD specification files (CONSTITUTION, SPEC, PLAN, TASKS)
+# SDD specification files (Spec-Kit default: specs/<feature>/ + .specify/memory/constitution.md)
 codify spec payments-api --from-context ./output/payments-api/
 
 # Reusable agent skills (architecture, testing, conventions)

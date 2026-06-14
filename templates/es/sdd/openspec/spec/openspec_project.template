@@ -1,0 +1,61 @@
+# Proyecto: {{PROJECT_NAME}}
+
+> Formato OpenSpec. Este archivo vive en `openspec/project.md` y es el
+> contexto del proyecto orientado al agente — el equivalente a un README
+> escrito para un agente de IA. Deriva cada sección del contexto del proyecto
+> provisto. Para todo lo que el contexto no establezca, escribe
+> `[DEFINE: <pista>]` en lugar de inventar datos.
+
+## Propósito
+
+Uno o dos párrafos que respondan: ¿qué hace este sistema, para quién y por qué
+existe? Indica el problema central que resuelve y el valor principal que
+entrega. Mantenlo concreto — sin lenguaje de marketing.
+
+## Stack Tecnológico
+
+Los lenguajes, frameworks, runtimes, almacenes de datos y librerías principales
+que el proyecto realmente usa. Derívalo del contexto (manifiestos,
+descripciones, imports). Lista solo lo que está en uso; marca lo desconocido
+como `[DEFINE: <pista>]`.
+
+- **Lenguaje(s):** [DEFINE: lenguaje principal + versión]
+- **Framework(s):** [DEFINE: framework web/app, si aplica]
+- **Almacén(es) de datos:** [DEFINE: base de datos, caché, cola]
+- **Librerías clave:** [DEFINE: dependencias de runtime relevantes]
+
+## Convenciones
+
+Cómo el equipo escribe y entrega código. Cubre, como mínimo:
+
+- **Estilo de código:** herramienta de formato, reglas de lint, idioms que
+  sigue el proyecto
+- **Nomenclatura:** archivos, paquetes/módulos, tipos, funciones, tests
+- **Testing:** framework, dónde viven los tests, qué se espera cubrir
+- **Commits / ramas:** formato de mensaje (p. ej. Conventional Commits),
+  nomenclatura de ramas, expectativas de PR
+
+Usa `[DEFINE: <pista>]` para cualquier convención que el contexto no revele.
+
+## Estructura del Proyecto
+
+La disposición de alto nivel que importa para navegar — los directorios que un
+agente necesita conocer para encontrar código, tests, configuración y docs. Un
+árbol anotado breve o una lista de viñetas es suficiente; no enumeres cada
+archivo.
+
+```
+[DEFINE: directorios de alto nivel y sus responsabilidades]
+```
+
+## Comandos Clave
+
+Los comandos para construir, testear, ejecutar y lintar el proyecto, tal como
+los invocaría una persona contribuyente. Prefiere el propio ejecutor de tareas
+del proyecto (Makefile, scripts, gestor de paquetes) cuando el contexto muestre
+uno.
+
+- **Build:** [DEFINE: comando de build]
+- **Test:** [DEFINE: comando de test]
+- **Run:** [DEFINE: comando de ejecución/arranque]
+- **Lint:** [DEFINE: comando de lint/formato]

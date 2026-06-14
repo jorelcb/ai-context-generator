@@ -1,37 +1,229 @@
-# Tasks: {{FEATURE_NAME}}
+# Tareas: [NOMBRE DE LA FUNCIONALIDAD]
 
-> Formato Spec-Kit. Unidades de trabajo concretas, ordenadas y ejecutables
-> derivadas de plan.md. Vive en `specs/<feature-id>/tasks.md`.
->
-> Marca `[P]` para tasks que pueden correr en paralelo con la anterior.
+> Formato Spec-Kit (v0.10.x). Este archivo es una GUÍA ESTRUCTURAL para un LLM.
+> Genera tareas REALES, ordenadas por dependencias, a partir de plan.md, spec.md
+> (historias de usuario), data-model.md y contracts/. Vive en
+> `specs/<feature-id>/tasks.md`.
 
-## Setup
+**Entrada**: Documentos de diseño desde `specs/[###-nombre-funcionalidad]/`
 
-- [ ] **T-1** — {{TASK_DE_SETUP}}  → `{{PATH_EXACTO}}`
-- [ ] **T-2** [P] — {{TASK_DE_SETUP}}  → `{{PATH_EXACTO}}`
+**Prerrequisitos**: plan.md (requerido), spec.md (requerido para las historias de usuario), research.md, data-model.md, contracts/
 
-## Implementacion Core
+**Pruebas**: Las tareas de prueba son OPCIONALES; inclúyelas solo si las pruebas se solicitaron explícitamente en la especificación.
 
-- [ ] **T-10** — {{TASK_CORE}}  → `{{PATH_EXACTO}}`
-  - Depende de: T-1, T-2
-  - Aceptacion: {{RESULTADO_VERIFICABLE}}
-- [ ] **T-11** — {{TASK_CORE}}  → `{{PATH_EXACTO}}`
-  - Depende de: T-10
-  - Aceptacion: {{RESULTADO_VERIFICABLE}}
+**Organización**: Las tareas se agrupan por historia de usuario para permitir la implementación y prueba independiente de cada historia.
 
-## Tests
+## Formato: `[ID] [P?] [Historia] Descripción`
 
-- [ ] **T-20** [P] — Unit tests para {{COMPONENTE}}  → `{{PATH_TEST_EXACTO}}`
-- [ ] **T-21** — Integration test para {{FLUJO}}  → `{{PATH_TEST_EXACTO}}`
-- [ ] **T-22** [P] — End-to-end check matching los pasos de `quickstart.md`
+- **[P]**: Puede ejecutarse en paralelo (archivos distintos, sin dependencias)
+- **[Historia]**: A qué historia de usuario pertenece la tarea (p. ej., US1, US2, US3)
+- Usa IDs secuenciales con ceros a la izquierda: T001, T002, T003...
+- Incluye rutas de archivo exactas en las descripciones
 
-## Wiring y Polish
+## Convenciones de Rutas
 
-- [ ] **T-30** — {{TASK_DE_WIRING}}  → `{{PATH_EXACTO}}`
-- [ ] **T-31** — Update docs / changelog
+- **Proyecto único**: `src/`, `tests/` en la raíz del repositorio
+- **App web**: `backend/src/`, `frontend/src/`
+- **Móvil**: `api/src/`, `ios/src/` o `android/src/`
+- Las rutas mostradas abajo asumen un proyecto único; ajústalas según la estructura de plan.md
 
-## Done When
+<!--
+  Regla de ordenamiento de fases (NO desviarse):
+  - Fase 1: Setup
+  - Fase 2: Fundacional (prerrequisitos bloqueantes — ninguna historia puede
+    empezar hasta terminarla)
+  - Fase 3+: UNA FASE POR HISTORIA DE USUARIO, en orden de prioridad (P1 primero).
+    Cada fase entrega una porción comprobable de forma independiente y termina
+    con un Checkpoint.
+  - Fase final: Pulido y Aspectos Transversales
+  Reemplaza cada tarea de ejemplo de abajo con tareas reales para esta funcionalidad.
+-->
 
-- [ ] Todos los tests anteriores pasan en CI
-- [ ] El flujo de `quickstart.md` corre sin errores
-- [ ] El constitution check de plan.md sigue verde
+## Fase 1: Setup (Infraestructura Compartida)
+
+**Propósito**: Inicialización del proyecto y estructura básica
+
+- [ ] T001 Crear la estructura del proyecto según el plan de implementación
+- [ ] T002 Inicializar el proyecto [lenguaje] con las dependencias de [framework]
+- [ ] T003 [P] Configurar las herramientas de linting y formateo
+
+---
+
+## Fase 2: Fundacional (Prerrequisitos Bloqueantes)
+
+**Propósito**: Infraestructura central que DEBE estar completa antes de que CUALQUIER historia de usuario pueda implementarse
+
+**⚠️ CRÍTICO**: Ningún trabajo de historia de usuario puede comenzar hasta que esta fase esté completa
+
+- [ ] T004 Configurar el esquema de base de datos y el framework de migraciones
+- [ ] T005 [P] Implementar el framework de autenticación/autorización
+- [ ] T006 [P] Configurar el enrutamiento de la API y la estructura de middleware
+- [ ] T007 Crear los modelos/entidades base de los que dependen todas las historias
+- [ ] T008 Configurar el manejo de errores y la infraestructura de logging
+
+**Checkpoint**: Fundación lista; la implementación de historias de usuario ya puede comenzar
+
+---
+
+## Fase 3: Historia de Usuario 1 - [Título] (Prioridad: P1) 🎯 MVP
+
+**Objetivo**: [Descripción breve de lo que entrega esta historia]
+
+**Prueba Independiente**: [Cómo verificar que esta historia funciona por sí sola]
+
+### Pruebas para la Historia de Usuario 1 (OPCIONAL - solo si se solicitan pruebas) ⚠️
+
+> **NOTA: Escribe estas pruebas PRIMERO, asegúrate de que FALLEN antes de implementar**
+
+- [ ] T009 [P] [US1] Prueba de contrato para [endpoint] en tests/contract/test_[name].py
+- [ ] T010 [P] [US1] Prueba de integración para [recorrido de usuario] en tests/integration/test_[name].py
+
+### Implementación para la Historia de Usuario 1
+
+- [ ] T011 [P] [US1] Crear el modelo [Entidad1] en src/models/[entidad1].py
+- [ ] T012 [P] [US1] Crear el modelo [Entidad2] en src/models/[entidad2].py
+- [ ] T013 [US1] Implementar [Servicio] en src/services/[servicio].py (depende de T011, T012)
+- [ ] T014 [US1] Implementar [endpoint/funcionalidad] en src/[ubicación]/[archivo].py
+- [ ] T015 [US1] Añadir validación y manejo de errores
+
+**Checkpoint**: En este punto, la Historia de Usuario 1 debe estar completamente funcional y ser comprobable de forma independiente
+
+---
+
+## Fase 4: Historia de Usuario 2 - [Título] (Prioridad: P2)
+
+**Objetivo**: [Descripción breve de lo que entrega esta historia]
+
+**Prueba Independiente**: [Cómo verificar que esta historia funciona por sí sola]
+
+### Pruebas para la Historia de Usuario 2 (OPCIONAL - solo si se solicitan pruebas) ⚠️
+
+- [ ] T016 [P] [US2] Prueba de contrato para [endpoint] en tests/contract/test_[name].py
+- [ ] T017 [P] [US2] Prueba de integración para [recorrido de usuario] en tests/integration/test_[name].py
+
+### Implementación para la Historia de Usuario 2
+
+- [ ] T018 [P] [US2] Crear el modelo [Entidad] en src/models/[entidad].py
+- [ ] T019 [US2] Implementar [Servicio] en src/services/[servicio].py
+- [ ] T020 [US2] Implementar [endpoint/funcionalidad] en src/[ubicación]/[archivo].py
+
+**Checkpoint**: En este punto, las Historias de Usuario 1 Y 2 deben funcionar ambas de forma independiente
+
+---
+
+## Fase 5: Historia de Usuario 3 - [Título] (Prioridad: P3)
+
+**Objetivo**: [Descripción breve de lo que entrega esta historia]
+
+**Prueba Independiente**: [Cómo verificar que esta historia funciona por sí sola]
+
+### Pruebas para la Historia de Usuario 3 (OPCIONAL - solo si se solicitan pruebas) ⚠️
+
+- [ ] T021 [P] [US3] Prueba de contrato para [endpoint] en tests/contract/test_[name].py
+- [ ] T022 [P] [US3] Prueba de integración para [recorrido de usuario] en tests/integration/test_[name].py
+
+### Implementación para la Historia de Usuario 3
+
+- [ ] T023 [P] [US3] Crear el modelo [Entidad] en src/models/[entidad].py
+- [ ] T024 [US3] Implementar [Servicio] en src/services/[servicio].py
+- [ ] T025 [US3] Implementar [endpoint/funcionalidad] en src/[ubicación]/[archivo].py
+
+**Checkpoint**: Todas las historias de usuario deben ser ahora funcionales de forma independiente
+
+---
+
+[Añade más fases de historia de usuario según se necesite, siguiendo el mismo patrón]
+
+---
+
+## Fase N: Pulido y Aspectos Transversales
+
+**Propósito**: Mejoras que afectan a múltiples historias de usuario
+
+- [ ] TXXX [P] Actualizaciones de documentación en docs/
+- [ ] TXXX Limpieza de código y refactorización
+- [ ] TXXX Optimización de rendimiento en todas las historias
+- [ ] TXXX [P] Pruebas unitarias adicionales (si se solicitan) en tests/unit/
+- [ ] TXXX Endurecimiento de seguridad
+- [ ] TXXX Ejecutar la validación de quickstart.md
+
+---
+
+## Dependencias y Orden de Ejecución
+
+### Dependencias entre Fases
+
+- **Setup (Fase 1)**: Sin dependencias; puede empezar de inmediato
+- **Fundacional (Fase 2)**: Depende de completar el Setup; BLOQUEA todas las historias de usuario
+- **Historias de Usuario (Fase 3+)**: Todas dependen de completar la fase Fundacional
+  - Las historias pueden entonces avanzar en paralelo (si hay equipo)
+  - O secuencialmente en orden de prioridad (P1 → P2 → P3)
+- **Pulido (Fase final)**: Depende de que todas las historias deseadas estén completas
+
+### Dependencias entre Historias de Usuario
+
+- **Historia de Usuario 1 (P1)**: Puede empezar tras la Fundacional (Fase 2); sin dependencias de otras historias
+- **Historia de Usuario 2 (P2)**: Puede empezar tras la Fundacional (Fase 2); puede integrarse con US1 pero debe ser comprobable de forma independiente
+- **Historia de Usuario 3 (P3)**: Puede empezar tras la Fundacional (Fase 2); puede integrarse con US1/US2 pero debe ser comprobable de forma independiente
+
+### Dentro de Cada Historia de Usuario
+
+- Las pruebas (si se incluyen) DEBEN escribirse y FALLAR antes de implementar
+- Modelos antes que servicios
+- Servicios antes que endpoints
+- Implementación central antes de la integración
+- Completar la historia antes de pasar a la siguiente prioridad
+
+### Oportunidades de Paralelismo
+
+- Todas las tareas de Setup marcadas [P] pueden ejecutarse en paralelo
+- Todas las tareas Fundacionales marcadas [P] pueden ejecutarse en paralelo (dentro de la Fase 2)
+- Una vez completada la fase Fundacional, todas las historias pueden empezar en paralelo (si el equipo lo permite)
+- Todas las pruebas de una historia marcadas [P] pueden ejecutarse en paralelo
+- Los modelos dentro de una historia marcados [P] pueden ejecutarse en paralelo
+
+---
+
+## Ejemplo de Paralelismo: Historia de Usuario 1
+
+```bash
+# Lanzar todas las pruebas de la Historia de Usuario 1 juntas (si se solicitan pruebas):
+Task: "Prueba de contrato para [endpoint] en tests/contract/test_[name].py"
+Task: "Prueba de integración para [recorrido de usuario] en tests/integration/test_[name].py"
+
+# Lanzar todos los modelos de la Historia de Usuario 1 juntos:
+Task: "Crear el modelo [Entidad1] en src/models/[entidad1].py"
+Task: "Crear el modelo [Entidad2] en src/models/[entidad2].py"
+```
+
+---
+
+## Estrategia de Implementación
+
+### MVP Primero (Solo Historia de Usuario 1)
+
+1. Completar la Fase 1: Setup
+2. Completar la Fase 2: Fundacional (CRÍTICO; bloquea todas las historias)
+3. Completar la Fase 3: Historia de Usuario 1
+4. **DETENERSE y VALIDAR**: Probar la Historia de Usuario 1 de forma independiente
+5. Desplegar/demostrar si está lista
+
+### Entrega Incremental
+
+1. Completar Setup + Fundacional → Fundación lista
+2. Añadir la Historia de Usuario 1 → Probar de forma independiente → Desplegar/Demostrar (¡MVP!)
+3. Añadir la Historia de Usuario 2 → Probar de forma independiente → Desplegar/Demostrar
+4. Añadir la Historia de Usuario 3 → Probar de forma independiente → Desplegar/Demostrar
+5. Cada historia añade valor sin romper las anteriores
+
+---
+
+## Notas
+
+- Tareas [P] = archivos distintos, sin dependencias
+- La etiqueta [Historia] asocia la tarea a una historia de usuario específica para trazabilidad
+- Cada historia de usuario debe poder completarse y probarse de forma independiente
+- Verifica que las pruebas fallen antes de implementar (si se solicitan pruebas)
+- Haz commit tras cada tarea o grupo lógico
+- Detente en cualquier checkpoint para validar la historia de forma independiente
+- Evita: tareas vagas, conflictos en el mismo archivo, dependencias entre historias que rompan la independencia

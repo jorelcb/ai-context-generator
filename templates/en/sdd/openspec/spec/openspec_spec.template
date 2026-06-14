@@ -1,0 +1,86 @@
+# {{PROJECT_NAME}} — Capability Spec
+
+> OpenSpec format. One file describes ONE capability and lives at
+> `openspec/specs/<capability>/spec.md` (e.g. `openspec/specs/user-auth/spec.md`).
+> A capability is a coherent, named ability of the system. Derive the
+> capability and its requirements from the provided project context — do not
+> copy the illustrative examples below verbatim. For any domain detail the
+> context does not establish, write `[DEFINE: <hint>]` rather than inventing it.
+
+## Purpose
+
+One short paragraph stating what this capability provides and why it exists.
+Name the capability in the first sentence. Keep it scoped to a single ability —
+if you are describing two unrelated abilities, they belong in separate
+capability files.
+
+## Requirements
+
+This section holds MULTIPLE requirement blocks. Each block MUST follow this
+exact shape:
+
+- A `### Requirement: <Name>` heading.
+- A single normative statement in RFC 2119 language — use **SHALL** (or MUST)
+  to express the behavior the system is obligated to provide.
+- AT LEAST ONE `#### Scenario: <Name>` block, each written as GIVEN / WHEN /
+  THEN bullets. A requirement may have several scenarios (happy path, error
+  path, edge case).
+
+Literal syntax to reproduce exactly:
+
+### Requirement: <Short imperative name>
+
+The system SHALL <observable, testable behavior in SHALL/MUST language>.
+
+#### Scenario: <Short scenario name>
+
+- **GIVEN** <initial state / precondition>
+- **WHEN** <action or trigger>
+- **THEN** <expected, observable result>
+
+---
+
+The following two requirements are **illustrative — replace them with the
+project's real capability and requirements derived from the context.** They
+exist only to show the literal pattern.
+
+### Requirement: Credential validation
+
+The system SHALL reject any sign-in attempt whose password does not match the
+stored credential, without revealing which factor was incorrect.
+
+#### Scenario: Wrong password
+
+- **GIVEN** a registered user with a known email
+- **WHEN** they submit the correct email but an incorrect password
+- **THEN** the system denies access and returns a generic "invalid credentials" error
+
+#### Scenario: Unknown account
+
+- **GIVEN** an email that is not registered
+- **WHEN** a sign-in is attempted with that email
+- **THEN** the system returns the same generic "invalid credentials" error, with no account-existence hint
+
+### Requirement: Session expiry
+
+The system SHALL invalidate an authenticated session after 30 minutes of
+inactivity and require re-authentication.
+
+#### Scenario: Idle timeout
+
+- **GIVEN** an authenticated session with no activity for 30 minutes
+- **WHEN** the user issues their next request
+- **THEN** the system rejects it as unauthenticated and prompts for re-authentication
+
+---
+
+Now write the REAL requirements for this project's capability:
+
+- Derive each requirement from the provided context (features, rules,
+  constraints). Do not pad with generic requirements.
+- Every requirement uses **SHALL/MUST** and has **≥1 scenario** in
+  GIVEN/WHEN/THEN form.
+- Cover the meaningful error and edge cases as additional scenarios, not just
+  the happy path.
+- For any rule the context implies but does not fully specify, write
+  `[DEFINE: <hint>]` inside the requirement or scenario rather than guessing.

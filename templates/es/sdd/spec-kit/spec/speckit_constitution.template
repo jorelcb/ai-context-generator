@@ -1,0 +1,87 @@
+# Constitución de [NOMBRE_DEL_PROYECTO]
+
+> Formato Spec-Kit (v0.10.x). Este archivo es una GUÍA ESTRUCTURAL para un LLM.
+> Genera principios REALES derivados del contexto del proyecto. Vive en
+> `.specify/memory/constitution.md` y es la fuente de verdad para la
+> Verificación de la Constitución en plan.md.
+>
+> Los principios DEBEN ser no negociables, declarativos y COMPROBABLES: cada uno
+> debe estar redactado de modo que un revisor pueda verificar objetivamente si un
+> plan o un PR cumple. Evita aspiraciones vagas. Si un valor que la constitución
+> necesita (p. ej., la fecha de ratificación) no aparece en el contexto, usa
+> `[NEEDS CLARIFICATION: <pregunta>]` o recurre a la fecha de hoy para la primera
+> ratificación.
+
+## Principios Fundamentales
+
+### I. [NOMBRE_DEL_PRINCIPIO]
+
+[Enunciado declarativo y comprobable del principio: qué DEBE o NO DEBE ocurrir.]
+
+**Justificación**: [Por qué existe este principio y qué protege.]
+
+### II. [NOMBRE_DEL_PRINCIPIO]
+
+[Enunciado declarativo y comprobable del principio.]
+
+**Justificación**: [Por qué existe este principio.]
+
+### III. [NOMBRE_DEL_PRINCIPIO] (NO NEGOCIABLE)
+
+[Enunciado declarativo y comprobable. Marca los gates más estrictos como NO NEGOCIABLE.]
+
+**Justificación**: [Por qué existe este principio.]
+
+### IV. [NOMBRE_DEL_PRINCIPIO]
+
+[Enunciado declarativo y comprobable del principio.]
+
+**Justificación**: [Por qué existe este principio.]
+
+### V. [NOMBRE_DEL_PRINCIPIO]
+
+[Enunciado declarativo y comprobable del principio.]
+
+**Justificación**: [Por qué existe este principio.]
+
+[Añade o elimina principios para ajustarte al proyecto. Lo típico es de 3 a 7 principios.]
+
+## [Restricciones Adicionales / Seguridad / Estándares de Rendimiento]
+
+<!--
+  Sección opcional. Úsala para restricciones transversales que no son principios
+  completos: requisitos de stack tecnológico, estándares de cumplimiento, líneas
+  base de seguridad, presupuestos de rendimiento, políticas de despliegue.
+  Renombra el encabezado según corresponda. Elimina la sección si el proyecto no
+  tiene tales restricciones.
+-->
+
+[Contenido de restricciones derivado del contexto del proyecto.]
+
+## Flujo de Desarrollo / Quality Gates
+
+<!--
+  Define las reglas de flujo que hacen cumplir los principios anteriores:
+  requisitos de revisión de código, gates de prueba obligatorios, checks de CI,
+  proceso de aprobación antes de mergear o desplegar. Estos son los checks
+  concretos que la Verificación de la Constitución de plan.md va a comprobar.
+-->
+
+[Contenido de flujo de trabajo y quality gates derivado del contexto del proyecto.]
+
+## Gobernanza
+
+<!--
+  Indica cómo se mantiene la constitución. Como mínimo:
+  - Esta constitución prevalece sobre otras prácticas cuando entren en conflicto.
+  - Procedimiento de enmienda (quién propone, cómo se aprueba, plan de migración).
+  - Política de versionado: MAJOR para principios eliminados o que rompen,
+    MINOR para un principio nuevo o una guía materialmente ampliada, PATCH para
+    aclaraciones.
+  - Revisión de cumplimiento: todos los planes/PRs verifican el cumplimiento; la
+    complejidad debe justificarse en el Seguimiento de Complejidad de plan.md.
+-->
+
+[Reglas de gobernanza derivadas del contexto del proyecto.]
+
+**Versión**: [VERSIÓN_DE_LA_CONSTITUCIÓN] | **Ratificada**: [FECHA_DE_RATIFICACIÓN] | **Última Enmienda**: [FECHA_DE_ÚLTIMA_ENMIENDA]
