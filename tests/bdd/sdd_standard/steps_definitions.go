@@ -41,7 +41,8 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^the lookup should succeed$`, featureContext.theLookupShouldSucceed)
 	ctx.Step(`^the standard's display name should be "([^"]*)"$`, featureContext.theDisplayNameShouldBe)
 	ctx.Step(`^the standard's template directory should be "([^"]*)"$`, featureContext.theTemplateDirShouldBe)
-	ctx.Step(`^the standard's output layout should be "([^"]*)"$`, featureContext.theOutputLayoutShouldBe)
+	ctx.Step(`^the artifact "([^"]*)" should resolve to path "([^"]*)" for feature "([^"]*)"$`, featureContext.theArtifactShouldResolveTo)
+	ctx.Step(`^the artifact "([^"]*)" should be optional and skip-if-exists$`, featureContext.theArtifactOptionalSkipIfExists)
 	ctx.Step(`^the bootstrap artifacts should include exactly these files:$`, featureContext.theArtifactsShouldIncludeExactly)
 	ctx.Step(`^every bootstrap artifact should be marked required$`, featureContext.everyArtifactRequired)
 	ctx.Step(`^every required artifact should have a lowercase file name$`, featureContext.everyRequiredArtifactLowercase)
@@ -113,12 +114,39 @@ func (f *FeatureContext) theTemplateDirShouldBe(want string) error {
 	return assertions.AssertExpectedAndActual(assert.Equal, want, f.standard.TemplateDir(), "template dir mismatch")
 }
 
-func (f *FeatureContext) theOutputLayoutShouldBe(want string) error {
-	if f.standard == nil {
-		return fmt.Errorf("no standard resolved")
+func (f *FeatureContext) theArtifactShouldResolveTo(fileName, wantPath, featureID string) error {
+	a, err := f.artifactByFile(fileName)
+	if err != nil {
+		return err
 	}
-	got := layoutLabel(f.standard.OutputLayout())
-	return assertions.AssertExpectedAndActual(assert.Equal, want, got, "output layout mismatch")
+	got := sdd.ArtifactPath(a, featureID)
+	return assertions.AssertExpectedAndActual(assert.Equal, wantPath, got, "artifact path mismatch")
+}
+
+func (f *FeatureContext) theArtifactOptionalSkipIfExists(fileName string) error {
+	a, err := f.artifactByFile(fileName)
+	if err != nil {
+		return err
+	}
+	if a.Required {
+		return fmt.Errorf("artifact %q should be optional", fileName)
+	}
+	if !a.SkipIfExists {
+		return fmt.Errorf("artifact %q should be skip-if-exists", fileName)
+	}
+	return nil
+}
+
+func (f *FeatureContext) artifactByFile(fileName string) (service.SpecArtifact, error) {
+	if f.standard == nil {
+		return service.SpecArtifact{}, fmt.Errorf("no standard resolved")
+	}
+	for _, a := range f.standard.BootstrapArtifacts() {
+		if a.FileName == fileName {
+			return a, nil
+		}
+	}
+	return service.SpecArtifact{}, fmt.Errorf("artifact %q not found in %s", fileName, f.standard.ID())
 }
 
 func (f *FeatureContext) theArtifactsShouldIncludeExactly(table *godog.Table) error {
@@ -267,20 +295,6 @@ func (f *FeatureContext) theFSShouldContainTemplate(path string) error {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-// layoutLabel mapea el enum a un string estable usado en los Gherkin steps.
-// Mantener acá (en vez de en el adapter) evita acoplar el dominio a labels
-// que solo existen para tests.
-func layoutLabel(l service.OutputLayout) string {
-	switch l {
-	case service.LayoutFlat:
-		return "flat"
-	case service.LayoutFeatureGrouped:
-		return "feature-grouped"
-	default:
-		return fmt.Sprintf("unknown(%d)", l)
-	}
-}
 
 func tableToSet(t *godog.Table) map[string]bool {
 	out := make(map[string]bool, len(t.Rows))

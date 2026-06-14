@@ -3,8 +3,6 @@ package sdd
 import (
 	"strings"
 	"testing"
-
-	"github.com/jorelcb/codify/internal/domain/service"
 )
 
 func TestSpecKitAdapter_BasicContract(t *testing.T) {
@@ -18,9 +16,6 @@ func TestSpecKitAdapter_BasicContract(t *testing.T) {
 	}
 	if a.TemplateDir() != "spec-kit" {
 		t.Errorf("TemplateDir: got %q, want spec-kit", a.TemplateDir())
-	}
-	if a.OutputLayout() != service.LayoutFeatureGrouped {
-		t.Errorf("OutputLayout: got %v, want LayoutFeatureGrouped", a.OutputLayout())
 	}
 }
 
@@ -59,13 +54,29 @@ func TestSpecKitAdapter_BootstrapArtifacts(t *testing.T) {
 	}
 }
 
-func TestSpecKitAdapter_DoesNotShipConstitution(t *testing.T) {
+func TestSpecKitAdapter_ShipsProjectConstitution(t *testing.T) {
 	a := NewSpecKitAdapter()
+	var found bool
 	for _, art := range a.BootstrapArtifacts() {
-		// CONSTITUTION.md es OpenSpec-specific. Spec-Kit no lo usa.
-		if strings.Contains(strings.ToLower(art.FileName), "constitution") {
-			t.Errorf("Spec-Kit should not include constitution-like file, got %q", art.FileName)
+		if art.FileName != "constitution.md" {
+			continue
 		}
+		found = true
+		// The constitution is a project-level artifact: optional, lives under
+		// .specify/memory/ (NOT specs/<feature>/), and must survive per-feature
+		// re-runs (audit SDD-2 turned into a feature).
+		if art.Required {
+			t.Error("constitution.md should be optional, not required")
+		}
+		if !art.SkipIfExists {
+			t.Error("constitution.md should be skip-if-exists (project-level, survives re-runs)")
+		}
+		if art.Dir != ".specify/memory" {
+			t.Errorf("constitution.md Dir: got %q, want .specify/memory", art.Dir)
+		}
+	}
+	if !found {
+		t.Error("Spec-Kit must ship a constitution.md artifact (fixes the dangling Constitution Check)")
 	}
 }
 
@@ -85,24 +96,18 @@ func TestSpecKitAdapter_LifecycleWorkflowIDs(t *testing.T) {
 	}
 }
 
-func TestSpecKitAdapter_SystemPromptHints_MentionsLayout(t *testing.T) {
+func TestSpecKitAdapter_SystemPromptHints_MentionsKeyConventions(t *testing.T) {
 	a := NewSpecKitAdapter()
 
-	// Las hints deben recordarle al LLM las dos diferencias críticas
-	// frente a OpenSpec: layout per-feature y file names lowercase.
-	hintsEN := a.SystemPromptHints("en")
-	if !strings.Contains(strings.ToLower(hintsEN), "lowercase") {
-		t.Errorf("EN hints should mention lowercase convention, got: %s", hintsEN)
-	}
-	if !strings.Contains(hintsEN, "specs/<feature-id>/") {
-		t.Errorf("EN hints should mention specs/<feature-id>/ layout, got: %s", hintsEN)
-	}
-
-	hintsES := a.SystemPromptHints("es")
-	if !strings.Contains(strings.ToLower(hintsES), "lowercase") {
-		t.Errorf("ES hints should mention lowercase convention, got: %s", hintsES)
-	}
-	if !strings.Contains(hintsES, "specs/<feature-id>/") {
-		t.Errorf("ES hints should mention specs/<feature-id>/ layout, got: %s", hintsES)
+	// The hints must remind the LLM of: lowercase names, the per-feature
+	// layout, the constitution location (fixes SDD-2), and the upstream
+	// clarification marker (SDD-3) — in both locales.
+	for _, locale := range []string{"en", "es"} {
+		hints := a.SystemPromptHints(locale)
+		for _, want := range []string{"lowercase", "specs/<feature-id>/", ".specify/memory/constitution.md", "NEEDS CLARIFICATION"} {
+			if !strings.Contains(hints, want) {
+				t.Errorf("%s hints should mention %q, got: %s", locale, want, hints)
+			}
+		}
 	}
 }

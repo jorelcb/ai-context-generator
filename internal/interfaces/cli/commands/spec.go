@@ -27,7 +27,7 @@ import (
 //  1. flagValue — `--sdd-standard` en la línea de comandos
 //  2. project config (.codify/config.yml > sdd_standard)
 //  3. user config (~/.codify/config.yml > sdd_standard)
-//  4. built-in default (openspec)
+//  4. built-in default (spec-kit)
 //
 // El registry resuelve los IDs contra los adapters disponibles. Si el ID en
 // cualquiera de los niveles no existe, falla con error explícito (preferimos
@@ -57,8 +57,8 @@ func resolveSpecStandard(flagValue string) (domainservice.SpecStandard, error) {
 
 // slugifyFeatureID convierte un projectName en un slug seguro para
 // filesystem (lowercase, ASCII, guiones para espacios y caracteres
-// especiales). Usado solo cuando el SpecStandard activo tiene
-// LayoutFeatureGrouped — en LayoutFlat el feature-id no se usa.
+// especiales). Es el feature/capability id que llena el token {feature} en
+// el Dir de cada artefacto (specs/<feature>/, openspec/specs/<capability>/).
 //
 // Heurística mínima: si el nombre ya es lowercase + alfanuméricos +
 // guiones, se devuelve tal cual. Si tiene mayúsculas o caracteres no-safe,
@@ -111,17 +111,17 @@ func NewSpecCmd() *cobra.Command {
 		Long: `Generate spec-driven development files from previously generated context.
 
 The set of files and their layout depend on the active SDD standard. Default
-is OpenSpec (4 files at the root of specs/):
-  - CONSTITUTION.md - Project DNA: stack, conventions, constraints, principles
-  - SPEC.md         - Feature specifications with acceptance criteria
-  - PLAN.md         - Technical design and architecture decisions
-  - TASKS.md        - Implementation task breakdown with dependencies
+is GitHub Spec-Kit, which writes per-feature artifacts under specs/<feature-id>/
+(spec.md with prioritized user stories, plan.md, tasks.md) plus a project-level
+constitution at .specify/memory/constitution.md.
 
-Spec-Kit is also supported and produces a different file set under
-specs/<feature-id>/ (lowercase file names, per-feature directory). Pick the
-active standard with --sdd-standard (precedence: flag > .codify/config.yml >
-~/.codify/config.yml > built-in default 'openspec'). For Spec-Kit, the
-feature-id defaults to a slugified projectName.
+OpenSpec is also supported: it writes the real OpenSpec structure —
+openspec/project.md plus openspec/specs/<capability>/spec.md with
+'### Requirement:' / '#### Scenario:' (GIVEN/WHEN/THEN) blocks.
+
+Pick the active standard with --sdd-standard (precedence: flag >
+.codify/config.yml > ~/.codify/config.yml > built-in default 'spec-kit'). The
+feature/capability id defaults to a slugified projectName.
 
 See ADR-0011 and 'docs/command-reference.md' for details.
 
@@ -154,7 +154,7 @@ Examples:
 	cmd.Flags().StringVarP(&p.output, "output", "o", "", "Output directory (default: same as --from-context)")
 	cmd.Flags().StringVarP(&p.model, "model", "m", "", "LLM model (default: claude-sonnet-4-6, or gemini-3.1-pro-preview)")
 	cmd.Flags().StringVar(&p.locale, "locale", defaultLocale, "Output language: en (English) or es (Spanish)")
-	cmd.Flags().StringVar(&p.sddStandard, "sdd-standard", "", "SDD standard: openspec (default) or spec-kit. Overrides project/user config.")
+	cmd.Flags().StringVar(&p.sddStandard, "sdd-standard", "", "SDD standard: spec-kit (default) or openspec. Overrides project/user config.")
 
 	return cmd
 }
@@ -266,12 +266,10 @@ func runSpec(projectName, fromContext, output, model, locale, sddStandardFlag st
 	// 6. Create command
 	specCmd := command.NewGenerateSpecCommand(provider, fileWriter, dirManager)
 
-	// 7. Build config
-	//    - For LayoutFlat (OpenSpec) FeatureID is unused — output goes
-	//      to <output>/specs/<file>.md.
-	//    - For LayoutFeatureGrouped (Spec-Kit) FeatureID is the subdir
-	//      under specs/. Default is the project name, slugified to a
-	//      filesystem-safe form.
+	// 7. Build config. FeatureID is the feature/capability slug substituted for
+	//    the {feature} token in each artifact's directory (Spec-Kit:
+	//    specs/<feature>/; OpenSpec: openspec/specs/<capability>/). Default is
+	//    the project name slugified to a filesystem-safe form.
 	featureID := slugifyFeatureID(projectName)
 	config := &dto.SpecConfig{
 		ProjectName:     projectName,
@@ -280,9 +278,9 @@ func runSpec(projectName, fromContext, output, model, locale, sddStandardFlag st
 		Model:           model,
 		Locale:          locale,
 		FeatureID:       featureID,
-		Layout:          standard.OutputLayout(),
 		StandardID:      standard.ID(),
 		StandardHints:   standard.SystemPromptHints(locale),
+		Artifacts:       standard.BootstrapArtifacts(),
 	}
 
 	// 8. Show progress
@@ -291,9 +289,10 @@ func runSpec(projectName, fromContext, output, model, locale, sddStandardFlag st
 	fmt.Printf("  Model:         %s\n", llm.DefaultModel(model))
 	fmt.Printf("  Locale:        %s\n", locale)
 	fmt.Printf("  SDD standard:  %s\n", standard.DisplayName())
-	if standard.OutputLayout() == domainservice.LayoutFeatureGrouped {
-		fmt.Printf("  Feature ID:    %s\n", featureID)
+	if aw, ok := standard.(interface{ AlignedWith() string }); ok {
+		fmt.Printf("  Aligned with:  %s\n", aw.AlignedWith())
 	}
+	fmt.Printf("  Feature ID:    %s\n", featureID)
 	fmt.Println()
 	fmt.Println("Generating spec files via LLM API...")
 

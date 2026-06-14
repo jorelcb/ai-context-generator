@@ -44,8 +44,8 @@ type Config struct {
 	ProjectName string `yaml:"project_name,omitempty"`
 
 	// SDDStandard identifica el estándar de Spec-Driven Development activo
-	// (ver ADR-0011). Valores soportados: "openspec" (default), "spec-kit".
-	// Vacío = usar built-in default (openspec). Validación contra la lista
+	// (ver ADR-0011). Valores soportados: "spec-kit" (default), "openspec".
+	// Vacío = usar built-in default (spec-kit). Validación contra la lista
 	// de adapters registrados sucede al momento de resolver el estándar,
 	// no al cargar el archivo — así un config con un estándar futuro no
 	// rompe la carga, solo el comando que efectivamente lo necesite.
@@ -70,7 +70,7 @@ func BuiltinDefaults() Config {
 		Language:    "",
 		Model:       "",
 		Provider:    "",
-		SDDStandard: "openspec", // ADR-0011: OpenSpec sigue siendo default
+		SDDStandard: "spec-kit", // D1 (audit 2026-06): Spec-Kit es el default desde v4.0.0
 	}
 }
 
