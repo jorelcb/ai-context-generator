@@ -124,25 +124,12 @@ func (p *AnthropicProvider) generateSingleFile(
 	req service.GenerationRequest,
 	guide service.TemplateGuide,
 ) (content string, tokensIn int, tokensOut int, err error) {
-	// Modes that personalize against a user-provided project context require it non-empty.
-	// Without it the LLM has nothing to anchor on and tends to invent stack details.
-	needsContext := req.Mode == "workflows" || req.Mode == "workflow-skills"
-	if needsContext && req.ProjectContext == "" {
-		return "", 0, 0, fmt.Errorf("mode %q requires non-empty ProjectContext", req.Mode)
-	}
-
 	var systemPrompt string
 	var userMessage string
 	switch req.Mode {
 	case "spec":
 		systemPrompt = p.promptBuilder.BuildSpecSystemPrompt(req.ExistingContext, req.Locale, req.SDDStandardHints)
 		userMessage = p.promptBuilder.BuildSpecUserMessage(guide)
-	case "workflow-skills":
-		systemPrompt = p.promptBuilder.BuildWorkflowSkillSystemPrompt(req.Locale, req.ProjectContext)
-		userMessage = p.promptBuilder.BuildWorkflowSkillUserMessage(guide)
-	case "workflows":
-		systemPrompt = p.promptBuilder.BuildPersonalizedWorkflowsSystemPrompt(req.Locale, req.ProjectContext)
-		userMessage = p.promptBuilder.BuildWorkflowsUserMessage(guide, req.Target)
 	case "analyze":
 		systemPrompt = p.promptBuilder.BuildAnalyzeSystemPromptForFile(req.Locale)
 		userMessage = p.promptBuilder.BuildUserMessageForFile(req, guide)
@@ -156,18 +143,6 @@ func (p *AnthropicProvider) generateSingleFile(
 
 	messages := []anthropic.MessageParam{
 		anthropic.NewUserMessage(anthropic.NewTextBlock(userMessage)),
-	}
-
-	// Frontmatter modes prefill the assistant turn with the --- delimiter:
-	// the response can then only continue the frontmatter, which removes the
-	// whole class of preamble/fence-wrapping deviations. The prefill is
-	// prepended back to the streamed text below (the API returns only the
-	// continuation). No trailing whitespace — the API rejects it in prefills.
-	const frontmatterPrefill = "---"
-	prefill := ""
-	if req.Mode == "workflows" || req.Mode == "workflow-skills" {
-		prefill = frontmatterPrefill
-		messages = append(messages, anthropic.NewAssistantMessage(anthropic.NewTextBlock(prefill)))
 	}
 
 	// The system prompt is byte-identical across the per-guide calls of one
@@ -221,9 +196,6 @@ func (p *AnthropicProvider) generateSingleFile(
 	// file is incomplete even though the stream ended without error.
 	if stopReason == anthropic.StopReasonMaxTokens {
 		return "", int(inTokens), int(outTokens), fmt.Errorf("response truncated: max_tokens hit after %d output tokens — the file is incomplete and was discarded", outTokens)
-	}
-	if prefill != "" {
-		text = prefill + text
 	}
 
 	return text, int(inTokens), int(outTokens), nil

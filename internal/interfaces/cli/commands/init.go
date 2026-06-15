@@ -223,16 +223,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 		target = "claude"
 	}
 
-	// Equip skills + hooks + plugins through the one shared selector (ADR-0010
-	// Decision 6 — same surface as `codify catalog`, scoped to this project).
+	// Equip skills (incl. the lifecycle category — ex-workflows, ADR-0015),
+	// hooks and plugins through the one shared selector (ADR-0010 Decision 6 —
+	// same surface as `codify catalog`, scoped to this project).
 	if err := PromptInstallPackages(target, "project"); err != nil {
 		fmt.Fprintf(os.Stderr, "\nWarning: project package install step failed: %v\n", err)
 		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --scope project'.")
-	}
-
-	if err := promptInstallWorkflows(target, locale, "project"); err != nil {
-		fmt.Fprintf(os.Stderr, "\nWarning: project workflows install step failed: %v\n", err)
-		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify workflows --install project'.")
 	}
 
 	printInitNextSteps()
@@ -254,7 +250,6 @@ func printInitNextSteps() {
 	fmt.Println("Equip (when you need more agent equipment):")
 	fmt.Println("  codify spec       Generate SDD specification files from this context")
 	fmt.Println("  codify catalog    Browse & install skills, hooks, and plugins")
-	fmt.Println("  codify workflows  Re-run the interactive workflows installer")
 	fmt.Println()
 	fmt.Println("Maintain (as your project evolves):")
 	fmt.Println("  codify check      Detect drift between artifacts and current project state")

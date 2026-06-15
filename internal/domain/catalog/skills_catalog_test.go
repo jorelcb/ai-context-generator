@@ -147,20 +147,23 @@ func TestCategoryResolve_UnknownPreset(t *testing.T) {
 
 func TestCategoryNames(t *testing.T) {
 	names := CategoryNames()
-	if len(names) != 3 {
-		t.Fatalf("got %d categories, want 3", len(names))
+	want := []string{"architecture", "testing", "conventions", "lifecycle"}
+	if len(names) != len(want) {
+		t.Fatalf("got %d categories %v, want %d %v", len(names), names, len(want), want)
 	}
-	if names[0] != "architecture" || names[1] != "testing" || names[2] != "conventions" {
-		t.Errorf("unexpected names: %v", names)
+	for i, w := range want {
+		if names[i] != w {
+			t.Errorf("category %d: got %q, want %q", i, names[i], w)
+		}
 	}
 }
 
 func TestLegacyPresetMapping(t *testing.T) {
 	tests := []struct {
-		legacy   string
-		wantCat  string
-		wantPre  string
-		wantOk   bool
+		legacy  string
+		wantCat string
+		wantPre string
+		wantOk  bool
 	}{
 		// "default" was removed in v2.0 (ADR-001 phase 3) — must NOT be in the map
 		{"default", "", "", false},

@@ -49,7 +49,6 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.Step(`^no bootstrap artifact should have a name containing "([^"]*)"$`, featureContext.noArtifactContaining)
 	ctx.Step(`^the required artifact files should be exactly:$`, featureContext.theRequiredFilesShouldBe)
 	ctx.Step(`^the optional artifact files should be exactly:$`, featureContext.theOptionalFilesShouldBe)
-	ctx.Step(`^the lifecycle workflow IDs should be:$`, featureContext.theLifecycleWorkflowIDsShouldBe)
 	ctx.Step(`^the system prompt hints in "([^"]*)" should mention "([^"]*)"$`, featureContext.theHintsInLocaleShouldMention)
 
 	// ========== Then Steps — resolution precedence ==========
@@ -233,15 +232,6 @@ func (f *FeatureContext) checkFilteredFiles(table *godog.Table, requiredFlag boo
 	return nil
 }
 
-func (f *FeatureContext) theLifecycleWorkflowIDsShouldBe(table *godog.Table) error {
-	if f.standard == nil {
-		return fmt.Errorf("no standard resolved")
-	}
-	want := tableToList(table)
-	got := f.standard.LifecycleWorkflowIDs()
-	return assertions.AssertExpectedAndActual(assert.Equal, want, got, "lifecycle workflow IDs mismatch")
-}
-
 func (f *FeatureContext) theHintsInLocaleShouldMention(locale, needle string) error {
 	if f.standard == nil {
 		return fmt.Errorf("no standard resolved")
@@ -303,19 +293,6 @@ func tableToSet(t *godog.Table) map[string]bool {
 			val := strings.TrimSpace(cell.Value)
 			if val != "" {
 				out[val] = true
-			}
-		}
-	}
-	return out
-}
-
-func tableToList(t *godog.Table) []string {
-	var out []string
-	for _, row := range t.Rows {
-		for _, cell := range row.Cells {
-			val := strings.TrimSpace(cell.Value)
-			if val != "" {
-				out = append(out, val)
 			}
 		}
 	}

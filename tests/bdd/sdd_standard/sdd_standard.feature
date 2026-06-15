@@ -50,13 +50,6 @@ Feature: SDD standard pluggable selection
       | data-model.md   |
       | quickstart.md   |
 
-  Scenario: Spec-Kit ships specify/plan/tasks lifecycle workflows
-    When I look up SDD standard "spec-kit"
-    Then the lifecycle workflow IDs should be:
-      | speckit_specify |
-      | speckit_plan    |
-      | speckit_tasks   |
-
   Scenario: Spec-Kit hints point at the constitution location and the clarification marker
     When I look up SDD standard "spec-kit"
     Then the system prompt hints in "en" should mention "lowercase"
@@ -88,13 +81,6 @@ Feature: SDD standard pluggable selection
     Then the system prompt hints in "en" should mention "### Requirement:"
     And the system prompt hints in "en" should mention "#### Scenario:"
     And the system prompt hints in "en" should mention "RENAMED"
-
-  Scenario: OpenSpec ships the propose/apply/archive lifecycle workflows
-    When I look up SDD standard "openspec"
-    Then the lifecycle workflow IDs should be:
-      | spec_propose |
-      | spec_apply   |
-      | spec_archive |
 
   # ===========================================================================
   # Resolución por precedencia (ADR-0011) — default ahora spec-kit (D1)

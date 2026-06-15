@@ -74,23 +74,9 @@ func ValidateOutput(content, mode, fileName string) ValidationResult {
 
 	// 3. Frontmatter expected for SKILL.md and workflow .md files.
 	expectsFrontmatter := strings.EqualFold(fileName, "SKILL.md") ||
-		mode == "skills" || mode == "workflow-skills" || mode == "workflows"
+		mode == "skills"
 	if expectsFrontmatter && !frontmatterRE.MatchString(content) {
 		result.Warnings = append(result.Warnings, "expected YAML frontmatter delimited by --- at the start of the file")
-	}
-
-	// 4. workflow-skills must declare disable-model-invocation + allowed-tools
-	//    inside the frontmatter for Claude to honor the constraints. Search
-	//    only the frontmatter region to avoid false positives in body prose.
-	if mode == "workflow-skills" {
-		if fm := frontmatterRE.FindString(content); fm != "" {
-			if !strings.Contains(fm, "disable-model-invocation:") {
-				result.Warnings = append(result.Warnings, "workflow-skill frontmatter missing disable-model-invocation field")
-			}
-			if !strings.Contains(fm, "allowed-tools:") {
-				result.Warnings = append(result.Warnings, "workflow-skill frontmatter missing allowed-tools field")
-			}
-		}
 	}
 
 	// 5. Truncation heuristic: a generated body shorter than 200 chars almost

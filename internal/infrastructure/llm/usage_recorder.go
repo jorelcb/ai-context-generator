@@ -31,7 +31,7 @@ func commandFromMode(mode string) string {
 	switch mode {
 	case "":
 		return "generate"
-	case "analyze", "spec", "skills", "workflows", "workflow-skills":
+	case "analyze", "spec", "skills":
 		return mode
 	case "audit":
 		return "audit"

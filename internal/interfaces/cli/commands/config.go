@@ -136,11 +136,6 @@ func runConfigWizard(repo *infraconfig.Repository, path string) error {
 		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify catalog --scope workstation'.")
 	}
 
-	if err := promptInstallWorkflows(target, locale, "global"); err != nil {
-		fmt.Fprintf(os.Stderr, "\nWarning: global workflows install step failed: %v\n", err)
-		fmt.Fprintln(os.Stderr, "You can retry anytime with 'codify workflows --install global'.")
-	}
-
 	printConfigNextSteps()
 	return nil
 }

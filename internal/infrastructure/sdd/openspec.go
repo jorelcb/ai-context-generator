@@ -18,8 +18,6 @@ import (
 //   - openspec/project.md — contexto del proyecto (stack, convenciones).
 //   - openspec/specs/<capability>/spec.md — capacidad con requirements en
 //     formato `### Requirement:` + `#### Scenario:` (GIVEN/WHEN/THEN).
-//   - Lifecycle workflows: propose / apply / archive con deltas
-//     ADDED/MODIFIED/REMOVED/RENAMED (ver Track 4b para el refresh OPSX).
 //
 // alignedWith documenta la versión upstream contra la que se calibró el
 // formato — revisar en cada release de codify (ver Track 4.3).
@@ -59,7 +57,7 @@ func (OpenSpecAdapter) BootstrapArtifacts() []service.SpecArtifact {
 }
 
 // TemplateDir returns "openspec". Templates live at
-// templates/{locale}/sdd/openspec/{spec,workflows}/.
+// templates/{locale}/sdd/openspec/spec/.
 func (OpenSpecAdapter) TemplateDir() string { return "openspec" }
 
 // SystemPromptHints returns OpenSpec's literal requirement/scenario syntax so
@@ -87,10 +85,4 @@ Required format conventions:
 - Do NOT use uppercase file names or a flat specs/<FILE>.md layout — that is the removed legacy format.
 </sdd_standard_hints>
 `
-}
-
-// LifecycleWorkflowIDs returns the OpenSpec lifecycle workflows. The workflow
-// skill templates themselves are refreshed to current OPSX naming in Track 4b.
-func (OpenSpecAdapter) LifecycleWorkflowIDs() []string {
-	return []string{"spec_propose", "spec_apply", "spec_archive"}
 }

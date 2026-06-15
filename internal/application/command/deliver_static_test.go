@@ -9,7 +9,6 @@ import (
 
 	"github.com/jorelcb/codify/internal/application/dto"
 	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/domain/service"
 	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
 )
 
@@ -90,65 +89,5 @@ func TestDeliverStaticSkills_MissingSkillMDIsError(t *testing.T) {
 
 	if _, err := cmd.Execute(cfg, fsys, selection); err == nil {
 		t.Fatal("a skill dir without SKILL.md must be a catalog layout error")
-	}
-}
-
-func TestDeliverStaticWorkflows_AntigravityFlatLayout(t *testing.T) {
-	tmp := t.TempDir()
-	cmd := NewDeliverStaticWorkflowsCommand(filesystem.NewFileWriter(), filesystem.NewDirectoryManager())
-	cfg := &dto.WorkflowConfig{
-		Preset:     "all",
-		Target:     "antigravity",
-		Mode:       "static",
-		Locale:     "en",
-		OutputPath: tmp,
-	}
-	guides := []service.TemplateGuide{
-		{Name: "bug_fix", Content: "# Bug fix guide"},
-		{Name: "release_cycle", Content: "# Release cycle guide"},
-	}
-
-	result, err := cmd.Execute(cfg, guides)
-	if err != nil {
-		t.Fatalf("Execute: %v", err)
-	}
-	if len(result.GeneratedFiles) != 2 {
-		t.Fatalf("GeneratedFiles: got %d, want 2", len(result.GeneratedFiles))
-	}
-	for _, name := range []string{"bug-fix.md", "release-cycle.md"} {
-		if _, err := os.Stat(filepath.Join(tmp, name)); err != nil {
-			t.Errorf("missing flat workflow %s: %v", name, err)
-		}
-	}
-}
-
-func TestDeliverStaticWorkflows_ClaudeStripsAnnotations(t *testing.T) {
-	tmp := t.TempDir()
-	cmd := NewDeliverStaticWorkflowsCommand(filesystem.NewFileWriter(), filesystem.NewDirectoryManager())
-	cfg := &dto.WorkflowConfig{
-		Preset:     "all",
-		Target:     "claude",
-		Mode:       "static",
-		Locale:     "en",
-		OutputPath: tmp,
-	}
-	guides := []service.TemplateGuide{
-		{Name: "release_cycle", Content: "step 1\n// turbo\nstep 2"},
-	}
-
-	result, err := cmd.Execute(cfg, guides)
-	if err != nil {
-		t.Fatalf("Execute: %v", err)
-	}
-	if len(result.GeneratedFiles) != 1 {
-		t.Fatalf("GeneratedFiles: got %d, want 1", len(result.GeneratedFiles))
-	}
-
-	body, err := os.ReadFile(filepath.Join(tmp, "release-cycle", "SKILL.md"))
-	if err != nil {
-		t.Fatalf("read SKILL.md: %v", err)
-	}
-	if strings.Contains(string(body), "// turbo") {
-		t.Fatalf("expected // turbo annotation to be stripped for Claude target, got:\n%s", body)
 	}
 }

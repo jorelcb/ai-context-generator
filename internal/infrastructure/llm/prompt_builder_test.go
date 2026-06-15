@@ -49,9 +49,8 @@ func TestPromptBuilder_SystemPromptsStableAcrossRun(t *testing.T) {
 	if a, b := builder.BuildAnalyzeSystemPromptForFile("en"), builder.BuildAnalyzeSystemPromptForFile("en"); a != b {
 		t.Error("analyze system prompt must be identical across calls of one run")
 	}
-	ctx := "Go project with DDD architecture"
-	if a, b := builder.BuildWorkflowSkillSystemPrompt("en", ctx), builder.BuildWorkflowSkillSystemPrompt("en", ctx); a != b {
-		t.Error("workflow-skills system prompt must be identical across the workflows of one run")
+	if a, b := builder.BuildSpecSystemPrompt("ctx", "en", ""), builder.BuildSpecSystemPrompt("ctx", "en", ""); a != b {
+		t.Error("spec system prompt must be identical across the artifacts of one run")
 	}
 }
 

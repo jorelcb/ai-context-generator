@@ -9,14 +9,6 @@ var ValidTargets = map[string]bool{
 	"antigravity": true,
 }
 
-// Generation modes. Skills are static-only since v4.0.0 (D4: LLM
-// personalization of skills was dropped); both constants remain because
-// workflows still support the personalized mode (WorkflowConfig.Mode).
-const (
-	SkillModeStatic       = "static"
-	SkillModePersonalized = "personalized"
-)
-
 // Skills install scopes
 const (
 	InstallScopeGlobal  = "global"
