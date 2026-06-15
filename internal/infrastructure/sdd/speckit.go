@@ -65,7 +65,7 @@ func (SpecKitAdapter) BootstrapArtifacts() []service.SpecArtifact {
 }
 
 // TemplateDir returns "spec-kit". Templates viven en
-// templates/{locale}/sdd/spec-kit/{spec,workflows}/.
+// templates/{locale}/sdd/spec-kit/spec/.
 func (SpecKitAdapter) TemplateDir() string { return "spec-kit" }
 
 // SystemPromptHints returns Spec-Kit-specific guidance. Reinforces the
@@ -94,11 +94,4 @@ Required conventions:
 - research.md, data-model.md, and quickstart.md are optional — emit only if the context warrants them.
 </sdd_standard_hints>
 `
-}
-
-// LifecycleWorkflowIDs returns the Spec-Kit lifecycle workflow guide IDs. The
-// workflow skill templates (command names /speckit.*, clarify/analyze gates)
-// are refreshed in Track 4b.
-func (SpecKitAdapter) LifecycleWorkflowIDs() []string {
-	return []string{"speckit_specify", "speckit_plan", "speckit_tasks"}
 }

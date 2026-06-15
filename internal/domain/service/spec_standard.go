@@ -32,15 +32,6 @@ type SpecStandard interface {
 	// OpenSpec returns delta-format reminders; Spec-Kit returns per-feature
 	// directory conventions; etc.
 	SystemPromptHints(locale string) string
-
-	// LifecycleWorkflowIDs returns the workflow guide IDs that implement
-	// this standard's lifecycle. Consumed by the workflows command when the
-	// user installs the spec-driven-change preset to know which workflow
-	// templates to ship for the active standard.
-	//
-	// OpenSpec → ["spec_propose", "spec_apply", "spec_archive"].
-	// Spec-Kit → ["speckit_specify", "speckit_plan", "speckit_tasks"].
-	LifecycleWorkflowIDs() []string
 }
 
 // SpecArtifact describes one file that `codify spec` generates. Dir + FileName

@@ -80,22 +80,6 @@ func TestSpecKitAdapter_ShipsProjectConstitution(t *testing.T) {
 	}
 }
 
-func TestSpecKitAdapter_LifecycleWorkflowIDs(t *testing.T) {
-	a := NewSpecKitAdapter()
-	ids := a.LifecycleWorkflowIDs()
-
-	if len(ids) == 0 {
-		t.Fatal("Spec-Kit must declare lifecycle workflow IDs")
-	}
-	// Los workflows IDs son los slash commands (specify/plan/tasks).
-	// Sus prefixes existen para no chocar con OpenSpec en el global mapping.
-	for _, id := range ids {
-		if !strings.HasPrefix(id, "speckit_") {
-			t.Errorf("Spec-Kit workflow IDs should be namespaced (speckit_*), got %q", id)
-		}
-	}
-}
-
 func TestSpecKitAdapter_SystemPromptHints_MentionsKeyConventions(t *testing.T) {
 	a := NewSpecKitAdapter()
 

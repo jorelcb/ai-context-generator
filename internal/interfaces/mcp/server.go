@@ -62,7 +62,6 @@ func NewServer() *server.MCPServer {
 		generateSpecsTool(),
 		analyzeProjectTool(),
 		generateSkillsTool(),
-		generateWorkflowsTool(),
 		generateHooksTool(),
 		commitGuidanceTool(),
 		versionGuidanceTool(),
@@ -137,22 +136,6 @@ func generateSkillsTool() server.ServerTool {
 	)
 
 	return server.ServerTool{Tool: tool, Handler: handleGenerateSkills}
-}
-
-// generateWorkflowsTool defines the generate_workflows MCP tool.
-func generateWorkflowsTool() server.ServerTool {
-	tool := mcp.NewTool("generate_workflows",
-		mcp.WithDescription("Generate workflow files for AI agents. Claude target produces native SKILL.md files with frontmatter. Antigravity target produces .md files with execution annotations. Static mode is instant. Personalized mode uses LLM."),
-		mcp.WithString("preset", mcp.Required(), mcp.Description("Workflow preset"), mcp.Enum(catalog.WorkflowPresetNames()...)),
-		mcp.WithString("target", mcp.Description("Target ecosystem"), mcp.Enum("claude", "antigravity"), mcp.DefaultString("antigravity")),
-		mcp.WithString("mode", mcp.Description("Generation mode"), mcp.Enum("static", "personalized"), mcp.DefaultString("static")),
-		mcp.WithString("project_context", mcp.Description("Project description for personalized mode (language, tools, CI/CD, deployment)")),
-		mcp.WithString("locale", mcp.Description("Output language"), mcp.Enum("en", "es"), mcp.DefaultString("en")),
-		mcp.WithString("model", mcp.Description("LLM model (only for personalized mode)"), mcp.DefaultString("claude-sonnet-4-6")),
-		mcp.WithString("output", mcp.Description("Output directory (default depends on target)")),
-	)
-
-	return server.ServerTool{Tool: tool, Handler: handleGenerateWorkflows}
 }
 
 // generateHooksTool defines the generate_hooks MCP tool.
@@ -367,90 +350,6 @@ func handleGenerateSkills(_ context.Context, request mcp.CallToolRequest) (*mcp.
 	sb.WriteString(fmt.Sprintf("Agent skills delivered (category: %s, preset: %s, target: %s)\n", categoryName, preset, target))
 	sb.WriteString(fmt.Sprintf("Output: %s\n", result.OutputPath))
 	sb.WriteString("\nGenerated skills:\n")
-	for _, f := range result.GeneratedFiles {
-		sb.WriteString(fmt.Sprintf("  - %s\n", f))
-	}
-
-	return mcp.NewToolResultText(sb.String()), nil
-}
-
-func handleGenerateWorkflows(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	preset := stringArg(request, "preset")
-	target := stringArgDefault(request, "target", "antigravity")
-	mode := stringArgDefault(request, "mode", dto.SkillModeStatic)
-	projectContext := stringArg(request, "project_context")
-	locale := stringArgDefault(request, "locale", "en")
-	model := stringArgDefault(request, "model", "")
-	output := stringArg(request, "output")
-	if output == "" {
-		if target == "claude" {
-			output = filepath.Join(".claude", "skills")
-		} else {
-			output = filepath.Join(".agent", "workflows")
-		}
-	}
-
-	if !dto.ValidWorkflowTargets[target] {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid target: %s (available: claude, antigravity)", target)), nil
-	}
-
-	cat, err := catalog.FindWorkflowCategory("workflows")
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid workflow category: %v", err)), nil
-	}
-
-	selection, err := cat.Resolve(preset)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid preset: %v", err)), nil
-	}
-
-	templatePath := filepath.Join("templates", locale, selection.TemplateDir)
-	templateLoader := infratemplate.NewFileSystemTemplateLoaderWithMapping(
-		root.TemplatesFS, templatePath, selection.TemplateMapping,
-	)
-	guides, err := templateLoader.LoadAll()
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to load workflow templates: %v", err)), nil
-	}
-
-	config := &dto.WorkflowConfig{
-		Category:       "workflows",
-		Preset:         preset,
-		Mode:           mode,
-		Target:         target,
-		Locale:         locale,
-		Model:          model,
-		OutputPath:     output,
-		ProjectContext: projectContext,
-	}
-
-	var result *dto.GenerationResult
-
-	if mode == dto.SkillModePersonalized {
-		if projectContext == "" {
-			return mcp.NewToolResultError("personalized mode requires project_context parameter"), nil
-		}
-		result, err = executePersonalizedWorkflowsMCP(ctx, config, guides)
-	} else {
-		result, err = executeStaticWorkflowsMCP(config, guides)
-	}
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Workflow generation failed: %v", err)), nil
-	}
-
-	targetLabel := "Antigravity"
-	if target == "claude" {
-		targetLabel = "Claude Code"
-	}
-
-	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%s workflows delivered (preset: %s, mode: %s)\n", targetLabel, preset, mode))
-	sb.WriteString(fmt.Sprintf("Output: %s\n", result.OutputPath))
-	if result.Model != "" && result.Model != "static" {
-		sb.WriteString(fmt.Sprintf("Model: %s\n", result.Model))
-		sb.WriteString(fmt.Sprintf("Tokens: %d in / %d out\n", result.TokensIn, result.TokensOut))
-	}
-	sb.WriteString("\nGenerated workflows:\n")
 	for _, f := range result.GeneratedFiles {
 		sb.WriteString(fmt.Sprintf("  - %s\n", f))
 	}
@@ -769,31 +668,6 @@ func executeStaticSkillsMCP(config *dto.SkillsConfig, selection *catalog.Resolve
 	dirManager := filesystem.NewDirectoryManager()
 	cmd := command.NewDeliverStaticSkillsCommand(fileWriter, dirManager)
 	return cmd.Execute(config, root.TemplatesFS, selection)
-}
-
-func executeStaticWorkflowsMCP(config *dto.WorkflowConfig, guides []service.TemplateGuide) (*dto.GenerationResult, error) {
-	fileWriter := filesystem.NewFileWriter()
-	dirManager := filesystem.NewDirectoryManager()
-	cmd := command.NewDeliverStaticWorkflowsCommand(fileWriter, dirManager)
-	return cmd.Execute(config, guides)
-}
-
-func executePersonalizedWorkflowsMCP(ctx context.Context, config *dto.WorkflowConfig, guides []service.TemplateGuide) (*dto.GenerationResult, error) {
-	apiKey, err := llm.ResolveAPIKey(config.Model)
-	if err != nil {
-		return nil, err
-	}
-
-	provider, err := llm.NewProvider(ctx, config.Model, apiKey, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create LLM provider: %w", err)
-	}
-
-	fileWriter := filesystem.NewFileWriter()
-	dirManager := filesystem.NewDirectoryManager()
-
-	workflowsCmd := command.NewGenerateWorkflowsCommand(provider, fileWriter, dirManager)
-	return workflowsCmd.Execute(ctx, config, guides)
 }
 
 func executePreviewHooksMCP(config *dto.HookConfig) (*dto.GenerationResult, error) {

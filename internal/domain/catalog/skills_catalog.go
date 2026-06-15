@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"strings"
-
-	"github.com/jorelcb/codify/internal/domain/service"
 )
 
 // SkillCategory representa una categoría de nivel 1 en el menú de skills.
@@ -18,31 +16,13 @@ type SkillCategory struct {
 }
 
 // SkillOption representa una sub-opción dentro de una categoría.
-//
-// Algunas opciones son SDD-aware: su TemplateDir y TemplateMapping varían
-// según el SpecStandard activo (ver ADR-0011). Para preservar
-// retrocompatibilidad y BDD scenarios existentes, los campos estáticos
-// TemplateDir/TemplateMapping siguen vigentes y actúan como fallback (suelen
-// apuntar al estándar default — OpenSpec). El override dinámico se aplica
-// cuando el caller invoca SkillCategory.ResolveWithSpecStandard pasando un
-// SpecStandard no-nil.
 type SkillOption struct {
-	Name        string // identificador: "clean", "neutral", "conventional-commit"
+	Name        string // identificador: "clean-ddd", "neutral", "conventional-commit"
 	Label       string // display: "Clean (DDD, BDD, CQRS, Hexagonal)"
-	TemplateDir string // directorio en templates/skills/... (o templates/{locale}/... para workflows)
-	// TemplateMapping mapea la entrada física al guide name. Para skills la
-	// clave es el SUBDIRECTORIO del skill (multi-archivo: SKILL.md +
-	// reference.md + examples.md opcionales) bajo TemplateDir; para workflows
-	// (incl. sddAwareSelection) la clave sigue siendo el archivo
-	// "<guide>.template" que consume el template loader.
+	TemplateDir string // directorio bajo templates/skills/
+	// TemplateMapping mapea el SUBDIRECTORIO del skill (multi-archivo: SKILL.md
+	// + reference.md + examples.md opcionales) bajo TemplateDir al guide name.
 	TemplateMapping map[string]string
-
-	// SDDAware indica que esta opción es parametrizada por el SpecStandard
-	// activo. Cuando es true y ResolveWithSpecStandard recibe un
-	// SpecStandard no-nil, TemplateDir y TemplateMapping se reemplazan por
-	// los valores derivados del adapter (TemplateDir() + LifecycleWorkflowIDs).
-	// Cuando es false, TemplateDir/TemplateMapping se usan tal cual.
-	SDDAware bool
 }
 
 // ResolvedSelection es el resultado de resolver una selección del catálogo.
@@ -88,6 +68,17 @@ var SkillMetadata = map[string]SkillMeta{
 	"test_foundational": {Description: "Evaluate and improve tests using Kent Beck's Test Desiderata — twelve trade-off properties of good developer tests. Use when writing new tests, reviewing test quality or suite health, deciding what kind of test to write, or resolving test-design disagreements with objective criteria. Pairs with test-tdd.", Triggers: []string{"test", "testing", "test quality", "desiderata"}},
 	"test_tdd":          {Description: "Practice Test-Driven Development with Red-Green-Refactor discipline — Kent Beck's cycle and strategies (Fake It, Triangulation, Obvious Implementation), Uncle Bob's Three Laws, and the Transformation Priority Premise. Use when implementing features or fixes test-first, designing APIs through usage, or enforcing baby-steps discipline. Builds on test-foundational.", Triggers: []string{"tdd", "test driven", "red green refactor", "test first"}},
 	"test_bdd":          {Description: "Practice Behavior-Driven Development as a collaboration method, not just a test tool — Discovery (Three Amigos, Example Mapping), Formulation (Gherkin), Automation (step definitions). Use when defining acceptance criteria, running example mapping, doing outside-in development, or building living documentation. For the mechanics of writing a single feature file, see bdd-scenario.", Triggers: []string{"bdd", "gherkin", "cucumber", "given when then", "acceptance test"}},
+	// Lifecycle (ex-workflows, ADR-0015)
+	"bug_fix":         {Description: "Drive a bug from report to verified fix: reproduce, write a failing regression test, diagnose the root cause, fix narrowly, and confirm no regressions. Use when fixing a reported bug, when you need a regression guard before shipping, or when checking whether a quick fix addresses the symptom or the actual cause.", Triggers: []string{"bug", "fix", "regression", "reproduce", "root cause"}},
+	"release_cycle":   {Description: "Take a codebase through a traceable, reversible release: confirm readiness, pick the SemVer bump, update version references, generate the changelog, commit, tag, push, deploy, and verify. Use when cutting a release, bumping the version, tagging and deploying, or auditing whether a release followed a safe sequence.", Triggers: []string{"release", "version", "changelog", "tag", "deploy"}},
+	"speckit_specify": {Description: "Capture the WHAT and WHY of a feature as a spec.md with prioritized user stories (P1/P2/P3), testable FR-XXX requirements, and measurable SC-XXX success criteria. Step 1 of the Spec-Kit lifecycle. Use when starting a new feature from a description, writing or re-scoping a spec, before planning.", Triggers: []string{"specify", "spec", "requirements", "user stories", "speckit"}},
+	"speckit_clarify": {Description: "Resolve ambiguity in a feature spec by asking up to 5 targeted questions and encoding the answers back into spec.md. Quality gate between specify and plan. Use when a spec has [NEEDS CLARIFICATION] markers or vague requirements, before planning.", Triggers: []string{"clarify", "open questions", "ambiguous spec", "clarifying questions"}},
+	"speckit_plan":    {Description: "Translate a clarified spec.md into plan.md — Technical Context, Constitution Check, project structure, and Phase 0/1 artifacts (research.md, data-model.md, contracts/, quickstart.md). Step 3 of the lifecycle. Use when a spec is ready and you need the technical design before tasks.", Triggers: []string{"plan", "technical design", "implementation plan", "architecture"}},
+	"speckit_tasks":   {Description: "Decompose plan.md into an executable, dependency-ordered tasks.md organized by user story (T001 IDs, [P] parallel markers, [US1] labels, MVP-first phases with checkpoints). Step 4 of the lifecycle. Use when a plan exists and you need an actionable breakdown.", Triggers: []string{"tasks", "task breakdown", "task list", "decompose"}},
+	"speckit_analyze": {Description: "Read-only cross-artifact consistency and quality check across spec.md, plan.md, and tasks.md — coverage gaps, duplications, ambiguities, contradictions, constitution conflicts. Final gate before implementation. Use when all three artifacts exist and you want to verify them before coding.", Triggers: []string{"analyze", "consistency", "cross-check", "ready to implement"}},
+	"spec_propose":    {Description: "Plan an OpenSpec change before any code: create openspec/changes/<id>/ with a proposal, design, atomic tasks, and spec deltas using literal ### Requirement: / #### Scenario: GIVEN/WHEN/THEN syntax. Use when starting a feature or fix, drafting spec deltas, or beginning the propose→apply→archive lifecycle.", Triggers: []string{"propose", "openspec change", "proposal", "spec delta"}},
+	"spec_apply":      {Description: "Implement an approved OpenSpec change: execute tasks.md atomically in order, write tests, verify each spec-delta scenario, and open a PR. Use when building an approved proposal, working a task list, checking spec compliance, or applying a change.", Triggers: []string{"apply", "implement change", "execute tasks", "spec compliance"}},
+	"spec_archive":    {Description: "Finalize an applied OpenSpec change: consolidate deltas into the canonical openspec/specs/<capability>/spec.md, merge the branch, and move the change to openspec/changes/archive/YYYY-MM-DD-<id>/. Use when a PR is approved and mergeable, consolidating specs, or archiving a change.", Triggers: []string{"archive", "consolidate specs", "finalize change", "merge spec"}},
 }
 
 // GenerateFrontmatter genera YAML frontmatter para un skill según el ecosistema target.
@@ -221,6 +212,55 @@ var Categories = []SkillCategory{
 			},
 		},
 	},
+	{
+		// Lifecycle skills — the recipes that used to be `workflows` (ADR-0015).
+		// bug-fix and release-cycle are plain skills; spec-kit and openspec are
+		// the SDD lifecycle bundles (one per standard — no SDDAware magic; the
+		// user installs the bundle matching their --sdd-standard).
+		Name:      "lifecycle",
+		Label:     "Lifecycle",
+		Exclusive: false,
+		Options: []SkillOption{
+			{
+				Name:        "bug-fix",
+				Label:       "Bug Fix (reproduce → diagnose → fix → test → PR)",
+				TemplateDir: "lifecycle",
+				TemplateMapping: map[string]string{
+					"bug_fix": "bug_fix",
+				},
+			},
+			{
+				Name:        "release-cycle",
+				Label:       "Release Cycle (version → changelog → tag → deploy)",
+				TemplateDir: "lifecycle",
+				TemplateMapping: map[string]string{
+					"release_cycle": "release_cycle",
+				},
+			},
+			{
+				Name:        "spec-kit",
+				Label:       "Spec-Kit SDD lifecycle (specify → clarify → plan → tasks → analyze)",
+				TemplateDir: "lifecycle-spec-kit",
+				TemplateMapping: map[string]string{
+					"speckit_specify": "speckit_specify",
+					"speckit_clarify": "speckit_clarify",
+					"speckit_plan":    "speckit_plan",
+					"speckit_tasks":   "speckit_tasks",
+					"speckit_analyze": "speckit_analyze",
+				},
+			},
+			{
+				Name:        "openspec",
+				Label:       "OpenSpec SDD lifecycle (propose → apply → archive)",
+				TemplateDir: "lifecycle-openspec",
+				TemplateMapping: map[string]string{
+					"spec_propose": "spec_propose",
+					"spec_apply":   "spec_apply",
+					"spec_archive": "spec_archive",
+				},
+			},
+		},
+	},
 }
 
 // CategoryNames devuelve los nombres de todas las categorías registradas.
@@ -261,81 +301,30 @@ func FindCategory(name string) (*SkillCategory, error) {
 }
 
 // Resolve resuelve la selección de una sub-opción (o "all") dentro de la
-// categoría usando los campos estáticos TemplateDir/TemplateMapping. Para
-// presets SDD-aware sin SpecStandard explícito, se devuelve el fallback
-// (típicamente OpenSpec), preservando el comportamiento histórico.
+// categoría usando los campos estáticos TemplateDir/TemplateMapping.
 func (c *SkillCategory) Resolve(preset string) (*ResolvedSelection, error) {
-	return c.ResolveWithSpecStandard(preset, nil)
-}
-
-// ResolveWithSpecStandard resuelve la selección aplicando el SpecStandard
-// activo a las opciones marcadas como SDDAware. Cuando std es nil, se
-// comporta igual que Resolve. Para opciones no-SDDAware el parámetro std es
-// ignorado.
-//
-// Esta firma permite que el comando workflows propague el adapter activo
-// sin que los presets no-SDD (bug-fix, release-cycle) tengan que conocer
-// la abstracción.
-func (c *SkillCategory) ResolveWithSpecStandard(preset string, std service.SpecStandard) (*ResolvedSelection, error) {
 	if preset == "all" {
 		if c.Exclusive {
 			return nil, fmt.Errorf("category %q does not support 'all' (options are mutually exclusive)", c.Name)
 		}
-		return c.resolveAll(std), nil
+		return c.resolveAll(), nil
 	}
 
 	for _, opt := range c.Options {
 		if opt.Name == preset {
-			return optionToSelection(opt, std), nil
+			return &ResolvedSelection{TemplateDir: opt.TemplateDir, TemplateMapping: opt.TemplateMapping}, nil
 		}
 	}
 	return nil, fmt.Errorf("unknown preset %q in category %q", preset, c.Name)
 }
 
-// optionToSelection construye un ResolvedSelection para una opción concreta.
-// Si la opción es SDDAware y se proveyó un SpecStandard, el dir y el mapping
-// se derivan del adapter; en caso contrario se usan los campos estáticos.
-func optionToSelection(opt SkillOption, std service.SpecStandard) *ResolvedSelection {
-	if opt.SDDAware && std != nil {
-		dir, mapping := sddAwareSelection(std)
-		return &ResolvedSelection{TemplateDir: dir, TemplateMapping: mapping}
-	}
-	return &ResolvedSelection{
-		TemplateDir:     opt.TemplateDir,
-		TemplateMapping: opt.TemplateMapping,
-	}
-}
-
-// sddAwareSelection deriva TemplateDir + TemplateMapping a partir del
-// SpecStandard activo. La convención es:
-//
-//	TemplateDir = "sdd/{standard.TemplateDir()}/workflows"
-//	TemplateMapping = { "{guideID}.template" -> "{guideID}" } para cada
-//	                  guideID en standard.LifecycleWorkflowIDs()
-//
-// Centralizado acá para que un único lugar conozca el contrato del layout
-// de templates por estándar (espejo de lo que hace `codify spec` en
-// cli/commands/spec.go).
-func sddAwareSelection(std service.SpecStandard) (string, map[string]string) {
-	dir := "sdd/" + std.TemplateDir() + "/workflows"
-	ids := std.LifecycleWorkflowIDs()
-	mapping := make(map[string]string, len(ids))
-	for _, id := range ids {
-		mapping[id+".template"] = id
-	}
-	return dir, mapping
-}
-
-// resolveAll combina todas las opciones de la categoría en una sola
-// selección. Las opciones SDDAware contribuyen vía sddAwareSelection cuando
-// hay un SpecStandard activo.
-func (c *SkillCategory) resolveAll(std service.SpecStandard) *ResolvedSelection {
+// resolveAll combina todas las opciones de la categoría en una sola selección.
+func (c *SkillCategory) resolveAll() *ResolvedSelection {
 	merged := make(map[string]string)
 	var dir string
 	for _, opt := range c.Options {
-		sel := optionToSelection(opt, std)
-		dir = sel.TemplateDir
-		maps.Copy(merged, sel.TemplateMapping)
+		dir = opt.TemplateDir
+		maps.Copy(merged, opt.TemplateMapping)
 	}
 	return &ResolvedSelection{
 		TemplateDir:     dir,
