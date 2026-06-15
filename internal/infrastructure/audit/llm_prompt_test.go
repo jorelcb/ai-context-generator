@@ -8,10 +8,10 @@ import (
 )
 
 func TestParseLLMFindings_HappyPath(t *testing.T) {
-	raw := `[
+	raw := `{"findings": [
 		{"commit_sha": "abc123", "severity": "significant", "detail": "violates DDD layer rule"},
 		{"commit_sha": "def456", "severity": "minor", "detail": "naming inconsistency"}
-	]`
+	]}`
 	findings, err := ParseLLMFindings(raw)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -31,7 +31,7 @@ func TestParseLLMFindings_HappyPath(t *testing.T) {
 }
 
 func TestParseLLMFindings_EmptyArray(t *testing.T) {
-	findings, err := ParseLLMFindings("[]")
+	findings, err := ParseLLMFindings(`{"findings": []}`)
 	if err != nil {
 		t.Fatalf("parse empty: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestParseLLMFindings_EmptyArray(t *testing.T) {
 }
 
 func TestParseLLMFindings_StripsMarkdownFences(t *testing.T) {
-	raw := "```json\n[{\"commit_sha\":\"a\",\"severity\":\"minor\",\"detail\":\"x\"}]\n```"
+	raw := "```json\n{\"findings\":[{\"commit_sha\":\"a\",\"severity\":\"minor\",\"detail\":\"x\"}]}\n```"
 	findings, err := ParseLLMFindings(raw)
 	if err != nil {
 		t.Fatalf("parse fenced: %v", err)
@@ -52,7 +52,7 @@ func TestParseLLMFindings_StripsMarkdownFences(t *testing.T) {
 }
 
 func TestParseLLMFindings_InvalidSeverityFallsBackToMinor(t *testing.T) {
-	raw := `[{"commit_sha":"abc","severity":"critical","detail":"nope"}]`
+	raw := `{"findings":[{"commit_sha":"abc","severity":"critical","detail":"nope"}]}`
 	findings, err := ParseLLMFindings(raw)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -63,10 +63,10 @@ func TestParseLLMFindings_InvalidSeverityFallsBackToMinor(t *testing.T) {
 }
 
 func TestParseLLMFindings_SkipsEntriesWithoutSHA(t *testing.T) {
-	raw := `[
+	raw := `{"findings":[
 		{"commit_sha":"abc","severity":"minor","detail":"ok"},
 		{"commit_sha":"","severity":"minor","detail":"missing sha"}
-	]`
+	]}`
 	findings, err := ParseLLMFindings(raw)
 	if err != nil {
 		t.Fatalf("parse: %v", err)

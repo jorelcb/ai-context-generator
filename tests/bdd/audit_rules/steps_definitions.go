@@ -50,7 +50,7 @@ func (f *FeatureContext) iParseTheLLMResponse(raw string) error {
 }
 
 func (f *FeatureContext) iParseTheLLMResponseWrappedInFences() error {
-	raw := "```json\n[{\"commit_sha\":\"abc\",\"severity\":\"minor\",\"detail\":\"x\"}]\n```"
+	raw := "```json\n{\"findings\":[{\"commit_sha\":\"abc\",\"severity\":\"minor\",\"detail\":\"x\"}]}\n```"
 	f.parsedFindings, f.parseErr = infraaudit.ParseLLMFindings(raw)
 	return nil
 }

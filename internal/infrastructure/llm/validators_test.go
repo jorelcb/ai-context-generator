@@ -1,6 +1,9 @@
 package llm
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestValidateOutput_DetectsDefineMarkers(t *testing.T) {
 	body := `# Title
@@ -100,6 +103,44 @@ func TestValidateOutput_FenceAtStartOfContentIsCounted(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected unbalanced fence warning for fence at offset 0, got %v", r.Warnings)
+	}
+}
+
+func TestValidateOutput_SizeGuards(t *testing.T) {
+	bigBody := func(lines int) string {
+		var sb strings.Builder
+		for range lines {
+			sb.WriteString("a line of actionable context that earns its place in the file\n")
+		}
+		return sb.String()
+	}
+
+	cases := []struct {
+		name     string
+		fileName string
+		lines    int
+		wantOver bool
+	}{
+		{"CLAUDE.md over 200", "CLAUDE.md", 250, true},
+		{"CLAUDE.md under 200", "CLAUDE.md", 150, false},
+		{"AGENTS.md over 500", "AGENTS.md", 600, true},
+		{"AGENTS.md under 500", "AGENTS.md", 400, false},
+		{"SKILL.md over 500", "SKILL.md", 600, true},
+		{"unbudgeted file is never flagged", "CONTEXT.md", 5000, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := ValidateOutput(bigBody(tc.lines), "generate", tc.fileName)
+			over := false
+			for _, w := range r.Warnings {
+				if contains(w, "over the") && contains(w, "line budget") {
+					over = true
+				}
+			}
+			if over != tc.wantOver {
+				t.Errorf("size warning = %v, want %v (warnings: %v)", over, tc.wantOver, r.Warnings)
+			}
+		})
 	}
 }
 

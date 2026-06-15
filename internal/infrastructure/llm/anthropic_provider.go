@@ -225,19 +225,38 @@ func (p *AnthropicProvider) EvaluatePrompt(ctx context.Context, req service.Eval
 	messages := []anthropic.MessageParam{
 		anthropic.NewUserMessage(anthropic.NewTextBlock(req.UserPrompt)),
 	}
-	if req.Prefill != "" {
+	// Prefill and structured output are mutually exclusive — a schema already
+	// constrains the response shape, so prefilling would conflict.
+	prefill := req.Prefill
+	if req.OutputSchema != nil {
+		prefill = ""
+	} else if prefill != "" {
 		// Prefill the assistant turn: the model can only continue from it,
 		// which kills prose preambles and fence wrapping at the source. The
 		// API returns just the continuation, so the prefill is prepended back
 		// to the text below.
-		messages = append(messages, anthropic.NewAssistantMessage(anthropic.NewTextBlock(req.Prefill)))
+		messages = append(messages, anthropic.NewAssistantMessage(anthropic.NewTextBlock(prefill)))
 	}
-	stream := p.client.Messages.NewStreaming(ctx, anthropic.MessageNewParams{
+	params := anthropic.MessageNewParams{
 		Model:     anthropic.Model(p.model),
 		MaxTokens: maxTokens,
 		System:    []anthropic.TextBlockParam{systemBlock},
 		Messages:  messages,
-	})
+	}
+	if req.OutputSchema != nil {
+		// Native structured output: the API constrains the response to the
+		// schema, so the returned text is guaranteed schema-valid JSON.
+		params.OutputConfig = anthropic.OutputConfigParam{
+			Format: anthropic.JSONOutputFormatParam{Schema: req.OutputSchema},
+		}
+	}
+	// Available-but-unwired lever (Track 5.2): OutputConfig.Effort
+	// (anthropic.OutputConfigEffortLow/Medium/High/Max) trades latency/cost
+	// against thoroughness for long-document generation. Left unset (model
+	// default) here — EvaluatePrompt serves short JSON-shaped responses where
+	// effort buys nothing; the candidate consumer is the multi-file generation
+	// path, which needs its own quality/cost evaluation before opting in.
+	stream := p.client.Messages.NewStreaming(ctx, params)
 
 	var textBuilder strings.Builder
 	var inTokens, outTokens int64
@@ -274,8 +293,8 @@ func (p *AnthropicProvider) EvaluatePrompt(ctx context.Context, req service.Eval
 	if text == "" {
 		return nil, fmt.Errorf("empty response from LLM")
 	}
-	if req.Prefill != "" {
-		text = req.Prefill + text
+	if prefill != "" {
+		text = prefill + text
 	}
 	// Surface max_tokens truncation explicitly; otherwise downstream JSON
 	// parsing fails with the opaque "unexpected end of JSON input".

@@ -25,9 +25,9 @@ const LLMSystemPrompt = `You are a senior code reviewer auditing recent git comm
 
 Your task: identify commits that DO NOT align with documented conventions. Skip commits that the rules-only audit already flagged (those will be reported separately) — focus only on alignment issues that require subjective judgment about the project's stated guidelines.
 
-Return ONLY a valid JSON array. No prose, no markdown fences, no commentary.
+Return a JSON object with a single key "findings" whose value is an array of finding objects. No prose, no markdown fences, no commentary.
 
-Schema (each finding):
+Each finding:
 {
   "commit_sha": "<full SHA>",
   "severity": "significant" | "minor",
@@ -38,7 +38,7 @@ Severity guidelines:
 - "significant" — the commit clearly violates a stated MUST or MUST NOT rule in AGENTS.md
 - "minor" — the commit is questionable but not a hard violation
 
-If all commits align: return [].`
+If all commits align: return {"findings": []}.`
 
 // BuildAuditUserPrompt arma el user prompt con AGENTS.md + commits + findings
 // rules-only (para que el LLM no las re-flagee).
@@ -71,8 +71,32 @@ func BuildAuditUserPrompt(agentsContent string, commits []CommitInfo, ruleFindin
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString("Output: JSON array of findings as specified in the system prompt.")
+	sb.WriteString("Output: the JSON object {\"findings\": [...]} as specified in the system prompt.")
 	return sb.String()
+}
+
+// AuditFindingsSchema is the JSON Schema handed to the provider's
+// structured-output feature so the response is guaranteed to be
+// {"findings": [...]}. Mirrors llmFindingJSON; keep in sync with the prompt.
+var AuditFindingsSchema = map[string]any{
+	"type":                 "object",
+	"additionalProperties": false,
+	"required":             []string{"findings"},
+	"properties": map[string]any{
+		"findings": map[string]any{
+			"type": "array",
+			"items": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"required":             []string{"commit_sha", "severity", "detail"},
+				"properties": map[string]any{
+					"commit_sha": map[string]any{"type": "string"},
+					"severity":   map[string]any{"type": "string", "enum": []string{"significant", "minor"}},
+					"detail":     map[string]any{"type": "string"},
+				},
+			},
+		},
+	},
 }
 
 // CommitInfo es la representación expuesta al LLM. Más rica que el commit
@@ -167,8 +191,16 @@ type llmFindingJSON struct {
 }
 
 // fenceRegex remueve markdown fences que algunos LLMs agregan a pesar de las
-// instrucciones del system prompt. Best-effort cleanup antes del unmarshal.
+// instrucciones del system prompt. Defensive cleanup antes del unmarshal — con
+// structured output (AuditFindingsSchema) la respuesta ya es JSON sin fences,
+// pero esto queda como fallback barato para providers/modelos que no lo honran.
 var fenceRegex = regexp.MustCompile("^\\s*```(?:json)?\\s*\\n?|\\n?\\s*```\\s*$")
+
+// auditEnvelope is the {"findings": [...]} wrapper the structured-output schema
+// produces (the API's top-level schema must be an object).
+type auditEnvelope struct {
+	Findings []llmFindingJSON `json:"findings"`
+}
 
 // ParseLLMFindings convierte la respuesta cruda del LLM en domain.Finding[].
 // Marca todas las findings con Heuristic=true. Si el JSON no parsea, devuelve
@@ -176,10 +208,11 @@ var fenceRegex = regexp.MustCompile("^\\s*```(?:json)?\\s*\\n?|\\n?\\s*```\\s*$"
 func ParseLLMFindings(raw string) ([]domain.Finding, error) {
 	cleaned := fenceRegex.ReplaceAllString(strings.TrimSpace(raw), "")
 
-	var items []llmFindingJSON
-	if err := json.Unmarshal([]byte(cleaned), &items); err != nil {
+	var env auditEnvelope
+	if err := json.Unmarshal([]byte(cleaned), &env); err != nil {
 		return nil, fmt.Errorf("parse LLM JSON: %w (raw: %q)", err, truncate(raw, 200))
 	}
+	items := env.Findings
 
 	findings := make([]domain.Finding, 0, len(items))
 	for _, it := range items {
