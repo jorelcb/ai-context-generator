@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-06-15 - Prompts & templates audit: standards realignment, static skills, spec-kit default, workflows→skills convergence
+
+> Outcome of the 2026-06 audit of every prompt and template behind `generate`, `analyze` and `spec`. Realigns Codify with the current agent ecosystem (AGENTS.md open standard + CLAUDE.md bridge, upstream-faithful Spec-Kit/OpenSpec, Agent Skills multi-file layout) and modernizes the LLM call path. **MAJOR — three breaking changes** (skills personalization removed, SDD default + legacy format, `workflows` surface folded into skills).
+
+### Breaking
+
+- **LLM personalization of skills removed.** Skills are now always static, delivered as multi-file packages. `codify catalog` drops `--mode`/`--model`/`--context`; the MCP `generate_skills` tool drops `mode`/`project_context`/`model`/`locale`. (`PersonalizingSource` and the personalization prompt are gone.)
+- **SDD realignment — Spec-Kit is the new default standard; the legacy CONSTITUTION/SPEC/PLAN/TASKS format is removed.** `codify spec` / MCP `generate_specs` default to `spec-kit`; `openspec` remains as the second real standard. Output placement moves from the rigid `OutputLayout` enum to a per-artifact path model (`SpecArtifact.Dir` with a `{feature}` token + `SkipIfExists`).
+- **`workflows` folded into the `lifecycle` skills category.** The standalone `codify workflows` command, the MCP `generate_workflows` tool, and the Antigravity annotated-workflow format are removed (Antigravity 2.0 converged on skills/hooks/plugins and dropped the workflow primitive — ADR-0015). Lifecycle automation now ships as skills: `bug-fix`, `release-cycle`, the Spec-Kit bundle (`specify`/`clarify`/`plan`/`tasks`/`analyze`) and the OpenSpec bundle (`propose`/`apply`/`archive`).
+
+### Added
+
+- **CLAUDE.md bridge (neutral-first, ADR-0014).** `generate` emits a deterministic `CLAUDE.md` that points at the canonical `AGENTS.md` via `@AGENTS.md`, plus Claude-specific notes. It never overwrites an existing `CLAUDE.md`, so `analyze` on a brownfield repo stays safe.
+- **Upstream-faithful SDD templates.** Spec-Kit mirrors the real upstream (`.specify/templates/`): P1/P2/P3 user stories with Independent Test, `FR-XXX` / `SC-XXX`, Assumptions, `[NEEDS CLARIFICATION]`, per-story tasks with `T001`/`[US1]`/`[P]`, a Constitution Check anchored to `.specify/memory/constitution.md`, and a new (optional, skip-if-exists) constitution artifact. OpenSpec emits real `openspec/` structure with literal `### Requirement:` / `#### Scenario:` GIVEN/WHEN/THEN syntax and ADDED/MODIFIED/REMOVED/RENAMED deltas.
+- **Native structured outputs** for the two JSON consumers (marker enricher, `audit --with-llm`) via `EvaluationRequest.OutputSchema` — Anthropic `output_config.format`, Gemini `responseSchema`/`responseMimeType`. The response is schema-valid JSON; fence-stripping stays only as a defensive fallback.
+- **Content size guards** in `ValidateOutput`: threshold warnings for CLAUDE.md > 200, AGENTS.md > 500, SKILL.md > 500 lines — fitness functions on the product's own output.
+- **TypeScript detection** (via `tsconfig.json`) and a richer language menu (go/typescript/javascript/python/rust/java) for `generate`/`analyze`.
+
+### Changed
+
+- **Prompt economy & robustness (`generate`/`analyze`/`spec`).** The spec mode no longer sends the full context twice per call; prompt caching is now effective (the per-file name moved out of the cacheable system prefix into the user message); `max_tokens` truncation surfaces an explicit error on both providers instead of silently writing a half file; per-file regeneration replaces the global abort on a fatal validation; the MCP tools now validate and report leftover `[DEFINE:]` markers instead of discarding the validation result.
+- **Skills catalog retro-ported and leveled.** The remediated architecture/testing skills (2026-05-23) are now in `templates/skills/` as multi-file packages (`SKILL.md` + `reference.md` + `examples.md`), the whole catalog is leveled to that bar, and each skill carries a trigger-phrase description; per-ecosystem frontmatter is generated at install time.
+- **Context templates leveled to the hexagonal bar** and de-duplicated across presets; `interactions` is now a pure ADR contract (no fabricated history); idioms refreshed (Go 1.24+, Python 3.12+, Node 20/22) with new TypeScript/Rust/Java entries; accents adopted across all `es/` templates.
+- **MCP `serverVersion` → 4.0.0.**
+
 ## [3.3.0] - 2026-06-10 - §7 deferred closeout: MCP parity, agentless plugin fallback, ecosystem scaffolding, huh-drop
 
 > Closes the entire remaining §7 deferred inventory from the v3.1.0 plan (R-4r, R-7, R-8 scaffolding, huh-drop). No breaking changes.
