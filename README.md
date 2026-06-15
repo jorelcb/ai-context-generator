@@ -16,7 +16,7 @@ _Because an agent without context is an intern with root access — and stale co
 
 **[English]** | [Español](README_ES.md)
 
-**Lifecycle:** [🚀 Bootstrap](#-bootstrap-phase-one-time-setup) · [🧰 Equip](#-equip-phase-install-context-skills-workflows-hooks-specs) · [🔧 Maintain](#-maintain-phase-ongoing-lifecycle)
+**Lifecycle:** [🚀 Bootstrap](#-bootstrap-phase-one-time-setup) · [🧰 Equip](#-equip-phase-install-context-skills-hooks-specs) · [🔧 Maintain](#-maintain-phase-ongoing-lifecycle)
 
 **Jump:** [Quick Start](#-quick-start) · [Phases at a glance](#-lifecycle-phases-at-a-glance) · [MCP Server](#-mcp-server) · [Language Guides](#-language-specific-guides) · [Architecture](#%EF%B8%8F-architecture) · [Migrating from v1.x](#-migrating-from-v1x) · [FAQ](#-faq) · [Troubleshooting](#-troubleshooting)
 
@@ -46,16 +46,16 @@ It's not the agent's fault. Without context, it starts from scratch every sessio
 **Codify** equips your AI agent with six layers it needs to stop improvising:
 
 ```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Context    │     │    Specs     │     │   Skills     │     │  Workflows   │
-│              │     │              │     │              │     │              │
-│  What the    │     │  What to     │     │  How to      │     │  Multi-step  │
-│  project is  │────▶│  build next  │     │  do things   │     │  recipes     │
-│              │     │              │     │  right       │     │  on demand   │
-│  generate    │     │  spec        │     │  skills      │     │  workflows   │
-│  analyze     │     │  --with-specs│     │              │     │              │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-     Memory             Plan              Abilities          Orchestration
+┌──────────────┐     ┌──────────────┐     ┌──────────────────────────────┐
+│   Context    │     │    Specs     │     │            Skills            │
+│              │     │              │     │                              │
+│  What the    │     │  What to     │     │  How to do things right —    │
+│  project is  │────▶│  build next  │     │  abilities + lifecycle       │
+│              │     │              │     │  recipes (multi-step)        │
+│  generate    │     │  spec        │     │  catalog                     │
+│  analyze     │     │  --with-specs│     │                              │
+└──────────────┘     └──────────────┘     └──────────────────────────────┘
+     Memory             Plan                Abilities + Orchestration
 
 ┌─────────────────────────────────┐  ┌─────────────────────────────────────┐
 │           Hooks                 │  │            Lifecycle                │
@@ -70,8 +70,7 @@ It's not the agent's fault. Without context, it starts from scratch every sessio
 
 - **Context** gives the agent architectural memory — stack, patterns, conventions, domain knowledge
 - **Specs** give the agent an implementation plan — features, acceptance criteria, task breakdowns
-- **Skills** give the agent reusable abilities — how to commit, version, design entities, review code
-- **Workflows** give the agent orchestration recipes — multi-step processes like feature development, bug fixing, releases
+- **Skills** give the agent reusable abilities — how to commit, version, design entities, review code — plus **lifecycle recipes**, the multi-step orchestrations (bug fixing, releases, the SDD lifecycle) that ship as a `lifecycle` skills category
 - **Hooks** add deterministic guardrails — shell scripts on Claude Code lifecycle events, no LLM in the loop
 - **Lifecycle** keeps everything in sync — `config`, `init`, `check`, `update`, `audit`, `usage`, `watch` — drift detection, selective regen, commit auditing, cost transparency, foreground watching
 
@@ -88,13 +87,13 @@ Codify groups its commands into three phases that map naturally to how a develop
        config              generate            check
        init                analyze             update
                            spec                audit
-                           skills              watch
-                           workflows           usage
-                           hooks               resolve
+                           catalog             watch
+                                               usage
+                                               resolve
 ```
 
 - **Bootstrap (one-time)** — set up the workstation (`codify config`) or a project (`codify init`).
-- **Equip (per need)** — generate context, install skills/workflows/hooks, write specs.
+- **Equip (per need)** — generate context, install skills (incl. lifecycle recipes) and hooks via `codify catalog`, write specs.
 - **Maintain (ongoing)** — detect drift, regenerate, audit commits, track usage.
 
 The same diagram is available in `codify --help`. For the full matrix of which command applies to **workstation vs project** and **greenfield vs brownfield**, see [`docs/lifecycle-matrix.md`](docs/lifecycle-matrix.md).
@@ -167,8 +166,7 @@ cd my-project && codify init
 
 # 4. Equip — install only what you need (each is skippable)
 codify spec <name> --from-context ./output/<name>/    # SDD specs
-codify catalog                                        # Skills + hooks (packages)
-codify workflows                                      # Multi-step recipes
+codify catalog                                        # Skills (incl. lifecycle recipes) + hooks + plugins
 
 # 5. Maintain — keep artifacts honest as the code evolves
 codify check    # Drift detection — no LLM, zero cost
@@ -187,7 +185,7 @@ The first-run auto-launch of `codify config` is soft (TTY only, never blocks CI)
 
 ## 🚀 Bootstrap phase (one-time setup)
 
-> **One-time setup** for the workstation and per project. After this, you move to the [Equip phase](#-equip-phase-install-context-skills-workflows-hooks-specs).
+> **One-time setup** for the workstation and per project. After this, you move to the [Equip phase](#-equip-phase-install-context-skills-hooks-specs).
 
 ### ⚙️ Configuration & Bootstrap
 
@@ -223,7 +221,7 @@ After that, both branches collect: architectural preset (override of global defa
 - `.codify/state.json` — snapshot of generation state (consumed by lifecycle commands)
 - Generated `AGENTS.md` and `context/*.md` written to `output/`
 
-Skills, workflows, and hooks are NOT bundled — `init` prints recommended next-step commands to keep responsibilities focused. Run `codify catalog` (skills + hooks) and `codify workflows` separately when you want them.
+Skills and hooks are NOT bundled — `init` prints recommended next-step commands to keep responsibilities focused. Run `codify catalog` (skills — including the `lifecycle` recipes — hooks, and plugins) separately when you want them.
 
 #### Merge precedence
 
@@ -237,7 +235,7 @@ Setting `--preset hexagonal` on the command line wins regardless of what's in ei
 
 ---
 
-## 🧰 Equip phase (install context, skills, workflows, hooks, specs)
+## 🧰 Equip phase (install context, skills, hooks, specs)
 
 > **Install only what you need.** Each command below is independent and skippable. After equipping, the [Maintain phase](#-maintain-phase-ongoing-lifecycle) keeps everything honest as the project evolves.
 
@@ -354,11 +352,11 @@ codify generate my-api \
 
 Default standard is **GitHub Spec-Kit** (per-feature, under `specs/<feature-id>/`):
 
-| File                          | What it does                                                        |
-| ----------------------------- | ------------------------------------------------------------------- |
-| `spec.md`                     | Prioritized user stories (P1/P2/P3), FR-XXX, measurable SC-XXX      |
-| `plan.md`                     | Technical context, Constitution Check, project structure           |
-| `tasks.md`                    | Tasks by user story (`T001`, `[P]`, `[US1]`), MVP-first phases      |
+| File                              | What it does                                                        |
+| --------------------------------- | ------------------------------------------------------------------- |
+| `spec.md`                         | Prioritized user stories (P1/P2/P3), FR-XXX, measurable SC-XXX      |
+| `plan.md`                         | Technical context, Constitution Check, project structure            |
+| `tasks.md`                        | Tasks by user story (`T001`, `[P]`, `[US1]`), MVP-first phases      |
 | `.specify/memory/constitution.md` | Project principles — the gate `plan.md`'s Constitution Check checks |
 
 `--sdd-standard openspec` instead writes the real OpenSpec tree (`openspec/project.md` + `openspec/specs/<capability>/spec.md` with `### Requirement:` / `#### Scenario:` blocks).
@@ -490,92 +488,57 @@ codify catalog --type skill [flags]
 
 ---
 
-### 🔄 Workflows
+### 🔄 Lifecycle recipes (the `lifecycle` skills category)
 
-Workflows are multi-step orchestration recipes that AI agents execute on demand. Unlike skills (which teach _how_ to do a specific task), workflows orchestrate _sequences of tasks_ — from branch creation to PR merge, from bug report to fix deployment.
+Lifecycle recipes are multi-step orchestrations that AI agents execute on demand — from branch creation to PR merge, from bug report to fix deployment. Where an ordinary skill teaches _how_ to do a single task, a lifecycle recipe orchestrates a _sequence_ of tasks.
 
-Codify generates workflows for two ecosystems:
+> **They are skills now.** Lifecycle recipes used to be a separate `codify workflows` command. As of v4.0.0 they are a **`lifecycle` category inside the unified skills catalog** — installed through `codify catalog` like any other skill, on Claude **and** Antigravity (both deliver them as native skills). The standalone `codify workflows` command, the MCP `generate_workflows` tool, and the old Antigravity annotated-workflow format (`// turbo`, `// capture`, …) were removed. See [ADR-0015](docs/adr/0015-workflows-skills-convergence.md) for the rationale (Antigravity 2.0 dropped its distinct workflow primitive and converged on Claude's skills/hooks/plugins model).
 
-| Target          | Output format                                                            | Output path                        | Invocation                          |
-| --------------- | ------------------------------------------------------------------------ | ---------------------------------- | ----------------------------------- |
-| **Claude Code** | Native skill (`SKILL.md` with frontmatter)                               | `.claude/skills/{preset}/SKILL.md` | `/{preset}` (e.g., `/spec-propose`) |
-| **Antigravity** | Native `.md` with execution annotations (`// turbo`, `// capture`, etc.) | `.agent/workflows/{workflow}.md`   | `/workflow-name`                    |
-
-Each Claude Code skill includes YAML frontmatter with:
+Each lifecycle skill is delivered as a native `SKILL.md` whose frontmatter carries:
 
 - `name` — Skill name (kebab-case, used as `/slash-command`)
-- `description` — What the workflow does
-- `disable-model-invocation: true` — Only the user invokes it (workflows have side effects)
+- `description` — What the recipe does
+- `disable-model-invocation: true` — Only the user invokes it (these recipes have side effects)
 - `allowed-tools: Bash(*)` — Auto-approves shell commands for uninterrupted execution
 
-#### Two modes
+Lifecycle skills are **static and English-only**, like the rest of the catalog — no LLM personalization, no API key, no cost.
 
-| Mode             | What it does                                                                                      | API key    | Cost     | Speed   |
-| ---------------- | ------------------------------------------------------------------------------------------------- | ---------- | -------- | ------- |
-| **Static**       | Delivers pre-built workflows from the embedded catalog. Ecosystem-aware frontmatter.              | Not needed | Free     | Instant |
-| **Personalized** | LLM adapts workflows to your project — steps reference your tools, CI/CD, and deployment targets. | Required   | ~pennies | ~10s    |
-
-#### Interactive mode
+#### Install via `codify catalog`
 
 ```bash
-codify workflows
-# → Select preset (spec-driven-change, bug-fix, release-cycle, all)
-# → Select target ecosystem (claude, antigravity)
-# → Select mode (static or personalized)
-# → Select locale
-# → Select install location (global, project, or custom)
-# → If personalized: describe your project, choose model
+# Interactive: open the catalog, switch to the Skills tab, expand the "lifecycle" category
+codify catalog
+
+# Install the SDD lifecycle (Spec-Kit) at project scope
+codify catalog --type skill --package spec-kit --scope project
+
+# Install bug-fix + release-cycle recipes at workstation scope
+codify catalog --type skill --package bug-fix,release-cycle --scope workstation
+
+# Install the OpenSpec lifecycle (propose → apply → archive)
+codify catalog --type skill --package openspec --scope project
+
+# Antigravity — same recipes, installed as native Antigravity skills
+codify catalog --ecosystem antigravity --type skill --package spec-kit --scope project
+
+# Browse the lifecycle recipes (and every other skill) with installed markers
+codify catalog --list --type skill
 ```
 
-#### CLI mode
+#### Lifecycle recipe catalog
 
-```bash
-# Claude Code: generate workflow skills
-codify workflows --preset all --target claude --mode static
+| Package         | Recipe                   | Description                                                                                                                                     |
+| --------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec-kit`      | SDD lifecycle (Spec-Kit) | Bundle of 5 skills: `speckit-specify → speckit-clarify → speckit-plan → speckit-tasks → speckit-analyze` — the full Spec-Kit SDD lifecycle      |
+| `openspec`      | SDD lifecycle (OpenSpec) | Bundle of 3 skills: `spec-propose → spec-apply → spec-archive` — full SDD lifecycle with formal spec deltas, branch creation, and merge cleanup |
+| `bug-fix`       | Bug Fix                  | Reproduce → diagnose → fix → test → PR                                                                                                          |
+| `release-cycle` | Release Cycle            | Version bump → changelog → tag → deploy                                                                                                         |
 
-# Claude Code: install skills globally
-codify workflows --preset all --target claude --mode static --install global
-
-# Claude Code: generate spec-driven feature lifecycle (propose → apply → archive)
-codify workflows --preset spec-driven-change --target claude --mode static
-
-# Antigravity: generate native workflow files
-codify workflows --preset all --target antigravity --mode static
-
-# Antigravity: install globally
-codify workflows --preset all --target antigravity --mode static --install global
-
-# Personalized: LLM-adapted skills for your project
-codify workflows --preset all --target claude --mode personalized \
-  --context "Go microservice with CI/CD via GitHub Actions"
-```
-
-#### Target ecosystems
-
-| Target                    | Output          | Structure                                 | Key difference                                                       |
-| ------------------------- | --------------- | ----------------------------------------- | -------------------------------------------------------------------- |
-| `claude`                  | Native skill    | `{preset}/SKILL.md` with YAML frontmatter | Annotations stripped, tool auto-approval via `allowed-tools`         |
-| `antigravity` _(default)_ | Flat `.md` file | `{workflow}.md` with YAML frontmatter     | Native annotations: `// turbo`, `// capture`, `// if`, `// parallel` |
-
-#### Install scopes
-
-| Scope     | Claude path         | Antigravity path                          |
-| --------- | ------------------- | ----------------------------------------- |
-| `global`  | `~/.claude/skills/` | `~/.gemini/antigravity/global_workflows/` |
-| `project` | `.claude/skills/`   | `.agent/workflows/`                       |
-
-#### Workflow catalog
-
-| Preset               | Workflow           | Description                                                                                                |
-| -------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
-| `spec-driven-change` | Spec-driven Change | Propose → apply → archive — full SDD lifecycle with formal spec deltas, branch creation, and merge cleanup |
-| `bug-fix`            | Bug Fix            | Reproduce → diagnose → fix → test → PR                                                                     |
-| `release-cycle`      | Release Cycle      | Version bump → changelog → tag → deploy                                                                    |
-| `all`                | All workflows      | All workflow presets combined                                                                              |
+> The SDD lifecycle ships under both standards — `spec-kit` (the default) and `openspec`. The standard is a _selection_, not a packaging primitive: both deliver the same recipe content as skills (ADR-0011 / ADR-0015).
 
 #### Spec-driven Change: the philosophy
 
-`spec-driven-change` is the recommended workflow for adding features and making non-trivial changes. It implements **Spec-Driven Development (SDD)**: a methodology where formal planning artifacts precede code, and where every change to the system is a tracked, reviewable evolution of specifications — not just a code diff.
+The SDD lifecycle (`spec-kit` / `openspec`) is the recommended recipe for adding features and making non-trivial changes. It implements **Spec-Driven Development (SDD)**: a methodology where formal planning artifacts precede code, and where every change to the system is a tracked, reviewable evolution of specifications — not just a code diff. The OpenSpec flavor (`/spec-propose → /spec-apply → /spec-archive`) is shown below; the Spec-Kit flavor (`/speckit-specify → … → /speckit-analyze`) follows the same intent-first discipline.
 
 **The problem with chat-driven AI development:**
 
@@ -649,14 +612,13 @@ $ /spec-archive add-2fa
 #### How it fits with the rest of Codify
 
 ```
-codify generate ─────▶ AGENTS.md, CONTEXT.md       (project memory)
-codify spec ─────────▶ specs/<feature>/spec.md...  (Spec-Kit specs, default)
-codify workflows ────▶ /spec-propose, /spec-apply, /spec-archive
-  --preset spec-                                   (SDD lifecycle skills)
-  driven-change
+codify generate ─────────────▶ AGENTS.md, CONTEXT.md       (project memory)
+codify spec ─────────────────▶ specs/<feature>/spec.md...  (Spec-Kit specs, default)
+codify catalog --type skill ─▶ /spec-propose, /spec-apply, /spec-archive
+  --package openspec                                       (SDD lifecycle skills)
 ```
 
-`generate` and `spec` create the **initial state**. `spec-driven-change` workflow then governs **every subsequent change**, keeping the system's specs in lockstep with its code.
+`generate` and `spec` create the **initial state**. The SDD lifecycle skills then govern **every subsequent change**, keeping the system's specs in lockstep with its code.
 
 #### Adopting SDD on an existing codebase
 
@@ -665,9 +627,8 @@ For brownfield projects (mature codebases without formal specs), the adoption pa
 ```
 1. codify analyze ./my-project           → AGENTS.md, CONTEXT.md, ... (factual context from scan)
 2. openspec init                         → empty openspec/ workspace
-3. codify workflows                      → /spec-propose, /spec-apply, /spec-archive
-     --preset spec-driven-change
-     --target claude --install project
+3. codify catalog --type skill           → /spec-propose, /spec-apply, /spec-archive
+     --package openspec --scope project
 4. From your agent, prompt:
    "Read AGENTS.md and CONTEXT.md, then reverse-engineer OpenSpec specs
     from the source code under a change named 'baseline'. Identify
@@ -677,59 +638,46 @@ For brownfield projects (mature codebases without formal specs), the adoption pa
 5. /spec-archive baseline                → consolidate baseline specs into openspec/specs/
 ```
 
-This pattern (the [OpenSpec retrofitting mode](https://openspec.dev/)) produces **factual** specs validated against existing code rather than projections from a description. After the baseline is archived, every new change goes through the standard `/spec-propose → /spec-apply → /spec-archive` lifecycle. Codify's role here is to provide the context (`analyze`) and the lifecycle skills (`workflows --preset spec-driven-change`); the baseline retrofit itself is a one-shot prompt against your agent, not a separate Codify command — keeping responsibilities clean and avoiding overlap with OpenSpec's tooling.
+This pattern (the [OpenSpec retrofitting mode](https://openspec.dev/)) produces **factual** specs validated against existing code rather than projections from a description. After the baseline is archived, every new change goes through the standard `/spec-propose → /spec-apply → /spec-archive` lifecycle. Codify's role here is to provide the context (`analyze`) and the lifecycle skills (`catalog --type skill --package openspec`); the baseline retrofit itself is a one-shot prompt against your agent, not a separate Codify command — keeping responsibilities clean and avoiding overlap with OpenSpec's tooling.
 
 #### OpenSpec compatibility
 
-The output structure (`openspec/specs/`, `openspec/changes/`, delta format with ADDED/MODIFIED/REMOVED, GIVEN/WHEN/THEN scenarios) follows the [OpenSpec](https://openspec.dev/) convention. Skills generated by Codify are designed to operate on OpenSpec workspaces seamlessly.
+The output structure (`openspec/specs/`, `openspec/changes/`, delta format with ADDED/MODIFIED/REMOVED, GIVEN/WHEN/THEN scenarios) follows the [OpenSpec](https://openspec.dev/) convention. The lifecycle skills Codify installs are designed to operate on OpenSpec workspaces seamlessly.
 
 **Codify's value-add over installing OpenSpec directly:**
 
-- **Multi-target**: same SDD methodology delivered for Claude Code or Antigravity
-- **Locale support**: English and Spanish skills out of the box
+- **Multi-target**: same SDD methodology delivered as native skills for Claude Code or Antigravity
+- **Curated, production-ready content**: the recipes ship with embedded examples, not scaffolding
 - **Integrated pipeline**: combined with `codify generate` + `codify spec`, you get end-to-end SDD bootstrap
 
-#### Skills vs Workflows
+#### Ordinary skills vs lifecycle recipes
 
-|                | Skills                                        | Workflows                                                                 |
+Both live in the same `codify catalog` skills surface; the difference is scope and how the agent invokes them:
+
+|                | Ordinary skills                               | Lifecycle recipes (`lifecycle` category)                                  |
 | -------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
 | **Purpose**    | Teach _how_ to do a specific task             | Orchestrate a _sequence_ of tasks                                         |
 | **Scope**      | Single concern (e.g., "write a commit")       | End-to-end process (e.g., "evolve a spec from proposal to merged change") |
-| **Invocation** | Agent reads when relevant                     | User invokes via `/command`                                               |
-| **Examples**   | Conventional Commits, DDD entity, code review | Spec-driven change lifecycle, bug fix, release cycle                      |
+| **Invocation** | Agent reads when relevant                     | User invokes via `/command` (`disable-model-invocation: true`)            |
+| **Examples**   | Conventional Commits, DDD entity, code review | SDD lifecycle (spec-kit / openspec), bug fix, release cycle               |
 
-#### Options
-
-```bash
-codify workflows [flags]
-```
-
-| Flag            | Description                                 | Default         |
-| --------------- | ------------------------------------------- | --------------- |
-| `--preset` `-p` | Workflow preset                             | _(interactive)_ |
-| `--target`      | Target ecosystem: `claude` or `antigravity` | `antigravity`   |
-| `--mode`        | Generation mode: `static` or `personalized` | _(interactive)_ |
-| `--install`     | Install scope: `global` or `project`        | _(interactive)_ |
-| `--context`     | Project description for personalized mode   | —               |
-| `--model` `-m`  | LLM model (personalized mode only)          | auto-detected   |
-| `--locale`      | Output language (`en`, `es`)                | `en`            |
-| `--output` `-o` | Output directory (overrides `--install`)    | target-specific |
+Both install the same way — see [Agent Skills → Options (`codify catalog`, skill type)](#-agent-skills). Lifecycle recipes use the package IDs from the [lifecycle recipe catalog](#lifecycle-recipe-catalog) above (`spec-kit`, `openspec`, `bug-fix`, `release-cycle`).
 
 ---
 
 ### 🪝 Hooks
 
-Hooks are **deterministic guardrails** for Claude Code. Where skills (prompts) and workflows (orchestration) rely on the LLM doing the right thing, hooks are shell scripts that **always** run on lifecycle events (`PreToolUse`, `PostToolUse`, etc.) — they enforce rules every single time, by exit code.
+Hooks are **deterministic guardrails** for Claude Code. Where skills (prompts, including the lifecycle recipes) rely on the LLM doing the right thing, hooks are shell scripts that **always** run on lifecycle events (`PreToolUse`, `PostToolUse`, etc.) — they enforce rules every single time, by exit code.
 
 Hooks install through **`codify catalog`** (the unified packages surface). They are catalog-driven (no LLM personalization) and English-only by design.
 
-The three artifact layers complement each other:
+The artifact layers complement each other:
 
-| Layer         | Mechanism                  | When does it run?              | Determinism       |
-| ------------- | -------------------------- | ------------------------------ | ----------------- |
-| **Skills**    | Prompt loaded into context | When agent or user invokes     | Depends on LLM    |
-| **Workflows** | Multi-skill lifecycle      | User invokes via slash command | Depends on LLM    |
-| **Hooks**     | Shell scripts on events    | Every matching tool call       | 100% (exit codes) |
+| Layer                 | Mechanism                                                   | When does it run?              | Determinism       |
+| --------------------- | ----------------------------------------------------------- | ------------------------------ | ----------------- |
+| **Skills**            | Prompt loaded into context                                  | When agent or user invokes     | Depends on LLM    |
+| **Lifecycle recipes** | Multi-skill lifecycle (a `lifecycle`-category skill bundle) | User invokes via slash command | Depends on LLM    |
+| **Hooks**             | Shell scripts on events                                     | Every matching tool call       | 100% (exit codes) |
 
 #### Preset catalog
 
@@ -971,7 +919,7 @@ Recognized commit types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `te
 
 #### `codify usage` — LLM cost transparency
 
-Every successful and failed LLM call (from `generate`, `analyze`, `update`, `spec`, `skills`, `workflows`, etc.) is automatically recorded with token counts and cost. Read the log with:
+Every successful and failed LLM call (from `generate`, `analyze`, `update`, `spec`, etc.) is automatically recorded with token counts and cost. Read the log with:
 
 ```bash
 codify usage                       # current project's spending
@@ -1299,16 +1247,15 @@ codex mcp add codify -- codify serve
 
 #### Generative tools (require LLM API key)
 
-| Tool                 | Description                                                                                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `generate_context`   | Generate context files from a project description                                                                                                                  |
-| `generate_specs`     | Generate SDD specs from existing context files                                                                                                                     |
-| `analyze_project`    | Scan an existing project and generate context from its structure                                                                                                   |
-| `generate_skills`    | Deliver curated Agent Skills (multi-file: SKILL.md + reference/examples). Instant, offline — no API key                                                            |
-| `generate_workflows` | Generate workflow files for Claude Code (native skills) or Antigravity (native .md) — supports `static` and `personalized` modes                                   |
-| `generate_hooks`     | Generate Claude Code hook bundles (deterministic guardrails). Static-only, Claude-only. Outputs `hooks.json` + `.sh` scripts for manual merge into `settings.json` |
+| Tool               | Description                                                                                                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `generate_context` | Generate context files from a project description                                                                                                                                        |
+| `generate_specs`   | Generate SDD specs from existing context files                                                                                                                                           |
+| `analyze_project`  | Scan an existing project and generate context from its structure                                                                                                                         |
+| `generate_skills`  | Deliver curated Agent Skills (multi-file: SKILL.md + reference/examples), including the `lifecycle` category (bug-fix, release-cycle, spec-kit, openspec). Instant, offline — no API key |
+| `generate_hooks`   | Generate Claude Code hook bundles (deterministic guardrails). Static-only, Claude-only. Outputs `hooks.json` + `.sh` scripts for manual merge into `settings.json`                       |
 
-All generative tools support `locale` (`en`/`es`) and `model` parameters. `generate_context` and `analyze_project` also accept `with_specs` (and `sdd_standard`). `generate_specs` accepts `from_context`, `output` (defaults to `from_context`), and `sdd_standard` (`spec-kit`/`openspec`) — full parity with the `codify spec` CLI. `generate_skills` accepts `mode`, `category`, `preset`, `target`, and `project_context`. `generate_workflows` accepts `mode`, `preset`, `target` (`claude`/`antigravity`), and `project_context`. `generate_hooks` accepts `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) and `output` — no model, context, or locale (hooks are English-only, static-only).
+All generative tools support `locale` (`en`/`es`) and `model` parameters (skills and hooks are English-only and ignore `locale`). `generate_context` and `analyze_project` also accept `with_specs` (and `sdd_standard`). `generate_specs` accepts `from_context`, `output` (defaults to `from_context`), and `sdd_standard` (`spec-kit`/`openspec`) — full parity with the `codify spec` CLI. `generate_skills` accepts `category` (including `lifecycle`), `preset`, and `target` (`claude`/`antigravity`) — static-only, no API key. `generate_hooks` accepts `preset` (`linting`/`security-guardrails`/`convention-enforcement`/`all`) and `output` — no model, context, or locale (hooks are English-only, static-only). The lifecycle recipes that were the removed `generate_workflows` tool are now obtained via `generate_skills` with `category=lifecycle` (ADR-0015).
 
 #### Read-only tools (no API key needed)
 
@@ -1332,11 +1279,11 @@ Knowledge tools inject behavioral context into the calling agent — the agent r
 "Generate convention skills for my project"
 → Agent calls generate_skills with category=conventions, preset=all
 
-"Generate spec-driven-change workflow for Claude Code"
-→ Agent calls generate_workflows with target=claude, preset=spec-driven-change, mode=static
+"Install the SDD lifecycle recipe for Claude Code"
+→ Agent calls generate_skills with category=lifecycle, preset=spec-kit, target=claude
 
-"Generate all workflows adapted to my Go project with GitHub Actions"
-→ Agent calls generate_workflows with target=claude, mode=personalized, preset=all, project_context="Go with GitHub Actions"
+"Give me the bug-fix and release-cycle lifecycle recipes"
+→ Agent calls generate_skills with category=lifecycle, preset=all, target=claude
 
 "Generate Claude Code hooks to block dangerous commands and enforce conventional commits"
 → Agent calls generate_hooks with preset=all (or security-guardrails + convention-enforcement)
@@ -1462,8 +1409,8 @@ codify config set preset neutral     # to adopt v2.0 default
 ### What did NOT change
 
 - All targets remain supported: `claude`, `codex`, `antigravity` (per [ADR-009](docs/adr/0009-antigravity-deprecation-reversal.md), reversing the v1.26 deprecation plan)
-- All commands work identically — `generate`, `analyze`, `spec`, `skills`, `workflows`, `hooks`, `config`, `init`, `check`, `update`, `audit`, `usage`, `watch`, `reset-state`
-- All other flags, all output formats, all MCP tools (10 total)
+- All commands work identically — `generate`, `analyze`, `spec`, `catalog` (skills incl. lifecycle, hooks, plugins), `config`, `init`, `check`, `update`, `audit`, `usage`, `watch`, `reset-state`
+- All other flags, all output formats, all MCP tools (9 total)
 - Config schema, state.json schema, usage.json schema — unchanged
 - Pricing table version, locale options, language options — unchanged
 
@@ -1477,12 +1424,12 @@ Built in Go with what it preaches — DDD/Clean Architecture:
 internal/
 ├── domain/              💎 Pure business logic
 │   ├── project/         Project entity (aggregate root)
-│   ├── catalog/         Declarative skill + workflow catalogs and metadata registries
+│   ├── catalog/         Declarative skill catalogs (incl. the lifecycle category) and metadata registries
 │   ├── shared/          Value objects, domain errors
 │   └── service/         Interfaces: LLMProvider, FileWriter, TemplateLoader
 │
 ├── application/         🔄 Use cases (CQRS)
-│   ├── command/         GenerateContext, GenerateSpec, GenerateSkills, GenerateWorkflows
+│   ├── command/         GenerateContext, GenerateSpec, GenerateSkills
 │   └── query/           ListProjects
 │
 ├── infrastructure/      🔧 Implementations
@@ -1492,8 +1439,8 @@ internal/
 │   └── filesystem/      File writer, directory manager, context reader
 │
 └── interfaces/          🎯 Entry points
-    ├── cli/commands/    generate, analyze, spec, skills, workflows, serve, list
-    └── mcp/             MCP server (stdio + HTTP transport, 10 tools)
+    ├── cli/commands/    generate, analyze, spec, catalog, serve, list
+    └── mcp/             MCP server (stdio + HTTP transport, 9 tools)
 ```
 
 ### Template system
@@ -1517,19 +1464,14 @@ templates/
 │   │   ├── spec.template
 │   │   ├── plan.template
 │   │   └── tasks.template
-│   ├── skills/                  Agent Skills templates (static + LLM guides)
+│   ├── skills/                  Agent Skills templates (static, English-only)
 │   │   ├── neutral/             Architecture: review, testing, API design, refactoring
 │   │   ├── clean-ddd/           Architecture: DDD entity, layer, BDD, CQRS, Hexagonal port
 │   │   ├── hexagonal/           Architecture: port, adapter, dependency inversion, integration test
 │   │   ├── event-driven/        Architecture: command handler, domain event, projection, saga, idempotency
 │   │   ├── testing/             Testing: Foundational, TDD, BDD
-│   │   └── conventions/         Conventions (conventional commits, semver)
-│   ├── workflows/              Workflow templates
-│   │   ├── bug_fix.template
-│   │   ├── release_cycle.template
-│   │   ├── spec_propose.template
-│   │   ├── spec_apply.template
-│   │   └── spec_archive.template
+│   │   ├── conventions/         Conventions (conventional commits, semver)
+│   │   └── lifecycle/           Lifecycle recipes: bug-fix, release-cycle, spec-kit, openspec (ADR-0015)
 │   ├── hooks/                  Hook bundle templates
 │   │   ├── linting/
 │   │   ├── security-guardrails/
@@ -1572,9 +1514,9 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 **Behavior layer**
 
 - ✅ `catalog` — unified install surface for **skills + hooks** (ADR-0010). Interactive wizard, `--list` browsing with source badges + installed markers, non-interactive `--type/--package/--scope`. Claude ecosystem (others return later)
-- ✅ `skills` (via catalog) — architecture (neutral/clean-ddd/hexagonal/event-driven) + testing + conventions; curated multi-file skills (SKILL.md + reference.md + examples.md), static-only since v4.0.0
+- ✅ `skills` (via catalog) — architecture (neutral/clean-ddd/hexagonal/event-driven) + testing + conventions + **lifecycle** (bug-fix, release-cycle, spec-kit, openspec); curated multi-file skills (SKILL.md + reference.md + examples.md), static-only and English-only since v4.0.0
 - ✅ `hooks` (via catalog) — linting, security-guardrails, convention-enforcement; auto-install with settings.json backup + idempotent merge
-- ✅ `workflows` — spec-driven-change, bug-fix, release-cycle; static + personalized; claude (native skills) + antigravity (native annotations)
+- ✅ lifecycle recipes (the `lifecycle` skills category) — installed as native skills on Claude **and** Antigravity; the standalone `workflows` command and the Antigravity annotated-workflow format were removed in v4.0.0 (ADR-0015)
 
 **Bootstrap layer**
 
@@ -1593,7 +1535,7 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 
 **MCP server**
 
-- ✅ 10 tools: 7 generative (context/specs/analyze/skills/workflows/hooks/usage) + 3 read-only (commit_guidance/version_guidance/get_usage)
+- ✅ 9 tools: 6 generative (context/specs/analyze/skills/hooks/usage) + 3 read-only (commit_guidance/version_guidance/get_usage)
 - ✅ stdio + HTTP transports; parameter enums for stricter agent validation; no API key needed for read-only tools
 
 **Distribution**
@@ -1633,23 +1575,23 @@ You can create your own presets in `templates/<locale>/`. Each preset needs 4 fi
 **Which agents support the generated files?**
 Any agent compatible with the [AGENTS.md](https://github.com/anthropics/AGENTS.md) standard: Claude Code, Cursor, GitHub Copilot Workspace, Codex, and more.
 
-**What's the difference between Skills and Workflows?**
-Skills teach your agent _how_ to do a single task (e.g., write a commit message, design a DDD entity). Workflows orchestrate a _sequence_ of tasks into an end-to-end process (e.g., the full feature development lifecycle from branch to PR merge). Skills are passive (read when relevant), workflows are active (invoked via `/command`).
+**What's the difference between ordinary skills and lifecycle recipes?**
+Ordinary skills teach your agent _how_ to do a single task (e.g., write a commit message, design a DDD entity). Lifecycle recipes — the `lifecycle` skills category — orchestrate a _sequence_ of tasks into an end-to-end process (e.g., the full SDD lifecycle from proposal to merged change). Ordinary skills are passive (read when relevant); lifecycle recipes are active (invoked via `/command`, with `disable-model-invocation: true`). Both install through `codify catalog`.
 
-**Do I need an API key for workflows?**
-Only for personalized mode. Static mode delivers pre-built workflows instantly — no LLM, no API key, no cost.
+**Do I need an API key for lifecycle recipes?**
+No. Like all skills, the lifecycle recipes are static, English-only, curated content delivered instantly — no LLM, no API key, no cost.
 
-**Which ecosystems support workflows?**
-Claude Code (`--target claude`) and Antigravity (`--target antigravity`). Claude workflows generate native skills (`SKILL.md` with frontmatter) following the official Claude Code skills methodology. Antigravity workflows produce native `.md` files with execution annotations (`// turbo`, `// capture`, etc.).
+**Which ecosystems support lifecycle recipes?**
+Claude Code and Antigravity — both install them as native skills (`SKILL.md` with frontmatter). As of v4.0.0 the `codify workflows` command, the MCP `generate_workflows` tool, and the old Antigravity annotated-workflow format (`// turbo`, `// capture`, …) were removed; Antigravity 2.0 converged on Claude's skills/hooks/plugins model (ADR-0015).
 
 **What's AI Spec-Driven Development?**
-A methodology where you generate context and specifications _before_ writing code. Your agent implements a spec, not an improvisation. `generate` creates the blueprint, `spec` creates the implementation plan, and the `spec-driven-change` workflow governs every subsequent change as a tracked spec evolution (propose → apply → archive) with formal deltas, isolated change workspaces, and audit trails.
+A methodology where you generate context and specifications _before_ writing code. Your agent implements a spec, not an improvisation. `generate` creates the blueprint, `spec` creates the implementation plan, and the SDD lifecycle recipe (the `spec-kit` / `openspec` package in the `lifecycle` skills category) governs every subsequent change as a tracked spec evolution (propose → apply → archive) with formal deltas, isolated change workspaces, and audit trails.
 
 **Why three phases (propose / apply / archive) instead of one workflow?**
 Each phase is a different cognitive mode. _Propose_ answers "what should change and why?" without writing code — the LLM stays focused on intent. _Apply_ answers "how to make it real?" with the deltas already approved, eliminating spec ambiguity from the implementation context. _Archive_ closes the loop deterministically: merge deltas into source-of-truth specs, archive the change for audit, merge the branch. Mixing these phases dilutes attention and produces vague plans + sloppy code.
 
 **Does Codify replace OpenSpec?**
-No — it complements it. The `spec-driven-change` preset generates skills that operate on OpenSpec-format workspaces (`openspec/specs/`, `openspec/changes/`, ADDED/MODIFIED/REMOVED deltas with G/W/T scenarios). If you already use OpenSpec, Codify gives you LLM-personalized lifecycle skills tailored to your stack. If you don't, Codify is your zero-config entry point to the methodology — combined with `codify generate` and `codify spec`, you get the full pipeline from blank repo to governed iteration.
+No — it complements it. The `openspec` lifecycle recipe installs skills that operate on OpenSpec-format workspaces (`openspec/specs/`, `openspec/changes/`, ADDED/MODIFIED/REMOVED deltas with G/W/T scenarios). If you already use OpenSpec, Codify gives you curated lifecycle skills that drive the workflow. If you don't, Codify is your zero-config entry point to the methodology — combined with `codify generate` and `codify spec`, you get the full pipeline from blank repo to governed iteration.
 
 ## 🆘 Troubleshooting
 
@@ -1686,7 +1628,7 @@ Apache License 2.0 — see [LICENSE](LICENSE).
 
 <div align="center">
 
-**Context. Specs. Skills. Workflows. Hooks. Lifecycle. Your agent, fully equipped — and kept honest.** 🧠
+**Context. Specs. Skills. Hooks. Lifecycle. Your agent, fully equipped — and kept honest.** 🧠
 
 _"An agent without context is an intern with root access — and stale context is an intern reading three-week-old docs"_
 

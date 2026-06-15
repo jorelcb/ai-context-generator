@@ -43,9 +43,9 @@ What you'll see:
 Codify · Bootstrap (workstation)
 ════════════════════════════════
 ? Default target ecosystem
-> Claude Code (recommended — full support: skills, workflows, hooks)
+> Claude Code (recommended — full support: skills, hooks, plugins)
   Codex (skills only)
-  Antigravity (skills + workflows)
+  Antigravity (skills + hooks)
 
 ? Default model: claude-sonnet-4-6
 ? Default locale: en
@@ -54,7 +54,6 @@ Codify · Bootstrap (workstation)
 ✓ Saved /Users/<you>/.codify/config.yml
 
 ? Install global skills now? [y/N] N   (default: skip — you can do it later)
-? Install global workflows now? [y/N] N
 ? Install global hooks now? [y/N] N
 
 ✓ Workstation defaults saved.
@@ -122,8 +121,7 @@ Next steps
 
 Equip (when you need more agent equipment):
   codify spec       Generate SDD specification files from this context
-  codify catalog    Browse & install skills, hooks, and plugins
-  codify workflows  Re-run the interactive workflows installer
+  codify catalog    Browse & install skills (incl. lifecycle recipes), hooks, and plugins
 
 Maintain (as your project evolves):
   codify check      Detect drift between artifacts and current project state
@@ -155,11 +153,9 @@ After bootstrap, equip the project with the layers you actually need. Each comma
 # SDD specification files (Spec-Kit default: specs/<feature>/ + .specify/memory/constitution.md)
 codify spec payments-api --from-context ./output/payments-api/
 
-# Reusable agent skills (architecture, testing, conventions)
+# Reusable agent skills — architecture, testing, conventions, and
+# lifecycle recipes (bug-fix, release-cycle, spec-kit, openspec)
 codify catalog --type skill
-
-# Multi-step workflow recipes (bug-fix, release-cycle, spec-driven-change)
-codify workflows
 
 # Deterministic guardrails on Claude Code lifecycle events
 codify catalog --type hook
@@ -209,9 +205,9 @@ export ANTHROPIC_API_KEY="sk-ant-..."   # for Claude (default)
 export GEMINI_API_KEY="AI..."           # for Gemini
 ```
 
-| No API key required                                                                                                                                                 | API key required                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `config`, `init` (existing scan), `check`, `reset-state`, `audit` (rules-only), `usage`, `catalog` (static skills/hooks), `workflows` (static), MCP read-only tools | `generate`, `analyze`, `spec`, `catalog --mode personalized`, `workflows --mode personalized`, `update`, `audit --with-llm` |
+| No API key required                                                                                                                    | API key required                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `config`, `init` (existing scan), `check`, `reset-state`, `audit` (rules-only), `usage`, `catalog` (skills/hooks), MCP read-only tools | `generate`, `analyze`, `spec`, `update`, `audit --with-llm` |
 
 ---
 
