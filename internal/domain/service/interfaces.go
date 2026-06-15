@@ -115,7 +115,18 @@ type EvaluationRequest struct {
 	// (Anthropic) prepend the prefill back to the returned Text; providers
 	// that do not (Gemini) ignore the field, so callers must keep their
 	// defensive parsing. Must not end in whitespace (the API rejects it).
+	// Ignored when OutputSchema is set (the two are mutually exclusive).
 	Prefill string
+
+	// OutputSchema, when non-nil, constrains the response to this JSON Schema
+	// via the provider's native structured-output feature (Anthropic
+	// output_config.format; Gemini responseSchema + responseMimeType). The
+	// returned Text is then guaranteed to be schema-valid JSON, so callers can
+	// json.Unmarshal it directly. The schema's top level must be an object.
+	// Requires a model that supports structured outputs (codify's default
+	// claude-sonnet-4-6 does); unsupported models surface an explicit API
+	// error rather than degrading silently.
+	OutputSchema map[string]any
 }
 
 // EvaluationResponse contains the raw text output of a one-shot prompt

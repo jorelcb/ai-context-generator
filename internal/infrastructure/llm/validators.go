@@ -88,7 +88,48 @@ func ValidateOutput(content, mode, fileName string) ValidationResult {
 		result.Warnings = append(result.Warnings, "output suspiciously short (< 200 chars) — possible truncation or stub")
 	}
 
+	// 6. Size guards (Track 5.3): a context file a consuming agent loads in full
+	//    must earn every line. Past these thresholds adherence drops ("context
+	//    rot") and the file should be split into linked modules. Limits follow
+	//    the 2026 guidance: CLAUDE.md ≤ 200 lines (Claude Code's documented cap),
+	//    AGENTS.md ≤ 500, SKILL.md ≤ 500 (Agent Skills spec).
+	if limit := lineLimitFor(fileName); limit > 0 {
+		if n := lineCount(content); n > limit {
+			result.Warnings = append(result.Warnings, fmt.Sprintf(
+				"%s is %d lines — over the %d-line budget; split detail into linked modules so the agent loads less context",
+				fileName, n, limit))
+		}
+	}
+
 	return result
+}
+
+// lineLimitFor returns the recommended max line count for a known generated
+// file, or 0 when the file has no budget. Keyed by base name so it applies
+// regardless of the directory the file lands in.
+func lineLimitFor(fileName string) int {
+	switch {
+	case strings.EqualFold(fileName, "CLAUDE.md"):
+		return 200
+	case strings.EqualFold(fileName, "AGENTS.md"):
+		return 500
+	case strings.EqualFold(fileName, "SKILL.md"):
+		return 500
+	default:
+		return 0
+	}
+}
+
+// lineCount counts lines in content (1 for a non-empty unterminated last line).
+func lineCount(content string) int {
+	if content == "" {
+		return 0
+	}
+	n := strings.Count(content, "\n")
+	if !strings.HasSuffix(content, "\n") {
+		n++
+	}
+	return n
 }
 
 // emitValidationFeedback writes a short summary of validation findings to

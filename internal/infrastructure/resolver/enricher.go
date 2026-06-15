@@ -46,17 +46,15 @@ const enrichmentSystemPrompt = `You translate technical [DEFINE: ...] placeholde
 - An optional default that must be one of the suggestions, OR empty when no suggestion is defensible.
 - A brief rationale (one sentence) explaining why those suggestions, citing what in the file implies them.
 
-Return ONLY a JSON array. No prose, no markdown fences. Schema:
+Return a JSON object with a single key "findings" whose value is an array of objects, one per placeholder. Each object:
 
-[
-  {
-    "marker_text": "<exact marker as it appears in the file, e.g. [DEFINE: ISO 4217 code]>",
-    "question": "<natural-language question in the target locale>",
-    "suggestions": ["<short value 1>", "<short value 2>"],
-    "default": "<one of suggestions, or empty string>",
-    "rationale": "<one short sentence>"
-  }
-]
+{
+  "marker_text": "<exact marker as it appears in the file, e.g. [DEFINE: ISO 4217 code]>",
+  "question": "<natural-language question in the target locale>",
+  "suggestions": ["<short value 1>", "<short value 2>"],
+  "default": "<one of suggestions, or empty string>",
+  "rationale": "<one short sentence>"
+}
 
 CRITICAL anti-hallucination rules:
 - If you cannot infer suggestions safely, return suggestions=[] and default="". An empty list is correct — better than an invented list.
@@ -75,8 +73,42 @@ type llmFinding struct {
 }
 
 // fenceRE strips markdown fences some models still wrap responses in despite
-// the system prompt. Best-effort cleanup before json.Unmarshal.
+// the system prompt. Defensive cleanup before json.Unmarshal — with native
+// structured output (enrichmentSchema) the response is already fence-free JSON,
+// but this stays as a cheap fallback for providers/models that don't honor it.
 var fenceRE = regexp.MustCompile("(?s)\\A\\s*```(?:json)?\\s*\\n?|\\n?\\s*```\\s*\\z")
+
+// enrichmentSchema is the JSON Schema handed to the provider's structured-output
+// feature so the response is guaranteed to be {"findings": [...]}. Mirrors
+// llmFinding 1:1; any change here must update the prompt and the struct.
+var enrichmentSchema = map[string]any{
+	"type":                 "object",
+	"additionalProperties": false,
+	"required":             []string{"findings"},
+	"properties": map[string]any{
+		"findings": map[string]any{
+			"type": "array",
+			"items": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"required":             []string{"marker_text", "question", "suggestions", "default", "rationale"},
+				"properties": map[string]any{
+					"marker_text": map[string]any{"type": "string"},
+					"question":    map[string]any{"type": "string"},
+					"suggestions": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
+					"default":     map[string]any{"type": "string"},
+					"rationale":   map[string]any{"type": "string"},
+				},
+			},
+		},
+	},
+}
+
+// enrichmentEnvelope is the {"findings": [...]} wrapper the structured-output
+// schema produces (the API's top-level schema must be an object).
+type enrichmentEnvelope struct {
+	Findings []llmFinding `json:"findings"`
+}
 
 // Enrich calls the LLM and returns one EnrichedMarker per input hit. When
 // the LLM omits a marker from its response (or returns invalid JSON), the
@@ -107,21 +139,25 @@ func (e *LLMEnricher) Enrich(
 			Command:         "resolve-enrich",
 			MaxTokens:       4096,
 			CacheableSystem: true,
-			Prefill:         "[",
+			OutputSchema:    enrichmentSchema,
 		})
 		if err != nil {
 			return enrichFallback(hits), fmt.Errorf("enrichment provider call failed: %w", err)
 		}
 
+		// Structured output guarantees a {"findings": [...]} object; the fence
+		// strip is a defensive fallback for providers/models that don't honor it.
 		cleaned := strings.TrimSpace(fenceRE.ReplaceAllString(resp.Text, ""))
-		if err := json.Unmarshal([]byte(cleaned), &findings); err != nil {
+		var env enrichmentEnvelope
+		if err := json.Unmarshal([]byte(cleaned), &env); err != nil {
 			parseErr = fmt.Errorf("enrichment response is not valid JSON: %w (response snippet: %q)", err, snippet(cleaned, 200))
 			prompt = userPrompt + fmt.Sprintf(
-				"\n\n<previous_error>\nYour previous response was not valid JSON: %v\nReturn ONLY the JSON array described in the system prompt — no prose, no fences.\n</previous_error>\n",
+				"\n\n<previous_error>\nYour previous response was not valid JSON: %v\nReturn ONLY the JSON object {\"findings\": [...]} described in the system prompt — no prose, no fences.\n</previous_error>\n",
 				err,
 			)
 			continue
 		}
+		findings = env.Findings
 		parseErr = nil
 		break
 	}

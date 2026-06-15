@@ -30,7 +30,7 @@ func (f *fakeProvider) EvaluatePrompt(_ context.Context, req service.EvaluationR
 
 func TestEnrich_HappyPath_MapsFindingsToHits(t *testing.T) {
 	provider := &fakeProvider{
-		respText: `[
+		respText: `{"findings": [
   {
     "marker_text": "[DEFINE: ISO 4217 code]",
     "question": "¿Qué moneda usa la aplicación?",
@@ -38,7 +38,7 @@ func TestEnrich_HappyPath_MapsFindingsToHits(t *testing.T) {
     "default": "USD",
     "rationale": "El archivo menciona pagos internacionales."
   }
-]`,
+]}`,
 	}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{{Text: "[DEFINE: ISO 4217 code]", Line: 42}}
@@ -59,7 +59,7 @@ func TestEnrich_HappyPath_MapsFindingsToHits(t *testing.T) {
 }
 
 func TestEnrich_RequestUsesCacheableSystem(t *testing.T) {
-	provider := &fakeProvider{respText: "[]"}
+	provider := &fakeProvider{respText: `{"findings": []}`}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}
 
@@ -76,7 +76,7 @@ func TestEnrich_RequestUsesCacheableSystem(t *testing.T) {
 
 func TestEnrich_StripsMarkdownFences(t *testing.T) {
 	provider := &fakeProvider{
-		respText: "```json\n[{\"marker_text\":\"[DEFINE: x]\",\"question\":\"q\",\"suggestions\":[],\"default\":\"\",\"rationale\":\"\"}]\n```",
+		respText: "```json\n{\"findings\":[{\"marker_text\":\"[DEFINE: x]\",\"question\":\"q\",\"suggestions\":[],\"default\":\"\",\"rationale\":\"\"}]}\n```",
 	}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}
@@ -132,7 +132,7 @@ func (s *sequenceProvider) EvaluatePrompt(_ context.Context, req service.Evaluat
 func TestEnrich_InvalidJSON_RetriesOnceWithErrorFeedback(t *testing.T) {
 	provider := &sequenceProvider{responses: []string{
 		"sure! here is the JSON you asked for",
-		`[{"marker_text":"[DEFINE: x]","question":"q","suggestions":[],"default":"","rationale":""}]`,
+		`{"findings":[{"marker_text":"[DEFINE: x]","question":"q","suggestions":[],"default":"","rationale":""}]}`,
 	}}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}
@@ -152,16 +152,19 @@ func TestEnrich_InvalidJSON_RetriesOnceWithErrorFeedback(t *testing.T) {
 	}
 }
 
-func TestEnrich_RequestUsesJSONPrefill(t *testing.T) {
-	provider := &fakeProvider{respText: "[]"}
+func TestEnrich_RequestUsesStructuredOutput(t *testing.T) {
+	provider := &fakeProvider{respText: `{"findings": []}`}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}
 
 	if _, err := enricher.Enrich(context.Background(), "f.md", "c", "en", hits); err != nil {
 		t.Fatalf("Enrich: %v", err)
 	}
-	if provider.captured.Prefill != "[" {
-		t.Errorf("enrichment should prefill the assistant turn with [ to force a bare JSON array, got %q", provider.captured.Prefill)
+	if provider.captured.OutputSchema == nil {
+		t.Error("enrichment should set OutputSchema so the response is guaranteed structured JSON")
+	}
+	if provider.captured.Prefill != "" {
+		t.Errorf("prefill must not be set alongside a schema (mutually exclusive), got %q", provider.captured.Prefill)
 	}
 }
 
@@ -181,7 +184,7 @@ func TestEnrich_ProviderError_FallsBackWithError(t *testing.T) {
 
 func TestEnrich_LLMOmitsMarker_GetsZeroValueEntry(t *testing.T) {
 	provider := &fakeProvider{
-		respText: `[{"marker_text":"[DEFINE: a]","question":"q","suggestions":["x"],"default":"","rationale":""}]`,
+		respText: `{"findings":[{"marker_text":"[DEFINE: a]","question":"q","suggestions":["x"],"default":"","rationale":""}]}`,
 	}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{
@@ -206,7 +209,7 @@ func TestEnrich_LLMOmitsMarker_GetsZeroValueEntry(t *testing.T) {
 
 func TestEnrich_FilterAppliesViaSanitizer(t *testing.T) {
 	provider := &fakeProvider{
-		respText: `[{"marker_text":"[DEFINE: x]","question":"q","suggestions":["valid","https://hallucinated.com"],"default":"","rationale":""}]`,
+		respText: `{"findings":[{"marker_text":"[DEFINE: x]","question":"q","suggestions":["valid","https://hallucinated.com"],"default":"","rationale":""}]}`,
 	}
 	enricher := NewLLMEnricher(provider)
 	hits := []service.MarkerHit{{Text: "[DEFINE: x]", Line: 1}}

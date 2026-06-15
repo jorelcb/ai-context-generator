@@ -211,6 +211,12 @@ func (p *GeminiProvider) EvaluatePrompt(ctx context.Context, req service.Evaluat
 		SystemInstruction: genai.NewContentFromText(req.SystemPrompt, genai.RoleUser),
 		MaxOutputTokens:   maxTokens,
 	}
+	if req.OutputSchema != nil {
+		// Native structured output: constrain the response to the JSON schema
+		// so the returned text is guaranteed valid JSON (no fences, no prose).
+		config.ResponseMIMEType = "application/json"
+		config.ResponseJsonSchema = req.OutputSchema
+	}
 
 	var textBuilder strings.Builder
 	var inTokens, outTokens int32
