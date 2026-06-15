@@ -24,10 +24,10 @@ Workstation has no `kind` axis — it is always a one-time setup of the develope
 
 ### Bootstrap phase (one-time)
 
-|                 | New (greenfield)                                                                                                                         | Existing (brownfield)                                                     |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **Workstation** | `codify config` — wizard for global defaults (target ecosystem, model, locale, preset) + opt-in install of global skills/workflows/hooks | (same — workstation setup is kind-agnostic)                               |
-| **Project**     | `codify init` → asks "new", routes to `generate` from a description; persists `.codify/config.yml` and `.codify/state.json`              | `codify init` → asks "existing", routes to `analyze` which scans the repo |
+|                 | New (greenfield)                                                                                                               | Existing (brownfield)                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| **Workstation** | `codify config` — wizard for global defaults (target ecosystem, model, locale, preset) + opt-in install of global skills/hooks | (same — workstation setup is kind-agnostic)                               |
+| **Project**     | `codify init` → asks "new", routes to `generate` from a description; persists `.codify/config.yml` and `.codify/state.json`    | `codify init` → asks "existing", routes to `analyze` which scans the repo |
 
 > `codify init` is a smart entry point. It asks `new vs existing` interactively and routes to the right pipeline. Use it instead of calling `generate`/`analyze` directly when you want the guided flow.
 
@@ -35,15 +35,14 @@ Workstation has no `kind` axis — it is always a one-time setup of the develope
 
 These commands install or generate AI agent equipment. They are not tied to a specific _kind_ once Bootstrap is done — the same command works for projects that started greenfield or brownfield.
 
-| Command            | Scope supported       | Purpose                                                                                                                                                                                                                                                                                                                                                             |
-| ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `codify generate`  | Project (new)         | Generate context from a description. Usually invoked indirectly by `init`.                                                                                                                                                                                                                                                                                          |
-| `codify analyze`   | Project (existing)    | Generate context by scanning the repo. Usually invoked indirectly by `init`.                                                                                                                                                                                                                                                                                        |
-| `codify spec`      | Project               | Generate SDD specification files from existing context (Spec-Kit default: specs/<feature>/spec.md/plan.md/tasks.md + .specify/memory/constitution.md; OpenSpec alt.).                                                                                                                                                                                                                                                                           |
-| `codify catalog`   | Workstation + Project | Browse & install ecosystem packages — skills, hooks, plugins. Interactive **rich selector** (tabs + tree + cross-tab checkboxes; reused by `init`/`config`, ADR-0013), or `--type/--package/--scope`. `--ecosystem claude\|antigravity`. `--apply` installs from the committable desired-state file; `--status`/`--sync`/`--uninstall` manage the install lockfile. |
-| `codify workflows` | Workstation + Project | Install workflow files (multi-step recipes). `--install global\|project`.                                                                                                                                                                                                                                                                                           |
+| Command           | Scope supported       | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `codify generate` | Project (new)         | Generate context from a description. Usually invoked indirectly by `init`.                                                                                                                                                                                                                                                                                                                                                                       |
+| `codify analyze`  | Project (existing)    | Generate context by scanning the repo. Usually invoked indirectly by `init`.                                                                                                                                                                                                                                                                                                                                                                     |
+| `codify spec`     | Project               | Generate SDD specification files from existing context (Spec-Kit default: specs/<feature>/spec.md/plan.md/tasks.md + .specify/memory/constitution.md; OpenSpec alt.).                                                                                                                                                                                                                                                                            |
+| `codify catalog`  | Workstation + Project | Browse & install ecosystem packages — skills (incl. the `lifecycle` category: bug-fix, release-cycle, spec-kit, openspec), hooks, plugins. Interactive **rich selector** (tabs + tree + cross-tab checkboxes; reused by `init`/`config`, ADR-0013), or `--type/--package/--scope`. `--ecosystem claude\|antigravity`. `--apply` installs from the committable desired-state file; `--status`/`--sync`/`--uninstall` manage the install lockfile. |
 
-> Track D (ADR-0010, shipped): the unified `codify catalog` command replaced the standalone `skills`/`hooks` commands. `workflows` stays standalone (lifecycle-coupled). Non-interactive flags remain available for automation.
+> Track D (ADR-0010, shipped): the unified `codify catalog` command replaced the standalone `skills`/`hooks` commands. The `codify workflows` command was **removed** in v4.0.0 (ADR-0015); its lifecycle recipes are now a `lifecycle` skills category installed through `codify catalog`. Non-interactive flags remain available for automation.
 
 ### Maintain phase (ongoing)
 
@@ -68,7 +67,7 @@ These commands operate on an already-bootstrapped project. They have no greenfie
 ```
 1. Bootstrap (workstation)   →  codify config
 2. Bootstrap (project)        →  codify init
-3. Equip (optional)           →  codify spec / skills / workflows / hooks
+3. Equip (optional)           →  codify spec / catalog (skills incl. lifecycle, hooks, plugins)
 4. Maintain (ongoing)         →  codify check / update / audit / watch / usage
 ```
 
@@ -83,7 +82,7 @@ These commands operate on an already-bootstrapped project. They have no greenfie
 
 ### CI / automation context (no TTY)
 
-Codify falls back to non-interactive flags when stdin is not a TTY. `codify config` is silently skipped (built-in defaults apply). Use the dedicated commands (`generate`, `analyze`, `skills --install ...`) with explicit flags. See `codify <command> --help` for the flag surface.
+Codify falls back to non-interactive flags when stdin is not a TTY. `codify config` is silently skipped (built-in defaults apply). Use the dedicated commands (`generate`, `analyze`, `catalog --type/--package/--scope ...`) with explicit flags. See `codify <command> --help` for the flag surface.
 
 ---
 
@@ -92,3 +91,4 @@ Codify falls back to non-interactive flags when stdin is not a TTY. `codify conf
 - `codify --help` — phase diagram and command listing grouped by phase.
 - ADR-0007 — naming and auto-launch rationale for the bootstrap commands.
 - ADR-0010 — the `catalog` command that consolidated the `skills`/`hooks` interactive surface (shipped).
+- ADR-0015 — folded `workflows` into `skills` (the `lifecycle` category); removed the `codify workflows` command.
