@@ -30,3 +30,6 @@ docs/adr/
 .codify/usage.json.bak.*
 **/.codify/usage.json
 **/.codify/usage.json.bak.*
+
+# Spec-Kit local scaffolding (extensions/integrations/scripts materialized per workstation)
+.specify/
