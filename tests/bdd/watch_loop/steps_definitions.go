@@ -10,7 +10,7 @@ import (
 
 	"github.com/cucumber/godog"
 
-	"github.com/jorelcb/codify/internal/infrastructure/watch"
+	"github.com/jorelcb/codify-og/internal/infrastructure/watch"
 )
 
 var featureContext = new(FeatureContext)

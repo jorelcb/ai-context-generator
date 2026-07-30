@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/jorelcb/codify/internal/interfaces/cli"
+	"github.com/jorelcb/codify-og/internal/interfaces/cli"
 )
 
 // Version information (will be set by build flags)

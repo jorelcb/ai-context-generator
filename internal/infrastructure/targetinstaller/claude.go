@@ -16,8 +16,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/infrastructure/settings"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/infrastructure/settings"
 )
 
 // Compile-time guard: ClaudeInstaller debe satisfacer el contrato

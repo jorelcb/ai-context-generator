@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 func TestAntigravitySkillSource_List_RestampsSkillsOnly(t *testing.T) {

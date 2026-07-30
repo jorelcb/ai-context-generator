@@ -9,10 +9,10 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
 
-	driftdomain "github.com/jorelcb/codify/internal/domain/drift"
-	infradrift "github.com/jorelcb/codify/internal/infrastructure/drift"
-	"github.com/jorelcb/codify/internal/infrastructure/snapshot"
-	"github.com/jorelcb/codify/tests/bdd/commons/assertions"
+	driftdomain "github.com/jorelcb/codify-og/internal/domain/drift"
+	infradrift "github.com/jorelcb/codify-og/internal/infrastructure/drift"
+	"github.com/jorelcb/codify-og/internal/infrastructure/snapshot"
+	"github.com/jorelcb/codify-og/tests/bdd/commons/assertions"
 )
 
 var featureContext = new(FeatureContext)

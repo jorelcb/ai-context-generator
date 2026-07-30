@@ -9,7 +9,7 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 const defaultModel = "claude-sonnet-4-6"

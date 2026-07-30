@@ -9,13 +9,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
-	"github.com/jorelcb/codify/internal/infrastructure/llm"
-	infratemplate "github.com/jorelcb/codify/internal/infrastructure/template"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/filesystem"
+	"github.com/jorelcb/codify-og/internal/infrastructure/llm"
+	infratemplate "github.com/jorelcb/codify-og/internal/infrastructure/template"
 )
 
 const defaultLocale = "en"

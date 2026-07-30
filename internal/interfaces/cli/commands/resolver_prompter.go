@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // TUIPrompter implements service.InteractivePrompter using the bubbletea

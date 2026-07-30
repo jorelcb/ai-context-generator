@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // writePackage creates <root>/<id>/ with a manifest + the given content files.

@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	domain "github.com/jorelcb/codify/internal/domain/audit"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
 )
 
 // validCommitTypes son los types reconocidos por Conventional Commits 1.0.0

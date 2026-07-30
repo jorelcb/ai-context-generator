@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	driftdomain "github.com/jorelcb/codify/internal/domain/drift"
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
-	infradrift "github.com/jorelcb/codify/internal/infrastructure/drift"
-	infrastate "github.com/jorelcb/codify/internal/infrastructure/state"
+	driftdomain "github.com/jorelcb/codify-og/internal/domain/drift"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
+	infradrift "github.com/jorelcb/codify-og/internal/infrastructure/drift"
+	infrastate "github.com/jorelcb/codify-og/internal/infrastructure/state"
 )
 
 // NewCheckCmd construye `codify check` — drift detection determinista.

@@ -8,10 +8,10 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/sdd"
-	"github.com/jorelcb/codify/tests/bdd/commons/assertions"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/sdd"
+	"github.com/jorelcb/codify-og/tests/bdd/commons/assertions"
 )
 
 // featureContext es el singleton compartido entre steps de un scenario.

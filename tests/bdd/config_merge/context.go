@@ -3,8 +3,8 @@ package config_merge
 import (
 	"os"
 
-	domain "github.com/jorelcb/codify/internal/domain/config"
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
+	domain "github.com/jorelcb/codify-og/internal/domain/config"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
 )
 
 // FeatureContext holds the state for config_merge feature scenarios.

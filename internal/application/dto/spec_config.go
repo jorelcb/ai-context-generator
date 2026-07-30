@@ -1,8 +1,8 @@
 package dto
 
 import (
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/domain/shared"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/shared"
 )
 
 // SpecConfig holds configuration for generating SDD specifications.

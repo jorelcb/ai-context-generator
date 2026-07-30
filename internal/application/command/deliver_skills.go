@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // DeliverStaticSkillsCommand entrega skills estáticas multi-archivo desde el

@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	usagedomain "github.com/jorelcb/codify/internal/domain/usage"
-	infrausage "github.com/jorelcb/codify/internal/infrastructure/usage"
+	usagedomain "github.com/jorelcb/codify-og/internal/domain/usage"
+	infrausage "github.com/jorelcb/codify-og/internal/infrastructure/usage"
 )
 
 // NewUsageCmd construye `codify usage` — reporte de tracking de uso LLM.

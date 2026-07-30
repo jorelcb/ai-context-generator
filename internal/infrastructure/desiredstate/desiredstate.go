@@ -26,7 +26,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // SchemaVersion is the on-disk format version.

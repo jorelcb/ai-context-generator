@@ -1,8 +1,8 @@
 package sdd_standard
 
 import (
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/sdd"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/sdd"
 )
 
 // FeatureContext mantiene el estado entre steps de un mismo escenario.

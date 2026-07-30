@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // HuhDiffPreviewer implements service.DiffPreviewer for the terminal. It

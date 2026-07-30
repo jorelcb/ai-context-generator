@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 func envOrEmpty(key string) string {

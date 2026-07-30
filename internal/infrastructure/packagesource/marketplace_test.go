@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // fakeFetcher returns fixed bytes (or an error) for any ref.

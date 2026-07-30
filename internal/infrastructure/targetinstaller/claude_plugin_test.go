@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // fakeRunner records calls and returns canned availability/output/error.

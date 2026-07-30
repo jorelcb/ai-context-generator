@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jorelcb/codify/internal/domain/shared"
+	"github.com/jorelcb/codify-og/internal/domain/shared"
 )
 
 // Project represents a project entity (aggregate root)

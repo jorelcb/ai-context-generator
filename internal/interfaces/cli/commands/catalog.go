@@ -11,14 +11,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/infrastructure/desiredstate"
-	"github.com/jorelcb/codify/internal/infrastructure/lockfile"
-	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
-	"github.com/jorelcb/codify/internal/infrastructure/targetinstaller"
-	tuicatalog "github.com/jorelcb/codify/internal/interfaces/cli/tui/catalog"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/infrastructure/desiredstate"
+	"github.com/jorelcb/codify-og/internal/infrastructure/lockfile"
+	"github.com/jorelcb/codify-og/internal/infrastructure/packagesource"
+	"github.com/jorelcb/codify-og/internal/infrastructure/targetinstaller"
+	tuicatalog "github.com/jorelcb/codify-og/internal/interfaces/cli/tui/catalog"
 )
 
 // catalogParams groups the flags of `codify catalog`.

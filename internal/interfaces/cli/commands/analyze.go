@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/jorelcb/codify/internal/infrastructure/scanner"
+	"github.com/jorelcb/codify-og/internal/infrastructure/scanner"
 )
 
 // analyzeParams groups all parameters for the analyze command.

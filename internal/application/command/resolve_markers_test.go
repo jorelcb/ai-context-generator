@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // scriptedPrompter is a service.InteractivePrompter driven by canned answers.

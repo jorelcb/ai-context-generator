@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	domain "github.com/jorelcb/codify/internal/domain/config"
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
+	domain "github.com/jorelcb/codify-og/internal/domain/config"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
 )
 
 // NewConfigCmd construye `codify config` y sus subcomandos (get, set, edit,

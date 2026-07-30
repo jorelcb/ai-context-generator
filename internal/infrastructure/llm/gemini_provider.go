@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/genai"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 const defaultGeminiModel = "gemini-3.1-pro-preview"

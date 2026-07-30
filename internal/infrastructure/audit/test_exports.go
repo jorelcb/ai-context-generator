@@ -1,6 +1,6 @@
 package audit
 
-import domain "github.com/jorelcb/codify/internal/domain/audit"
+import domain "github.com/jorelcb/codify-og/internal/domain/audit"
 
 // AuditCommitMessageForTest expone auditCommitMessage para pruebas BDD que
 // viven fuera del package. Permite que tests/bdd verifiquen las reglas

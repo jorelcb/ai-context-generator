@@ -3,7 +3,7 @@ package targetinstaller
 import (
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 func TestRegistry_For(t *testing.T) {

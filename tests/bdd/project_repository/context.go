@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jorelcb/codify/internal/domain/project"
-	"github.com/jorelcb/codify/internal/domain/shared"
-	"github.com/jorelcb/codify/internal/infrastructure/persistence/memory"
-	"github.com/jorelcb/codify/tests/bdd/commons/assertions"
+	"github.com/jorelcb/codify-og/internal/domain/project"
+	"github.com/jorelcb/codify-og/internal/domain/shared"
+	"github.com/jorelcb/codify-og/internal/infrastructure/persistence/memory"
+	"github.com/jorelcb/codify-og/tests/bdd/commons/assertions"
 )
 
 // FeatureContext holds the state for project repository test scenarios

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	domain "github.com/jorelcb/codify/internal/domain/drift"
-	"github.com/jorelcb/codify/internal/infrastructure/snapshot"
+	domain "github.com/jorelcb/codify-og/internal/domain/drift"
+	"github.com/jorelcb/codify-og/internal/infrastructure/snapshot"
 )
 
 func setup(t *testing.T) (projectPath, outputPath string) {

@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	domain "github.com/jorelcb/codify/internal/domain/config"
+	domain "github.com/jorelcb/codify-og/internal/domain/config"
 )
 
 // Repository implementa lectura/escritura atómica de archivos config.yml.

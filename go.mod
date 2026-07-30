@@ -1,4 +1,4 @@
-module github.com/jorelcb/codify
+module github.com/jorelcb/codify-og
 
 go 1.25.1
 

@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/jorelcb/codify/internal/interfaces/cli/commands"
+	"github.com/jorelcb/codify-og/internal/interfaces/cli/commands"
 	"github.com/spf13/cobra"
 )
 

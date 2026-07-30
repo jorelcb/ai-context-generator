@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
 )
 
 // MaybeAutoLaunchConfig implementa el auto-launch SOFT del wizard `codify config`

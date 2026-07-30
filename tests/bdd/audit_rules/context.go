@@ -1,7 +1,7 @@
 package audit_rules
 
 import (
-	domain "github.com/jorelcb/codify/internal/domain/audit"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
 )
 
 // FeatureContext is the per-scenario state for audit_rules.

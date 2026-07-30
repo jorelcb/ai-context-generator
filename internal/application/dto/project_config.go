@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/jorelcb/codify/internal/domain/shared"
+import "github.com/jorelcb/codify-og/internal/domain/shared"
 
 // ProjectConfig holds configuration for generating a project
 type ProjectConfig struct {

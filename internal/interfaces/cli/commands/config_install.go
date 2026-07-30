@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jorelcb/codify/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/application/dto"
 )
 
 // scopeLabel humanizes a dto.InstallScope* constant for prompt copy.

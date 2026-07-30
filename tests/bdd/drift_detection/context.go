@@ -3,8 +3,8 @@ package drift_detection
 import (
 	"os"
 
-	driftdomain "github.com/jorelcb/codify/internal/domain/drift"
-	statedomain "github.com/jorelcb/codify/internal/domain/state"
+	driftdomain "github.com/jorelcb/codify-og/internal/domain/drift"
+	statedomain "github.com/jorelcb/codify-og/internal/domain/state"
 )
 
 // FeatureContext is the per-scenario state for drift_detection.

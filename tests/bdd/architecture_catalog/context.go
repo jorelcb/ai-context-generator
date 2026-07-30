@@ -1,7 +1,7 @@
 package architecture_catalog
 
 import (
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // FeatureContext holds the state for architecture catalog test scenarios.

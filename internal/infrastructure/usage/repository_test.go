@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	domain "github.com/jorelcb/codify/internal/domain/usage"
+	domain "github.com/jorelcb/codify-og/internal/domain/usage"
 )
 
 func TestRepository_LoadMissing_ReturnsEmptyLog(t *testing.T) {

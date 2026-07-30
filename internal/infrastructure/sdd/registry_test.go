@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 func TestNewDefaultRegistry_RegistersOpenSpec(t *testing.T) {

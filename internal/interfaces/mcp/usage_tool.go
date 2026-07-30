@@ -10,8 +10,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	usagedomain "github.com/jorelcb/codify/internal/domain/usage"
-	infrausage "github.com/jorelcb/codify/internal/infrastructure/usage"
+	usagedomain "github.com/jorelcb/codify-og/internal/domain/usage"
+	infrausage "github.com/jorelcb/codify-og/internal/infrastructure/usage"
 )
 
 // getUsageTool define el MCP tool `get_usage`. Permite que un agente externo

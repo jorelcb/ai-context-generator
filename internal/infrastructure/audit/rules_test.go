@@ -3,7 +3,7 @@ package audit
 import (
 	"testing"
 
-	domain "github.com/jorelcb/codify/internal/domain/audit"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
 )
 
 func TestAuditCommitMessage_ValidConventional(t *testing.T) {

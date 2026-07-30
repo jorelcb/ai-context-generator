@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // Compile-time guard: CompositeSource satisfies the frozen

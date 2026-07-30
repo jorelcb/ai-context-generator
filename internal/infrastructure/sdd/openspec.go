@@ -8,7 +8,7 @@
 package sdd
 
 import (
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // OpenSpecAdapter implementa service.SpecStandard para el formato OpenSpec

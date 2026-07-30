@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // PromptBuilder constructs prompts for the LLM from templates and project description.

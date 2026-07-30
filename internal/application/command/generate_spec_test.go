@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
-	"github.com/jorelcb/codify/internal/infrastructure/llm"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/filesystem"
+	"github.com/jorelcb/codify-og/internal/infrastructure/llm"
 )
 
 // padded keeps mock output above the validator length threshold.

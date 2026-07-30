@@ -10,15 +10,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/application/dto"
-	domainservice "github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/config"
-	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
-	"github.com/jorelcb/codify/internal/infrastructure/llm"
-	"github.com/jorelcb/codify/internal/infrastructure/sdd"
-	infratemplate "github.com/jorelcb/codify/internal/infrastructure/template"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	domainservice "github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/config"
+	"github.com/jorelcb/codify-og/internal/infrastructure/filesystem"
+	"github.com/jorelcb/codify-og/internal/infrastructure/llm"
+	"github.com/jorelcb/codify-og/internal/infrastructure/sdd"
+	infratemplate "github.com/jorelcb/codify-og/internal/infrastructure/template"
 )
 
 // resolveSpecStandard aplica la precedencia documentada en ADR-0011 para

@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	domain "github.com/jorelcb/codify/internal/domain/audit"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
 )
 
 // LLMPromptBuilder construye el prompt enviado al LLM en `audit --with-llm`.

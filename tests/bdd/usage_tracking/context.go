@@ -3,7 +3,7 @@ package usage_tracking
 import (
 	"os"
 
-	usagedomain "github.com/jorelcb/codify/internal/domain/usage"
+	usagedomain "github.com/jorelcb/codify-og/internal/domain/usage"
 )
 
 // FeatureContext is the per-scenario state for usage_tracking.

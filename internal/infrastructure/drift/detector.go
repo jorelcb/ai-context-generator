@@ -5,9 +5,9 @@ package drift
 import (
 	"fmt"
 
-	domain "github.com/jorelcb/codify/internal/domain/drift"
-	statedomain "github.com/jorelcb/codify/internal/domain/state"
-	"github.com/jorelcb/codify/internal/infrastructure/snapshot"
+	domain "github.com/jorelcb/codify-og/internal/domain/drift"
+	statedomain "github.com/jorelcb/codify-og/internal/domain/state"
+	"github.com/jorelcb/codify-og/internal/infrastructure/snapshot"
 )
 
 // Detector es la API pública para correr drift detection. No mantiene estado

@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
 )
 
 const usageFileName = "usage.json"

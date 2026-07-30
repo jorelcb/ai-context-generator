@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/jorelcb/codify/internal/application/query"
-	"github.com/jorelcb/codify/internal/infrastructure/persistence/memory"
+	"github.com/jorelcb/codify-og/internal/application/query"
+	"github.com/jorelcb/codify-og/internal/infrastructure/persistence/memory"
 )
 
 // NewListCmd creates the list command

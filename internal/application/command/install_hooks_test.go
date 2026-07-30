@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
-	"github.com/jorelcb/codify/internal/infrastructure/settings"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/infrastructure/filesystem"
+	"github.com/jorelcb/codify-og/internal/infrastructure/settings"
 )
 
 // scopeRedirect returns a resolver that maps any scope to the (settingsPath,

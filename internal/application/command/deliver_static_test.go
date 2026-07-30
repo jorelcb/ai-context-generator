@@ -7,9 +7,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/infrastructure/filesystem"
 )
 
 func TestDeliverStaticSkills_WritesMultiFileSkillDirs(t *testing.T) {

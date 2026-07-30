@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/jorelcb/codify/internal/interfaces/cli"
+	"github.com/jorelcb/codify-og/internal/interfaces/cli"
 )
 
 func TestVersion(t *testing.T) {

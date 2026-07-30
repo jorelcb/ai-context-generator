@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	domain "github.com/jorelcb/codify/internal/domain/config"
+	domain "github.com/jorelcb/codify-og/internal/domain/config"
 )
 
 func TestSaveAndLoad_Roundtrip(t *testing.T) {

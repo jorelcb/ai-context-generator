@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	statedomain "github.com/jorelcb/codify/internal/domain/state"
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
-	"github.com/jorelcb/codify/internal/infrastructure/snapshot"
-	infrastate "github.com/jorelcb/codify/internal/infrastructure/state"
+	statedomain "github.com/jorelcb/codify-og/internal/domain/state"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
+	"github.com/jorelcb/codify-og/internal/infrastructure/snapshot"
+	infrastate "github.com/jorelcb/codify-og/internal/infrastructure/state"
 )
 
 // codifyVersionForState devuelve la versión del binario para popular
