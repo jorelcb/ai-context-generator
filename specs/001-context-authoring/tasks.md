@@ -26,11 +26,11 @@ Workspace Cargo (plan.md): `crates/codify-core/` (biblioteca hexagonal) + `crate
 
 **Purpose**: Inicializar workspace y toolchain.
 
-- [ ] T001 Crear workspace Cargo con miembros `codify-core` y `codify-app` en `Cargo.toml` (raíz) y esqueleto de crates
-- [ ] T002 [P] Declarar dependencias del core (tokio, serde/serde_json, reqwest, similar, oauth2, keyring, async-trait, thiserror) en `crates/codify-core/Cargo.toml`
+- [X] T001 Crear workspace Cargo con miembros `codify-core` y `codify-app` en `Cargo.toml` (raíz) y esqueleto de crates
+- [X] T002 [P] Declarar dependencias del core (tokio, serde/serde_json, reqwest, similar, oauth2, keyring, async-trait, thiserror) en `crates/codify-core/Cargo.toml`
 - [ ] T003 [P] Inicializar Tauri v2 (tauri, tauri-build) + scaffold del frontend web en `crates/codify-app/` y `crates/codify-app/ui/`
-- [ ] T004 [P] Configurar `rustfmt.toml` y clippy (`deny(warnings)`) en la raíz del repo
-- [ ] T005 [P] Esqueleto de CI (fmt + clippy + test) en `.github/workflows/ci.yml`
+- [X] T004 [P] Configurar `rustfmt.toml` y clippy (`deny(warnings)`) en la raíz del repo
+- [X] T005 [P] Esqueleto de CI (fmt + clippy + test) en `.github/workflows/ci.yml`
 
 ---
 
@@ -38,17 +38,17 @@ Workspace Cargo (plan.md): `crates/codify-core/` (biblioteca hexagonal) + `crate
 
 **Purpose**: Dominio puro, ports, composition root y las fitness functions de la constitución. **⚠️ Ninguna user story puede empezar hasta cerrar esta fase.**
 
-- [ ] T006 [P] Layout de módulos `domain/`, `application/`, `infrastructure/` en `crates/codify-core/src/lib.rs`
-- [ ] T007 [P] `AuthoringSession` (agregado) + máquina de estados Ingesting→Generating→Refining→Approved en `crates/codify-core/src/domain/session.rs`
-- [ ] T008 [P] `Repository` + `Reference` (+ estado Resolved/Inaccessible/RequiresAuth/OutOfScope) en `crates/codify-core/src/domain/reference.rs`
-- [ ] T009 [P] `ContextArtifact` + `Segment` (grounded/tentative) en `crates/codify-core/src/domain/context.rs`
-- [ ] T010 [P] `ChangeProposal` + `RiskLevel` + `ApprovalDecision` en `crates/codify-core/src/domain/change.rs`
-- [ ] T011 [P] `AuditEvent` (append-only) en `crates/codify-core/src/domain/audit.rs`
-- [ ] T012 Definir ports (driving `AuthoringService`; driven `ModelProvider`/`RepoNavigator`/`ReferenceResolver`/`DiffEngine`/`RiskClassifier`/`Prompter`/`AuditSink`/`LocaleDetector`) en `crates/codify-core/src/domain/ports/` y `crates/codify-core/src/application/ports/` — firmas con tipos de dominio únicamente (depende de T007-T011)
-- [ ] T013 [P] Fakes in-memory de todos los driven ports en `crates/codify-core/tests/fakes/mod.rs`
-- [ ] T014 Composition root + `ProviderRegistry` con cableado **solo-local** (cero-egress estructural) en `crates/codify-core/src/infrastructure/composition.rs` (depende de T012)
-- [ ] T015 [P] **Fitness function de dependencias** (aserta: `domain`/`application` con cero imports de `infrastructure`) en `.github/workflows/ci.yml` + `crates/codify-core/tests/arch_deps.rs` (constitución I, [NN])
-- [ ] T016 [P] **Harness de cero-egress** (falla si hay salida a host no-local en modo local) en `tests/integration/egress_guard.rs` (constitución proyecto, [NN])
+- [X] T006 [P] Layout de módulos `domain/`, `application/`, `infrastructure/` en `crates/codify-core/src/lib.rs`
+- [X] T007 [P] `AuthoringSession` (agregado) + máquina de estados Ingesting→Generating→Refining→Approved en `crates/codify-core/src/domain/session.rs`
+- [X] T008 [P] `Repository` + `Reference` (+ estado Resolved/Inaccessible/RequiresAuth/OutOfScope) en `crates/codify-core/src/domain/reference.rs`
+- [X] T009 [P] `ContextArtifact` + `Segment` (grounded/tentative) en `crates/codify-core/src/domain/context.rs`
+- [X] T010 [P] `ChangeProposal` + `RiskLevel` + `ApprovalDecision` en `crates/codify-core/src/domain/change.rs`
+- [X] T011 [P] `AuditEvent` (append-only) en `crates/codify-core/src/domain/audit.rs`
+- [X] T012 Definir ports (driving `AuthoringService`; driven `ModelProvider`/`RepoNavigator`/`ReferenceResolver`/`DiffEngine`/`RiskClassifier`/`Prompter`/`AuditSink`/`LocaleDetector`) en `crates/codify-core/src/domain/ports/` y `crates/codify-core/src/application/ports/` — firmas con tipos de dominio únicamente (depende de T007-T011)
+- [X] T013 [P] Fakes in-memory de todos los driven ports en `crates/codify-core/tests/fakes/mod.rs`
+- [X] T014 Composition root + `ProviderRegistry` con cableado **solo-local** (cero-egress estructural) en `crates/codify-core/src/infrastructure/composition.rs` (depende de T012)
+- [X] T015 [P] **Fitness function de dependencias** (aserta: `domain`/`application` con cero imports de `infrastructure`) en `.github/workflows/ci.yml` + `crates/codify-core/tests/arch_deps.rs` (constitución I, [NN])
+- [X] T016 [P] **Harness de cero-egress** (falla si hay salida a host no-local en modo local) en `tests/integration/egress_guard.rs` (constitución proyecto, [NN])
 
 **Checkpoint**: Fundación lista — las user stories pueden comenzar.
 
@@ -61,22 +61,22 @@ Workspace Cargo (plan.md): `crates/codify-core/` (biblioteca hexagonal) + `crate
 **Independent Test**: Apuntar al fixture (README→SPEC "sin broker/event-sourced") en modo local; verificar contexto grounded, referencias declaradas, y cero-egress.
 
 ### Tests for User Story 1 (test-first) ⚠️
-- [ ] T017 [P] [US1] Escenario de aceptación BDD (quickstart S1) en `tests/integration/us1_grounded.rs`
-- [ ] T018 [P] [US1] Contract test `RepoNavigator` (real fs + fake) en `tests/contract/repo_navigator.rs`
-- [ ] T019 [P] [US1] Contract test `ReferenceResolver` (local + URL pública; RequiresAuth reportado, no inventado) en `tests/contract/reference_resolver.rs`
-- [ ] T020 [P] [US1] Contract test `ModelProvider` local (openai-compat/Ollama; `is_local`) en `tests/contract/model_provider.rs`
-- [ ] T021 [P] [US1] Unit: presupuesto de ingesta + declarar-omitido + detección de idioma en `crates/codify-core/tests/ingest_unit.rs`
-- [ ] T053 [P] [US1] Escenario: dos fuentes contradictorias ⇒ el sistema señala la contradicción (no elige en silencio) en `tests/integration/us1_contradiction.rs` [FR-008]
+- [X] T017 [P] [US1] Escenario de aceptación BDD (quickstart S1) en `tests/integration/us1_grounded.rs`
+- [X] T018 [P] [US1] Contract test `RepoNavigator` (real fs + fake) en `tests/contract/repo_navigator.rs`
+- [X] T019 [P] [US1] Contract test `ReferenceResolver` (local + URL pública; RequiresAuth reportado, no inventado) en `tests/contract/reference_resolver.rs`
+- [X] T020 [P] [US1] Contract test `ModelProvider` local (openai-compat/Ollama; `is_local`) en `tests/contract/model_provider.rs`
+- [X] T021 [P] [US1] Unit: presupuesto de ingesta + declarar-omitido + detección de idioma en `crates/codify-core/tests/ingest_unit.rs`
+- [X] T053 [P] [US1] Escenario: dos fuentes contradictorias ⇒ el sistema señala la contradicción (no elige en silencio) en `tests/integration/us1_contradiction.rs` [FR-008]
 
 ### Implementation for User Story 1
-- [ ] T022 [P] [US1] Adapter `RepoNavigator` (fs) en `crates/codify-core/src/infrastructure/repo/navigator.rs`
-- [ ] T023 [P] [US1] Adapter `ReferenceResolver` (fs local + http público vía reqwest; estados de no-resuelto) en `crates/codify-core/src/infrastructure/repo/reference_resolver.rs`
-- [ ] T024 [P] [US1] Adapters `ModelProvider` locales (openai-compat cubre Ollama + llama.cpp-server) en `crates/codify-core/src/infrastructure/providers/local.rs`
-- [ ] T025 [P] [US1] Adapter `LocaleDetector` en `crates/codify-core/src/infrastructure/repo/locale.rs`
-- [ ] T026 [US1] Tools del agente (list_repo/read_file/fetch_url/note_unresolved/finalize) + estrategia de muestreo en `crates/codify-core/src/application/ingest.rs` (depende de T022-T024)
-- [ ] T027 [US1] Loop de authoring: pase ingest+generate → `ContextArtifact` con segmentos grounded/tentative en `crates/codify-core/src/application/authoring_loop.rs` (depende de T026, T012)
-- [ ] T054 [US1] Detección y señalización de contradicción entre fuentes (evento/segmento de contradicción) en `crates/codify-core/src/application/authoring_loop.rs` (depende de T027) [FR-008]
-- [ ] T028 [US1] `AuthoringService::start_session`/`session_state` (resultado US1) en `crates/codify-core/src/application/service.rs`
+- [X] T022 [P] [US1] Adapter `RepoNavigator` (fs) en `crates/codify-core/src/infrastructure/repo/navigator.rs`
+- [X] T023 [P] [US1] Adapter `ReferenceResolver` (fs local + http público vía reqwest; estados de no-resuelto) en `crates/codify-core/src/infrastructure/repo/reference_resolver.rs`
+- [X] T024 [P] [US1] Adapters `ModelProvider` locales (openai-compat cubre Ollama + llama.cpp-server) en `crates/codify-core/src/infrastructure/providers/local.rs`
+- [X] T025 [P] [US1] Adapter `LocaleDetector` en `crates/codify-core/src/infrastructure/repo/locale.rs`
+- [X] T026 [US1] Tools del agente (list_repo/read_file/fetch_url/note_unresolved/finalize) + estrategia de muestreo en `crates/codify-core/src/application/ingest.rs` (depende de T022-T024)
+- [X] T027 [US1] Loop de authoring: pase ingest+generate → `ContextArtifact` con segmentos grounded/tentative en `crates/codify-core/src/application/authoring_loop.rs` (depende de T026, T012)
+- [X] T054 [US1] Detección y señalización de contradicción entre fuentes (evento/segmento de contradicción) en `crates/codify-core/src/application/authoring_loop.rs` (depende de T027) [FR-008]
+- [X] T028 [US1] `AuthoringService::start_session`/`session_state` (resultado US1) en `crates/codify-core/src/application/service.rs`
 - [ ] T029 [US1] Comandos Tauri `start_session`/`session_state` + eventos `agent.activity`/`reference.unresolved` en `crates/codify-app/src/commands.rs`
 - [ ] T030 [US1] UI mínima: iniciar sesión, stream de actividad, render de artefactos (grounded vs tentative) en `crates/codify-app/ui/`
 

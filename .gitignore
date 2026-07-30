@@ -10,6 +10,11 @@ bin/
 dist/
 /codify
 
+# Rust (codify-NG workspace)
+target/
+**/*.rs.bk
+*.pdb
+
 # Generated output
 input/
 output/
