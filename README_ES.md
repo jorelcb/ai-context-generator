@@ -1,4 +1,17 @@
-# 🧠 Codify
+# 🧠 Codify (archivado)
+
+> **Este repositorio está archivado y es de solo lectura.** Contiene `codify` v1.x–v4.x, el CLI y
+> servidor MCP en Go. Se llamaba `jorelcb/codify` hasta el 2026-07-30.
+>
+> El proyecto continúa como una **reescritura en Rust** en
+> **[jorelcb/codify](https://github.com/jorelcb/codify)**, que heredó el nombre.
+>
+> **`brew install jorelcb/tap/codify` sigue instalando el binario Go v4.0.0 de aquí** y los
+> assets de las releases siguen descargables. Ver **[MIGRATION.md](./MIGRATION.md)** para el
+> estado actual, los pasos pendientes de cierre y el plan de transición de la fórmula de Homebrew.
+>
+> ⚠️ `go install` ya no funciona: los tags publicados conservan el module path viejo. Usa
+> Homebrew o los assets del release — detalles en [MIGRATION.md](./MIGRATION.md).
 
 <div align="center">
 
