@@ -8,9 +8,9 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
 
-	domain "github.com/jorelcb/codify/internal/domain/audit"
-	infraaudit "github.com/jorelcb/codify/internal/infrastructure/audit"
-	"github.com/jorelcb/codify/tests/bdd/commons/assertions"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
+	infraaudit "github.com/jorelcb/codify-og/internal/infrastructure/audit"
+	"github.com/jorelcb/codify-og/tests/bdd/commons/assertions"
 )
 
 var featureContext = new(FeatureContext)

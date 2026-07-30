@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)](https://github.com/jorelcb/codify/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)](https://github.com/jorelcb/codify-og/releases)
 [![MCP](https://img.shields.io/badge/MCP-Server-ff6b35?style=for-the-badge)](https://modelcontextprotocol.io)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/doc/go1.23)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green?style=for-the-badge)](LICENSE)
@@ -984,7 +984,7 @@ jobs:
 
       - name: Install Codify
         run: |
-          go install github.com/jorelcb/codify/cmd/codify@latest
+          go install github.com/jorelcb/codify-og/cmd/codify@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
       - name: Verify generated artifacts are in sync
@@ -1210,7 +1210,7 @@ Use Codify as an **MCP server** — your AI coding agent calls the tools directl
 ### Install
 
 ```bash
-go install github.com/jorelcb/codify/cmd/codify@latest
+go install github.com/jorelcb/codify-og/cmd/codify@latest
 ```
 
 ### Claude Code
@@ -1541,7 +1541,7 @@ The full surface in one snapshot — anything checked here is shipped, tested, a
 **Distribution**
 
 - ✅ Homebrew tap (`brew install jorelcb/tap/codify`)
-- ✅ `go install github.com/jorelcb/codify/cmd/codify@latest`
+- ✅ `go install github.com/jorelcb/codify-og/cmd/codify@latest`
 - ✅ Pre-built binaries in GitHub Releases
 
 **Quality**
@@ -1634,6 +1634,6 @@ _"An agent without context is an intern with root access — and stale context i
 
 ⭐ If this helped you, give it a star — it keeps us building
 
-[🐛 Report bug](https://github.com/jorelcb/codify/issues) · [💡 Request feature](https://github.com/jorelcb/codify/issues)
+[🐛 Report bug](https://github.com/jorelcb/codify-og/issues) · [💡 Request feature](https://github.com/jorelcb/codify-og/issues)
 
 </div>

@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // EmbeddedSource implementa catalog.PackageSource sobre el filesystem

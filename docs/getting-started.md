@@ -14,10 +14,10 @@ brew tap jorelcb/tap
 brew install codify
 
 # Or via go install
-go install github.com/jorelcb/codify/cmd/codify@latest
+go install github.com/jorelcb/codify-og/cmd/codify@latest
 
 # Or download pre-built binaries from GitHub Releases
-# https://github.com/jorelcb/codify/releases
+# https://github.com/jorelcb/codify-og/releases
 ```
 
 Verify the install:
@@ -189,7 +189,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with: { go-version: "1.23" }
-      - run: go install github.com/jorelcb/codify/cmd/codify@latest
+      - run: go install github.com/jorelcb/codify-og/cmd/codify@latest
       - run: codify check # exit 1 if drift detected
 ```
 

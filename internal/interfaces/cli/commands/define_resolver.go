@@ -3,9 +3,9 @@ package commands
 import (
 	"context"
 
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/domain/service"
-	infraresolver "github.com/jorelcb/codify/internal/infrastructure/resolver"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	infraresolver "github.com/jorelcb/codify-og/internal/infrastructure/resolver"
 )
 
 // resolveDefineMarkers is the CLI adapter for the post-generation resolve

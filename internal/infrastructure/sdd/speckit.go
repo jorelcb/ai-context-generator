@@ -1,7 +1,7 @@
 package sdd
 
 import (
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // SpecKitAdapter implementa service.SpecStandard para el formato GitHub

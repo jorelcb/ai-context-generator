@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 
-	"github.com/jorelcb/codify/internal/domain/project"
-	"github.com/jorelcb/codify/internal/domain/shared"
+	"github.com/jorelcb/codify-og/internal/domain/project"
+	"github.com/jorelcb/codify-og/internal/domain/shared"
 )
 
 // ProjectGenerator provides domain operations for managing projects

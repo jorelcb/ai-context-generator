@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	statedomain "github.com/jorelcb/codify/internal/domain/state"
+	statedomain "github.com/jorelcb/codify-og/internal/domain/state"
 )
 
 func TestHashFile_Deterministic(t *testing.T) {

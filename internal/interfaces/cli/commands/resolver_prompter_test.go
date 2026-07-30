@@ -3,7 +3,7 @@ package commands
 import (
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 func TestParseEnrichedInput_EmptyWithDefault_UsesDefault(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
-	"github.com/jorelcb/codify/internal/infrastructure/targetinstaller"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/infrastructure/packagesource"
+	"github.com/jorelcb/codify-og/internal/infrastructure/targetinstaller"
 )
 
 func newService(t *testing.T) (*command.CatalogService, string) {

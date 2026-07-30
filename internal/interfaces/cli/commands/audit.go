@@ -8,10 +8,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	domain "github.com/jorelcb/codify/internal/domain/audit"
-	servicedomain "github.com/jorelcb/codify/internal/domain/service"
-	infraaudit "github.com/jorelcb/codify/internal/infrastructure/audit"
-	"github.com/jorelcb/codify/internal/infrastructure/llm"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
+	servicedomain "github.com/jorelcb/codify-og/internal/domain/service"
+	infraaudit "github.com/jorelcb/codify-og/internal/infrastructure/audit"
+	"github.com/jorelcb/codify-og/internal/infrastructure/llm"
 )
 
 // NewAuditCmd construye `codify audit` — auditoría de commits contra

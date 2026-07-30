@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	statedomain "github.com/jorelcb/codify/internal/domain/state"
+	statedomain "github.com/jorelcb/codify-og/internal/domain/state"
 )
 
 // BuildOptions parametriza la captura del snapshot. Todos los campos son

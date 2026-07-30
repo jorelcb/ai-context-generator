@@ -11,11 +11,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	statedomain "github.com/jorelcb/codify/internal/domain/state"
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
-	infradrift "github.com/jorelcb/codify/internal/infrastructure/drift"
-	infrastate "github.com/jorelcb/codify/internal/infrastructure/state"
-	"github.com/jorelcb/codify/internal/infrastructure/watch"
+	statedomain "github.com/jorelcb/codify-og/internal/domain/state"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
+	infradrift "github.com/jorelcb/codify-og/internal/infrastructure/drift"
+	infrastate "github.com/jorelcb/codify-og/internal/infrastructure/state"
+	"github.com/jorelcb/codify-og/internal/infrastructure/watch"
 )
 
 // NewWatchCmd construye `codify watch` — foreground file watcher que dispara

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // FeatureContext is the per-scenario state for resolve_markers BDD. It

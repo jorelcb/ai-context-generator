@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/filesystem"
-	"github.com/jorelcb/codify/internal/infrastructure/persistence/memory"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/filesystem"
+	"github.com/jorelcb/codify-og/internal/infrastructure/persistence/memory"
 )
 
 func TestGenerateProjectCommand_Execute(t *testing.T) {

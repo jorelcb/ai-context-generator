@@ -3,8 +3,8 @@ package query
 import (
 	"context"
 
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/project"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/project"
 )
 
 // ListProjectsQuery representa la consulta para listar proyectos

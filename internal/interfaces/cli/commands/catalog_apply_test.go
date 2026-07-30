@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/infrastructure/desiredstate"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/infrastructure/desiredstate"
 )
 
 // TestCatalogApply_InstallsDesiredSkills exercises the full declarative path

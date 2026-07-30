@@ -3,7 +3,7 @@ package mcp
 import (
 	"testing"
 
-	"github.com/jorelcb/codify/internal/infrastructure/sdd"
+	"github.com/jorelcb/codify-og/internal/infrastructure/sdd"
 )
 
 // TestLoadSpecGuides_AllStandardsAndLocales is the regression guard for the

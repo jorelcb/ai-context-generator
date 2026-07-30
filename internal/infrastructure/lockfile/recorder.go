@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // Recorder writes install/uninstall records into the per-scope lockfile. It

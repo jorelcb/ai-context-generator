@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	domain "github.com/jorelcb/codify/internal/domain/usage"
+	domain "github.com/jorelcb/codify-og/internal/domain/usage"
 )
 
 // Repository implementa lectura/escritura atómica de usage.json.

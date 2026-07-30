@@ -7,8 +7,8 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/tests/bdd/commons/assertions"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/tests/bdd/commons/assertions"
 )
 
 var featureContext = new(FeatureContext)

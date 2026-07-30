@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // MockProvider is a deterministic stand-in for AnthropicProvider /

@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	mcpserver "github.com/jorelcb/codify/internal/interfaces/mcp"
+	mcpserver "github.com/jorelcb/codify-og/internal/interfaces/mcp"
 )
 
 // NewServeCmd creates the serve command for MCP server mode

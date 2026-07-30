@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // Compile-time guard: AntigravityPluginInstaller satisfies catalog.TargetInstaller.

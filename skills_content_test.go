@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // Estas pruebas son las "fitness functions" del CONTENIDO del catálogo de

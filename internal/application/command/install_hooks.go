@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/application/dto"
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/settings"
+	"github.com/jorelcb/codify-og/internal/application/dto"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/settings"
 )
 
 // InstallHooksCommand auto-activates a Claude Code hook bundle by merging it

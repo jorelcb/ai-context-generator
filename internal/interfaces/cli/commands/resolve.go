@@ -12,10 +12,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/domain/service"
-	"github.com/jorelcb/codify/internal/infrastructure/llm"
-	infraresolver "github.com/jorelcb/codify/internal/infrastructure/resolver"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/infrastructure/llm"
+	infraresolver "github.com/jorelcb/codify-og/internal/infrastructure/resolver"
 )
 
 // NewResolveCmd builds `codify resolve` — interactive marker resolution

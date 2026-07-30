@@ -8,8 +8,8 @@ import (
 
 	"github.com/cucumber/godog"
 
-	"github.com/jorelcb/codify/internal/application/command"
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/application/command"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 var featureContext = new(FeatureContext)

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	root "github.com/jorelcb/codify"
-	"github.com/jorelcb/codify/internal/domain/catalog"
-	"github.com/jorelcb/codify/internal/infrastructure/packagesource"
+	root "github.com/jorelcb/codify-og"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/infrastructure/packagesource"
 )
 
 // newTestInstaller points both scope roots at one temp dir so tests never

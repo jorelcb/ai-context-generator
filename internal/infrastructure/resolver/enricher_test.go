@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jorelcb/codify/internal/domain/service"
+	"github.com/jorelcb/codify-og/internal/domain/service"
 )
 
 // fakeProvider is a minimal service.LLMProvider stub for enricher tests.

@@ -38,7 +38,7 @@ changelog:
 release:
   github:
     owner: jorelcb
-    name: codify
+    name: codify-og
   draft: false
   prerelease: auto
   name_template: "{{ .Tag }}"
@@ -50,7 +50,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/jorelcb/codify"
+    homepage: "https://github.com/jorelcb/codify-og"
     description: "MCP server & CLI that generates context, specs, and skills for AI coding agents"
     license: "Apache-2.0"
     install: |

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // Compile-time guard: AntigravitySkillSource satisfies catalog.PackageSource.

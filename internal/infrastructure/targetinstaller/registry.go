@@ -3,7 +3,7 @@ package targetinstaller
 import (
 	"fmt"
 
-	"github.com/jorelcb/codify/internal/domain/catalog"
+	"github.com/jorelcb/codify-og/internal/domain/catalog"
 )
 
 // Registry routes a package to the installer that handles its Target. The

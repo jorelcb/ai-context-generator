@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	domain "github.com/jorelcb/codify/internal/domain/audit"
+	domain "github.com/jorelcb/codify-og/internal/domain/audit"
 )
 
 func TestParseLLMFindings_HappyPath(t *testing.T) {

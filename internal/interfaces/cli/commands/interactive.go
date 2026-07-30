@@ -6,7 +6,7 @@ import (
 
 	"github.com/mattn/go-isatty"
 
-	"github.com/jorelcb/codify/internal/interfaces/cli/tui/prompts"
+	"github.com/jorelcb/codify-og/internal/interfaces/cli/tui/prompts"
 )
 
 // selectOption represents an option in an interactive menu.

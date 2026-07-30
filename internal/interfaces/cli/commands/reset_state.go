@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	infraconfig "github.com/jorelcb/codify/internal/infrastructure/config"
-	infrastate "github.com/jorelcb/codify/internal/infrastructure/state"
+	infraconfig "github.com/jorelcb/codify-og/internal/infrastructure/config"
+	infrastate "github.com/jorelcb/codify-og/internal/infrastructure/state"
 )
 
 // NewResetStateCmd construye `codify reset-state` — recompute .codify/state.json

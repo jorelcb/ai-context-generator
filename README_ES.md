@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)](https://github.com/jorelcb/codify/releases)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue?style=for-the-badge)](https://github.com/jorelcb/codify-og/releases)
 [![MCP](https://img.shields.io/badge/MCP-Server-ff6b35?style=for-the-badge)](https://modelcontextprotocol.io)
 [![Go](https://img.shields.io/badge/Go-1.23+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/doc/go1.23)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green?style=for-the-badge)](LICENSE)
@@ -958,7 +958,7 @@ jobs:
           fetch-depth: 50
       - name: Install Codify
         run: |
-          go install github.com/jorelcb/codify/cmd/codify@latest
+          go install github.com/jorelcb/codify-og/cmd/codify@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: Verify generated artifacts in sync
         run: codify check --strict
@@ -1182,7 +1182,7 @@ Usa Codify como **servidor MCP** — tu agente de IA invoca las herramientas dir
 ### Instalacion
 
 ```bash
-go install github.com/jorelcb/codify/cmd/codify@latest
+go install github.com/jorelcb/codify-og/cmd/codify@latest
 ```
 
 ### Claude Code
@@ -1521,7 +1521,7 @@ Snapshot completo de la superficie. Lo que aparece aqui esta shippeado, testeado
 **Distribucion**
 
 - ✅ Homebrew tap (`brew install jorelcb/tap/codify`)
-- ✅ `go install github.com/jorelcb/codify/cmd/codify@latest`
+- ✅ `go install github.com/jorelcb/codify-og/cmd/codify@latest`
 - ✅ Binarios pre-construidos en GitHub Releases
 
 **Calidad**
@@ -1619,6 +1619,6 @@ _"Un agente sin contexto es un pasante con acceso root — y contexto desactuali
 
 ⭐ Si te sirvio, dale una estrella — nos motiva a seguir construyendo
 
-[🐛 Reportar bug](https://github.com/jorelcb/codify/issues) · [💡 Sugerir feature](https://github.com/jorelcb/codify/issues)
+[🐛 Reportar bug](https://github.com/jorelcb/codify-og/issues) · [💡 Sugerir feature](https://github.com/jorelcb/codify-og/issues)
 
 </div>
